@@ -11,7 +11,6 @@ namespace Broot.Redirect.API.Controllers
     [Route("api/redirect")]
     public class RedirectController : ControllerBase
     {
-        private readonly IRuleCacheService _cacheService;
         private readonly IRuleMatchingService _ruleMatchingService;
         private readonly IUrlTransformService _urlTransformService;
         private readonly IAppSettingsCacheService _settingsCache;
@@ -20,7 +19,6 @@ namespace Broot.Redirect.API.Controllers
         private readonly ILogger<RedirectController> _logger;
 
         public RedirectController(
-            IRuleCacheService cacheService,
             IRuleMatchingService ruleMatchingService,
             IUrlTransformService urlTransformService,
             IAppSettingsCacheService settingsCache,
@@ -28,7 +26,6 @@ namespace Broot.Redirect.API.Controllers
             IOptions<BrootRedirectOptions> options,
             ILogger<RedirectController> logger)
         {
-            _cacheService = cacheService;
             _ruleMatchingService = ruleMatchingService;
             _urlTransformService = urlTransformService;
             _settingsCache = settingsCache;
@@ -54,13 +51,7 @@ namespace Broot.Redirect.API.Controllers
 
             var matchingConfig = RuleMatchingConfigFactory.Create(_options);
 
-            var allRules = _cacheService.GetAll();
-
-            var processedRules = allRules
-                .Select(rule => _ruleMatchingService.PreprocessRule(rule, matchingConfig))
-                .ToList();
-
-            var matchResult = _ruleMatchingService.FindMatchingRule(path, processedRules, matchingConfig);
+            var matchResult = _ruleMatchingService.ResolveMatch(path, matchingConfig);
 
             var appSettings = _settingsCache.GetSettings();
 

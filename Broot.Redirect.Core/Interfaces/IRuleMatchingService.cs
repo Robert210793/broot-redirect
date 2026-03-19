@@ -15,5 +15,11 @@ namespace Broot.Redirect.Core.Interfaces
             string requestUrl,
             IReadOnlyList<ProcessedRule> rules,
             RuleMatchingConfig config);
+
+        /// <summary>
+        /// Resolves the best matching rule for a request URL using the cache's
+        /// type-partitioned indexes: wildcard O(1) → partial/domain scan → regex scan.
+        /// </summary>
+        RuleMatchResult? ResolveMatch(string requestUrl, RuleMatchingConfig config);
     }
 }

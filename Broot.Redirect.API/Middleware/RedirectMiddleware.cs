@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using Broot.Redirect.API.Configuration;
 using Broot.Redirect.Core.Interfaces;
-using Broot.Redirect.Core.Models;
 
 namespace Broot.Redirect.API.Middleware
 {
@@ -33,7 +32,6 @@ namespace Broot.Redirect.API.Middleware
 
         public async Task InvokeAsync(
             HttpContext context,
-            IRuleCacheService ruleCacheService,
             IRuleMatchingService ruleMatchingService,
             IUrlTransformService urlTransformService,
             IAppSettingsCacheService settingsCache,
@@ -53,17 +51,9 @@ namespace Broot.Redirect.API.Middleware
 
             var appSettings = settingsCache.GetSettings();
 
-            var staticOptions = options.Value;
+            var matchingConfig = RuleMatchingConfigFactory.Create(options.Value);
 
-            var matchingConfig = RuleMatchingConfigFactory.Create(staticOptions);
-
-            var allRules = ruleCacheService.GetAll();
-
-            var processedRules = allRules
-                .Select(rule => ruleMatchingService.PreprocessRule(rule, matchingConfig))
-                .ToList();
-
-            var matchResult = ruleMatchingService.FindMatchingRule(fullPath, processedRules, matchingConfig);
+            var matchResult = ruleMatchingService.ResolveMatch(fullPath, matchingConfig);
 
             if (matchResult != null)
             {

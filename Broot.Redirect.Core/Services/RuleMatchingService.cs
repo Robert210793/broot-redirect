@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -11,6 +12,114 @@ namespace Broot.Redirect.Core.Services
 {
     public sealed class RuleMatchingService : IRuleMatchingService
     {
+        private readonly IRuleCacheService _cacheService;
+
+        public RuleMatchingService(IRuleCacheService cacheService)
+        {
+            _cacheService = cacheService;
+        }
+
+        public RuleMatchResult? ResolveMatch(string requestUrl, RuleMatchingConfig config)
+        {
+            // Phase 1: Wildcard O(1) lookup
+            var wildcardResult = TryWildcardLookup(requestUrl, config);
+            if (wildcardResult != null)
+            {
+                return wildcardResult;
+            }
+
+            // Phase 2: Partial and domain rules (pre-sorted by matcher length)
+            var partialAndDomainRules = _cacheService.GetPartialAndDomainRules();
+            if (partialAndDomainRules.Count > 0)
+            {
+                var processedRules = partialAndDomainRules
+                    .Select(rule => PreprocessRule(rule, config))
+                    .ToList();
+
+                var partialResult = FindMatchingRule(requestUrl, processedRules, config);
+                if (partialResult != null)
+                {
+                    return partialResult;
+                }
+            }
+
+            // Phase 3: Regex rules (pre-compiled)
+            var regexResult = TryRegexMatch(requestUrl);
+            return regexResult;
+        }
+
+        private RuleMatchResult? TryWildcardLookup(string requestUrl, RuleMatchingConfig config)
+        {
+            var parsed = ParseRequestUrl(requestUrl);
+            var path = parsed.AbsolutePath;
+
+            if (config.TrailingSlashPolicy == TrailingSlashPolicy.Ignore && path.Length > 1 && path.EndsWith('/'))
+            {
+                path = path.TrimEnd('/');
+            }
+
+            if (!config.CaseSensitivePath)
+            {
+                path = path.ToLowerInvariant();
+            }
+
+            var rule = _cacheService.LookupWildcard(path);
+            if (rule == null)
+            {
+                return null;
+            }
+
+            var requestQuery = NormalizeQuery(parsed.Query, config);
+            var matcherParts = rule.Matcher.Split('?', 2);
+            var ruleQuery = matcherParts.Length > 1
+                ? NormalizeQuery("?" + matcherParts[1], config)
+                : new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+            if (!QueryMatches(ruleQuery, requestQuery, out var queryPairs))
+            {
+                return null;
+            }
+
+            var isExact = ruleQuery.Count == requestQuery.Count;
+            var quality = isExact ? 100 : 75;
+
+            return new RuleMatchResult
+            {
+                Rule = rule,
+                Score = 1000 + (queryPairs * config.WeightQueryPair) + (isExact ? config.BonusExactMatch : 0),
+                Quality = quality,
+                Level = QualityToLevel(quality)
+            };
+        }
+
+        private RuleMatchResult? TryRegexMatch(string requestUrl)
+        {
+            var regexRules = _cacheService.GetRegexRules();
+
+            foreach (var (compiledRegex, rule) in regexRules)
+            {
+                try
+                {
+                    if (compiledRegex.IsMatch(requestUrl))
+                    {
+                        return new RuleMatchResult
+                        {
+                            Rule = rule,
+                            Score = 500,
+                            Quality = 100,
+                            Level = MatchQualityLevel.Green
+                        };
+                    }
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    // Skip rules that time out
+                }
+            }
+
+            return null;
+        }
+
         public ProcessedRule PreprocessRule(RedirectRule rule, RuleMatchingConfig config)
         {
             var matcherParts = rule.Matcher.Split('?', 2);
