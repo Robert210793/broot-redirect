@@ -84,8 +84,7 @@ namespace Broot.Redirect.API.Middleware
                             targetUrl,
                             rule.Id);
 
-                        context.Response.StatusCode = StatusCodes.Status301MovedPermanently;
-                        context.Response.Headers.Location = targetUrl;
+                        WritePermanentRedirect(context.Response, targetUrl);
 
                         return;
                     }
@@ -106,8 +105,7 @@ namespace Broot.Redirect.API.Middleware
             {
                 _logger.LogInformation("No match for {Path}, redirecting to default domain", path);
 
-                context.Response.StatusCode = StatusCodes.Status301MovedPermanently;
-                context.Response.Headers.Location = appSettings.DefaultNewDomain;
+                WritePermanentRedirect(context.Response, appSettings.DefaultNewDomain);
 
                 return;
             }
@@ -120,8 +118,7 @@ namespace Broot.Redirect.API.Middleware
                 {
                     _logger.LogInformation("No match for {Path}, smart search redirect to {SearchUrl}", path, searchUrl);
 
-                    context.Response.StatusCode = StatusCodes.Status301MovedPermanently;
-                    context.Response.Headers.Location = searchUrl;
+                    WritePermanentRedirect(context.Response, searchUrl);
 
                     return;
                 }
@@ -130,6 +127,17 @@ namespace Broot.Redirect.API.Middleware
             }
 
             await _next(context);
+        }
+
+        /// <summary>
+        /// Writes a 301 redirect with no-cache so browsers revalidate on every
+        /// request. This prevents stale cached redirects when rules change.
+        /// </summary>
+        private static void WritePermanentRedirect(HttpResponse response, string targetUrl)
+        {
+            response.StatusCode = StatusCodes.Status301MovedPermanently;
+            response.Headers.Location = targetUrl;
+            response.Headers.CacheControl = "no-cache";
         }
 
         private static bool ShouldSkip(string path)
