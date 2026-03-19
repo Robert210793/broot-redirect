@@ -11,7 +11,7 @@
     <div class="card card-body import-card">
 
         <!-- Phase 1: Input -->
-        @if (!previewRows() && !importResult() && !isImporting()) {
+        @if (!previewData() && !importResult() && !isImporting() && !isLoadingPreview()) {
 
             <!-- Mode selector -->
             <div class="import-mode-selector">
@@ -48,7 +48,7 @@
                         class="form-input"
                         (change)="onFileSelected($event)"
                     />
-                    <span class="form-hint">Supported formats: JSON, CSV, XLSX. CSV and XLSX files are sent directly to the server for parsing.</span>
+                    <span class="form-hint">Supported formats: JSON, CSV, XLSX</span>
                 </div>
 
                 @if (selectedFileName()) {
@@ -58,9 +58,6 @@
                             <polyline points="14 2 14 8 20 8" />
                         </svg>
                         <span class="mono">{{ selectedFileName() }}</span>
-                        @if (isCsvOrXlsxFile) {
-                            <span class="badge badge-update">server-side parsing</span>
-                        }
                     </div>
                 }
             }
@@ -86,70 +83,133 @@
                 (click)="onPreview()"
                 [disabled]="!canPreview"
             >
-                @if (isCsvOrXlsxFile) {
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                    Import File
-                } @else {
-                    Preview Import
-                }
+                Preview Import
             </button>
         }
 
-        <!-- Phase 2: Preview (JSON only, not yet imported) -->
-        @if (previewRows() && !importResult() && !isImporting()) {
+        <!-- Phase 1b: Loading preview -->
+        @if (isLoadingPreview()) {
+            <div class="import-progress">
+                <span class="spinner spinner-lg"></span>
+                <h3 class="import-progress-title">Analyzing file...</h3>
+                <p class="import-progress-text">Parsing and comparing against existing rules</p>
+            </div>
+        }
+
+        <!-- Phase 2: Preview -->
+        @if (previewData() && !importResult() && !isImporting()) {
             <div class="preview-header">
                 <div>
-                    <strong>{{ previewRows()!.length }} rules</strong> to import.
+                    <strong>{{ previewData()!.total }} rules</strong> found in file
+                    @if (previewData()!.isLimited) {
+                        <span class="preview-limit-note">(showing first {{ previewData()!.limit }})</span>
+                    }
                 </div>
                 <div class="page-actions">
                     <button class="btn btn-secondary" (click)="onReset()">Back</button>
                     <button
                         class="btn btn-primary"
                         (click)="onConfirmImport()"
+                        [disabled]="!canConfirmImport"
                     >
                         Confirm Import
                     </button>
                 </div>
             </div>
 
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Matcher</th>
-                        <th>Target URL</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (row of previewRows()!; track $index) {
+            <!-- Counts summary with filter -->
+            <div class="preview-counts">
+                <button
+                    class="preview-filter-btn"
+                    [class.active]="statusFilter === 'all'"
+                    (click)="onStatusFilter('all')"
+                >
+                    All
+                    <span class="preview-count">{{ previewData()!.total }}</span>
+                </button>
+                @if (previewData()!.counts.new > 0) {
+                    <button
+                        class="preview-filter-btn filter-new"
+                        [class.active]="statusFilter === 'new'"
+                        (click)="onStatusFilter('new')"
+                    >
+                        New
+                        <span class="preview-count">{{ previewData()!.counts.new }}</span>
+                    </button>
+                }
+                @if (previewData()!.counts.update > 0) {
+                    <button
+                        class="preview-filter-btn filter-update"
+                        [class.active]="statusFilter === 'update'"
+                        (click)="onStatusFilter('update')"
+                    >
+                        Update
+                        <span class="preview-count">{{ previewData()!.counts.update }}</span>
+                    </button>
+                }
+                @if (previewData()!.counts.invalid > 0) {
+                    <button
+                        class="preview-filter-btn filter-invalid"
+                        [class.active]="statusFilter === 'invalid'"
+                        (click)="onStatusFilter('invalid')"
+                    >
+                        Invalid
+                        <span class="preview-count">{{ previewData()!.counts.invalid }}</span>
+                    </button>
+                }
+            </div>
+
+            @if (previewData()!.counts.invalid > 0 && previewData()!.counts.new === 0 && previewData()!.counts.update === 0) {
+                <div class="alert alert-danger">
+                    All entries are invalid. Fix the file and try again.
+                </div>
+            }
+
+            <div class="preview-table-wrapper">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <td>
-                                <span class="mono cell-truncate" [title]="row.matcher">{{ row.matcher }}</span>
-                            </td>
-                            <td>
-                                <span class="mono cell-truncate" [title]="row.targetUrl">{{ row.targetUrl || '(default)' }}</span>
-                            </td>
-                            <td>
-                                <span class="badge" [class]="'badge-' + row.redirectType">{{ row.redirectType }}</span>
-                            </td>
-                            <td>
-                                @if (row.status === 'new') {
-                                    <span class="badge badge-new">new</span>
-                                } @else if (row.status === 'update') {
-                                    <span class="badge badge-update">update</span>
-                                } @else {
-                                    <span class="badge" style="background: var(--color-bg); color: var(--color-text-secondary)">unknown</span>
-                                }
-                            </td>
+                            <th>Matcher</th>
+                            <th>Target URL</th>
+                            <th>Type</th>
+                            <th>Status</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @for (row of filteredPreview; track $index) {
+                            <tr [ngClass]="{ 'row-invalid': row.status === 'invalid' }">
+                                <td>
+                                    <span class="mono cell-truncate" [title]="row.matcher">{{ row.matcher || '(empty)' }}</span>
+                                </td>
+                                <td>
+                                    <span class="mono cell-truncate" [title]="row.targetUrl || ''">{{ row.targetUrl || '(default)' }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge" [ngClass]="'badge-' + (row.redirectType || 'partial')">{{ row.redirectType || 'partial' }}</span>
+                                </td>
+                                <td>
+                                    @if (row.status === 'new') {
+                                        <span class="badge badge-new">new</span>
+                                    } @else if (row.status === 'update') {
+                                        <span class="badge badge-update">update</span>
+                                    } @else if (row.status === 'invalid') {
+                                        <span class="badge badge-invalid" [title]="row.reason || ''">invalid</span>
+                                        @if (row.reason) {
+                                            <span class="reason-text">{{ row.reason }}</span>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+
+                        @if (filteredPreview.length === 0) {
+                            <tr>
+                                <td colspan="4" class="empty-state">No entries match the selected filter.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
 
         <!-- Phase 3: In-progress -->
@@ -171,7 +231,7 @@
                         ></div>
                     </div>
                 } @else {
-                    <p class="import-progress-text">Parsing file on server...</p>
+                    <p class="import-progress-text">Starting import...</p>
                 }
             </div>
         }

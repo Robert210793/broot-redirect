@@ -84,6 +84,28 @@ export interface ImportResult {
     errors: string[];
 }
 
+export interface ImportPreviewEntry {
+    matcher: string;
+    targetUrl: string | null;
+    redirectType: string | null;
+    infoText: string | null;
+    status: 'new' | 'update' | 'invalid';
+    reason: string | null;
+    existingRuleId: string | null;
+}
+
+export interface ImportPreviewResponse {
+    total: number;
+    limit: number;
+    isLimited: boolean;
+    preview: ImportPreviewEntry[];
+    counts: {
+        new: number;
+        update: number;
+        invalid: number;
+    };
+}
+
 export interface ResolveResponse {
     rule: RedirectRule | null;
     resolvedUrl: string | null;

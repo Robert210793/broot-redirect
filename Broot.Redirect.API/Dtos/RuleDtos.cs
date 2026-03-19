@@ -114,20 +114,91 @@ namespace Broot.Redirect.API.Dtos
         public List<string> Errors { get; set; } = new();
     }
 
+    public class ImportPreviewEntry
+    {
+        public string Matcher { get; set; } = string.Empty;
+
+        public string? TargetUrl { get; set; }
+
+        public string? RedirectType { get; set; }
+
+        public string? InfoText { get; set; }
+
+        /// <summary>
+        /// "new" = no existing rule matches, "update" = existing rule found by ID or matcher, "invalid" = missing required fields or bad redirect type.
+        /// </summary>
+        public string Status { get; set; } = "new";
+
+        /// <summary>
+        /// Human-readable reason when Status is "invalid".
+        /// </summary>
+        public string? Reason { get; set; }
+
+        /// <summary>
+        /// The ID of the existing rule when Status is "update".
+        /// </summary>
+        public string? ExistingRuleId { get; set; }
+    }
+
+    public class ImportPreviewResponse
+    {
+        public int Total { get; set; }
+
+        public int Limit { get; set; }
+
+        public bool IsLimited { get; set; }
+
+        public List<ImportPreviewEntry> Preview { get; set; } = new();
+
+        public ImportPreviewCounts Counts { get; set; } = new();
+    }
+
+    public class ImportPreviewCounts
+    {
+        public int New { get; set; }
+
+        public int Update { get; set; }
+
+        public int Invalid { get; set; }
+    }
+
     public class RedirectResolveResponse
     {
         public RedirectRule? Rule { get; set; }
 
         public string? ResolvedUrl { get; set; }
 
+        /// <summary>
+        /// Raw matching score from the scoring engine.
+        /// </summary>
+        /// 
         public int MatchQuality { get; set; }
 
+        /// <summary>
+        /// Match quality as a percentage (0-100).
+        /// 100 = exact match, 75 = extra query params, 50 = partial/prefix match.
+        /// </summary>
+        /// 
         public int Quality { get; set; }
 
+        /// <summary>
+        /// Traffic-light level derived from Quality: "green" (>= 90), "yellow" (>= 60), "red" (&lt; 60).
+        /// </summary>
+        /// 
         public MatchQualityLevel Level { get; set; }
 
+        /// <summary>
+        /// True when no rule matched and the ResolvedUrl is a smart search fallback URL.
+        /// The frontend should display this differently (search link instead of redirect).
+        /// </summary>
+        /// 
         public bool IsSmartSearchFallback { get; set; }
 
+        /// <summary>
+        /// The generated search URL when IsSmartSearchFallback is true.
+        /// Null when a rule matched normally.
+        /// </summary>
+        /// 
         public string? FallbackSearchUrl { get; set; }
     }
 

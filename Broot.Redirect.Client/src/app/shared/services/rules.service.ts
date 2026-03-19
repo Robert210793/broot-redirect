@@ -9,6 +9,7 @@ import {
     BulkDeleteRequest,
     BulkDeleteResponse,
     ImportResult,
+    ImportPreviewResponse,
     RulesQueryParams
 } from '../models/redirect-rule';
 
@@ -112,6 +113,26 @@ export class RulesService {
         return this.httpClient.post<JobStartResponse>(`${this.baseUrl}/import`, formData).pipe(
             switchMap(({ jobId, total }) => this.pollJob(jobId, total))
         );
+    }
+
+    /**
+     * Preview a file import (CSV, XLSX, JSON file).
+     * Sends the file to the server for parsing and comparison against existing rules.
+     */
+    previewFileImport(file: File): Observable<ImportPreviewResponse> {
+        const formData = new FormData();
+
+        formData.append('file', file, file.name);
+
+        return this.httpClient.post<ImportPreviewResponse>(`${this.baseUrl}/import/preview`, formData);
+    }
+
+    /**
+     * Preview a JSON import (pasted text).
+     * Sends the parsed JSON array to the server for comparison against existing rules.
+     */
+    previewJsonImport(rules: unknown[]): Observable<ImportPreviewResponse> {
+        return this.httpClient.post<ImportPreviewResponse>(`${this.baseUrl}/import/preview`, rules);
     }
 
     /**

@@ -33,6 +33,10 @@ namespace Broot.Redirect.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// GET /api/rules?page=1&amp;limit=50&amp;search=&amp;sortBy=createdAt&amp;sortOrder=desc
+        /// Returns paginated rule list from cache with server-side search and sort.
+        /// </summary>
         [HttpGet]
         public IActionResult GetPaginated(
             [FromQuery] int page = 1,
@@ -97,6 +101,10 @@ namespace Broot.Redirect.API.Controllers
             });
         }
 
+        /// <summary>
+        /// GET /api/rules/{id}
+        /// Returns a single rule by ID from cache.
+        /// </summary>
         [HttpGet("{id:guid}")]
         public IActionResult GetById(Guid id)
         {
@@ -110,6 +118,11 @@ namespace Broot.Redirect.API.Controllers
             return Ok(rule);
         }
 
+        /// <summary>
+        /// POST /api/rules
+        /// Creates a new redirect rule. Validates duplicate matcher.
+        /// Writes to Table Storage first, then updates cache.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateRuleRequest request)
         {
@@ -153,6 +166,12 @@ namespace Broot.Redirect.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = rule.Id }, rule);
         }
 
+        /// <summary>
+        /// PUT /api/rules/{id}
+        /// Updates an existing redirect rule with partial update semantics.
+        /// Validates duplicate matcher if changed.
+        /// Writes to Table Storage first, then updates cache.
+        /// </summary>
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateRuleRequest request)
         {
@@ -206,6 +225,10 @@ namespace Broot.Redirect.API.Controllers
             return Ok(updatedRule);
         }
 
+        /// <summary>
+        /// DELETE /api/rules/{id}
+        /// Deletes a single rule. Returns 204 on success, 404 if not found.
+        /// </summary>
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -225,6 +248,10 @@ namespace Broot.Redirect.API.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// DELETE /api/rules/all
+        /// Starts deleting all rules in the background. Returns a job ID for polling progress.
+        /// </summary>
         [HttpDelete("all")]
         public IActionResult DeleteAll()
         {
@@ -272,6 +299,10 @@ namespace Broot.Redirect.API.Controllers
             return Ok(new { jobId, total = totalCount });
         }
 
+        /// <summary>
+        /// GET /api/rules/jobs/{jobId}
+        /// Returns progress for a long-running operation.
+        /// </summary>
         [HttpGet("jobs/{jobId}")]
         public IActionResult GetJobProgress(string jobId)
         {
@@ -292,6 +323,10 @@ namespace Broot.Redirect.API.Controllers
             });
         }
 
+        /// <summary>
+        /// DELETE /api/rules/bulk
+        /// Bulk deletes rules by ID array. Returns count of deleted and not found.
+        /// </summary>
         [HttpDelete("bulk")]
         public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteRequest request)
         {
@@ -352,6 +387,175 @@ namespace Broot.Redirect.API.Controllers
             });
         }
 
+        /// <summary>
+        /// POST /api/rules/import/preview
+        /// Parses an uploaded file (JSON, CSV, XLSX) and compares each entry against
+        /// existing rules in cache. Returns categorized results (new/update/invalid)
+        /// without persisting anything.
+        ///
+        /// Accepts two content types:
+        /// - application/json: JSON array of ImportRuleEntry
+        /// - multipart/form-data: CSV or XLSX file upload (field name "file")
+        /// </summary>
+        [HttpPost("import/preview")]
+        public async Task<IActionResult> ImportPreview()
+        {
+            List<ImportRuleEntry> entries;
+
+            var contentType = Request.ContentType ?? string.Empty;
+
+            if (contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+            {
+                var file = Request.Form.Files.FirstOrDefault();
+
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(new { error = "No file uploaded" });
+                }
+
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+                try
+                {
+                    using var stream = file.OpenReadStream();
+
+                    entries = extension switch
+                    {
+                        ".csv" => RuleImportExportService.ParseCsv(stream),
+                        ".xlsx" => RuleImportExportService.ParseXlsx(stream),
+                        ".xls" => RuleImportExportService.ParseXlsx(stream),
+                        ".json" => await ParseJsonFromStreamAsync(stream),
+                        _ => throw new InvalidOperationException($"Unsupported file format: {extension}. Use .json, .csv, .xlsx, or .xls.")
+                    };
+                }
+                catch (InvalidOperationException exception)
+                {
+                    return BadRequest(new { error = exception.Message });
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogError(exception, "Failed to parse preview file: {FileName}", file.FileName);
+
+                    return BadRequest(new { error = $"Failed to parse file: {exception.Message}" });
+                }
+            }
+            else
+            {
+                try
+                {
+                    entries = await ParseJsonFromStreamAsync(Request.Body);
+                }
+                catch (JsonException exception)
+                {
+                    return BadRequest(new { error = $"Invalid JSON: {exception.Message}" });
+                }
+            }
+
+            if (entries.Count == 0)
+            {
+                return BadRequest(new { error = "No rules found in file" });
+            }
+
+            // Build lookup from existing rules for comparison
+            var matcherLookup = _cacheService.GetAll()
+                .GroupBy(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+            var previewEntries = new List<ImportPreviewEntry>();
+            var counts = new ImportPreviewCounts();
+
+            for (var index = 0; index < entries.Count; index++)
+            {
+                var entry = entries[index];
+
+                var previewEntry = new ImportPreviewEntry
+                {
+                    Matcher = entry.Matcher,
+                    TargetUrl = entry.TargetUrl,
+                    RedirectType = entry.RedirectType ?? "partial",
+                    InfoText = entry.InfoText
+                };
+
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(entry.Matcher))
+                {
+                    previewEntry.Status = "invalid";
+                    previewEntry.Reason = "Matcher is required";
+                    counts.Invalid++;
+
+                    previewEntries.Add(previewEntry);
+
+                    continue;
+                }
+
+                // Validate redirect type
+                var redirectType = entry.RedirectType ?? "partial";
+
+                if (!TryParseRedirectType(redirectType, out _))
+                {
+                    previewEntry.Status = "invalid";
+                    previewEntry.Reason = $"Invalid redirect type: '{redirectType}'";
+                    counts.Invalid++;
+
+                    previewEntries.Add(previewEntry);
+
+                    continue;
+                }
+
+                // Check if this is an update (by ID or matcher)
+                RedirectRule? existingRule = null;
+
+                if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
+                {
+                    existingRule = _cacheService.GetById(parsedId);
+                }
+
+                if (existingRule == null)
+                {
+                    matcherLookup.TryGetValue(entry.Matcher, out existingRule);
+                }
+
+                if (existingRule != null)
+                {
+                    previewEntry.Status = "update";
+                    previewEntry.ExistingRuleId = existingRule.Id.ToString();
+                    counts.Update++;
+                }
+                else
+                {
+                    previewEntry.Status = "new";
+                    counts.New++;
+                }
+
+                previewEntries.Add(previewEntry);
+            }
+
+            const int previewLimit = 1000;
+
+            var response = new ImportPreviewResponse
+            {
+                Total = previewEntries.Count,
+                Limit = previewLimit,
+                IsLimited = previewEntries.Count > previewLimit,
+                Preview = previewEntries.Take(previewLimit).ToList(),
+                Counts = counts
+            };
+
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// POST /api/rules/import
+        /// Imports rules with upsert semantics.
+        ///
+        /// Accepts two content types:
+        /// - application/json: JSON array of ImportRuleEntry (existing behavior)
+        /// - multipart/form-data: CSV or XLSX file upload (field name "file")
+        ///
+        /// If a rule has an ID and exists: update. If ID not found: create with that ID.
+        /// If no ID but matcher matches: update. If no ID and no matcher match: create new.
+        /// After import, replaces entire cache to ensure consistency.
+        /// </summary>
         [HttpPost("import")]
         public async Task<IActionResult> Import()
         {
@@ -539,6 +743,13 @@ namespace Broot.Redirect.API.Controllers
             return Ok(new { jobId, total = totalCount });
         }
 
+        /// <summary>
+        /// GET /api/rules/export?format=json|csv|xlsx
+        /// Exports all rules as a download.
+        /// - json (default): JSON array with Content-Disposition: attachment
+        /// - csv: flat CSV with header row
+        /// - xlsx: Excel workbook with header row
+        /// </summary>
         [HttpGet("export")]
         public IActionResult Export([FromQuery] string format = "json")
         {
@@ -578,6 +789,13 @@ namespace Broot.Redirect.API.Controllers
         private static bool TryParseRedirectType(string value, out RedirectType redirectType)
         {
             return Enum.TryParse(value, ignoreCase: true, out redirectType);
+        }
+
+        private static async Task<List<ImportRuleEntry>> ParseJsonFromStreamAsync(Stream stream)
+        {
+            return await JsonSerializer.DeserializeAsync<List<ImportRuleEntry>>(
+                stream,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<ImportRuleEntry>();
         }
 
         private class JobProgress
