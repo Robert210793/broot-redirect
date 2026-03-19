@@ -1,0 +1,128 @@
+<div class="page-container">
+    <div class="page-header">
+        <h1>Blockierte IPs</h1>
+        <div class="page-actions">
+            @if (blockedIps().length > 0) {
+                <button class="btn btn-secondary btn-danger-text" (click)="onClearAll()">
+                    Alle aufheben
+                </button>
+            }
+            <button class="btn btn-secondary" (click)="loadBlockedIps()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                    <path d="M16 16h5v5" />
+                </svg>
+                Aktualisieren
+            </button>
+        </div>
+    </div>
+
+    <!-- Clear confirm overlay -->
+    @if (showClearConfirm()) {
+        <div class="confirm-overlay">
+            <div class="confirm-dialog">
+                <h3>Alle Blockierungen aufheben?</h3>
+                <p>Alle blockierten IPs und gespeicherten Fehlversuche werden entfernt. Diese Aktion kann nicht rueckgaengig gemacht werden.</p>
+                <div class="confirm-actions">
+                    <button class="btn btn-secondary" (click)="onCancelClear()" [disabled]="isClearing()">Abbrechen</button>
+                    <button class="btn btn-danger" (click)="onConfirmClear()" [disabled]="isClearing()">
+                        @if (isClearing()) {
+                            <span class="spinner"></span>
+                        }
+                        Alle aufheben
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Manual block input -->
+    <div class="card manual-block-card">
+        <div class="card-body">
+            <div class="manual-block-row">
+                <div class="form-group manual-block-input-wrapper">
+                    <label class="form-label" for="blockIpInput">IP-Adresse manuell blockieren</label>
+                    <input
+                        id="blockIpInput"
+                        type="text"
+                        class="form-input mono"
+                        placeholder="z.B. 192.168.1.100"
+                        [(ngModel)]="newIpAddress"
+                        (keydown.enter)="onBlockIp()"
+                    />
+                </div>
+                <button
+                    class="btn btn-primary manual-block-btn"
+                    (click)="onBlockIp()"
+                    [disabled]="isBlocking() || !newIpAddress.trim()"
+                >
+                    @if (isBlocking()) {
+                        <span class="spinner"></span>
+                    }
+                    Blockieren
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blocked IPs table -->
+    <div class="card">
+        @if (isLoading()) {
+            <div class="card-body">
+                <div class="loading-overlay">
+                    <span class="spinner"></span>
+                    Blockierte IPs werden geladen...
+                </div>
+            </div>
+        } @else if (blockedIps().length === 0) {
+            <div class="card-body">
+                <div class="empty-state">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.4">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="M9 12l2 2 4-4" />
+                    </svg>
+                    <p>Keine IPs sind derzeit blockiert.</p>
+                </div>
+            </div>
+        } @else {
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>IP-Adresse</th>
+                            <th>Fehlversuche</th>
+                            <th>Blockiert bis</th>
+                            <th>Verbleibend</th>
+                            <th class="col-actions">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (entry of blockedIps(); track entry.ip) {
+                            <tr>
+                                <td>
+                                    <code class="mono">{{ entry.ip }}</code>
+                                </td>
+                                <td>{{ entry.attempts }}</td>
+                                <td>{{ formatDate(entry.blockedUntil) }}</td>
+                                <td>
+                                    <span class="remaining-badge">{{ formatTimeRemaining(entry.blockedUntil) }}</span>
+                                </td>
+                                <td class="col-actions">
+                                    <button class="btn btn-ghost btn-sm" (click)="onUnblock(entry.ip)">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                            <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                                        </svg>
+                                        Aufheben
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

@@ -136,3 +136,33 @@ export interface RulesQueryParams {
     sortBy: string;
     sortOrder: 'asc' | 'desc';
 }
+
+// -- Blocked IP management (Phase 5.2) --
+
+export interface BlockedIpInfo {
+    ip: string;
+    attempts: number;
+    blockedUntil: string;
+}
+
+// -- URL Validation/Trace (Phase 5.1) --
+
+export interface ValidateUrlResult {
+    url: string;
+    matched: boolean;
+    ruleId: string | null;
+    matcher: string | null;
+    redirectType: string | null;
+    score: number;
+    quality: number;
+    level: MatchQualityLevel;
+    resolvedUrl: string | null;
+    error: string | null;
+}
+
+export interface ValidateUrlsResponse {
+    total: number;
+    matched: number;
+    unmatched: number;
+    results: ValidateUrlResult[];
+}

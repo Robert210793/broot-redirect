@@ -107,5 +107,71 @@ namespace Broot.Redirect.API.Controllers
 
             return Ok(new { success = true });
         }
+
+        // -- Blocked IP management (Phase 5.2) --
+
+        [HttpGet("blocked-ips")]
+        public IActionResult GetBlockedIps()
+        {
+            var blockedIps = _bruteForce.GetBlockedIps();
+
+            var response = blockedIps.Select(entry => new BlockedIpResponse
+            {
+                Ip = entry.Ip,
+                Attempts = entry.Attempts,
+                BlockedUntil = entry.BlockedUntil
+            }).ToList();
+
+            return Ok(response);
+        }
+
+        [HttpPost("blocked-ips")]
+        public IActionResult BlockIp([FromBody] BlockIpRequest request)
+        {
+            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Ip))
+            {
+                return BadRequest(new { error = "IP address is required" });
+            }
+
+            var trimmedIp = request.Ip.Trim();
+
+            if (_bruteForce.IsBlocked(trimmedIp))
+            {
+                return Conflict(new { error = $"IP '{trimmedIp}' is already blocked" });
+            }
+
+            _bruteForce.BlockIp(trimmedIp);
+
+            _logger.LogInformation("Admin manually blocked IP {Ip}", trimmedIp);
+
+            return Ok(new { success = true, ip = trimmedIp });
+        }
+
+        [HttpDelete("blocked-ips/{ip}")]
+        public IActionResult UnblockIp(string ip)
+        {
+            if (string.IsNullOrWhiteSpace(ip))
+            {
+                return BadRequest(new { error = "IP address is required" });
+            }
+
+            var decodedIp = Uri.UnescapeDataString(ip).Trim();
+
+            _bruteForce.UnblockIp(decodedIp);
+
+            _logger.LogInformation("Admin unblocked IP {Ip}", decodedIp);
+
+            return Ok(new { success = true, ip = decodedIp });
+        }
+
+        [HttpDelete("blocked-ips")]
+        public IActionResult ClearBlockedIps()
+        {
+            _bruteForce.ClearAll();
+
+            _logger.LogInformation("Admin cleared all blocked IPs");
+
+            return Ok(new { success = true });
+        }
     }
 }

@@ -32,6 +32,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/stats/stats.component').then((module) => module.StatsComponent)
     },
     {
+        path: 'blocked-ips',
+        canActivate: [authGuard],
+        loadComponent: () => import('./features/blocked-ips/blocked-ips.component').then((module) => module.BlockedIpsComponent)
+    },
+    {
         // Root path: info page (public)
         path: '',
         loadComponent: () => import('./features/info-page/info-page.component').then((module) => module.InfoPageComponent),

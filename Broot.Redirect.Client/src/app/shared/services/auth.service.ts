@@ -1,7 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
-import { AuthStatusResponse, LoginResponse } from '../models/redirect-rule';
+import { AuthStatusResponse, BlockedIpInfo, LoginResponse } from '../models/redirect-rule';
 
 @Injectable({
     providedIn: 'root'
@@ -48,5 +48,23 @@ export class AuthService {
                 this.loginTimestamp.set(null);
             })
         );
+    }
+
+    // -- Blocked IP management (Phase 5.2) --
+
+    getBlockedIps(): Observable<BlockedIpInfo[]> {
+        return this.httpClient.get<BlockedIpInfo[]>('/api/auth/blocked-ips');
+    }
+
+    blockIp(ip: string): Observable<{ success: boolean; ip: string }> {
+        return this.httpClient.post<{ success: boolean; ip: string }>('/api/auth/blocked-ips', { ip });
+    }
+
+    unblockIp(ip: string): Observable<{ success: boolean; ip: string }> {
+        return this.httpClient.delete<{ success: boolean; ip: string }>(`/api/auth/blocked-ips/${encodeURIComponent(ip)}`);
+    }
+
+    clearBlockedIps(): Observable<{ success: boolean }> {
+        return this.httpClient.delete<{ success: boolean }>('/api/auth/blocked-ips');
     }
 }

@@ -3,6 +3,8 @@ using Broot.Redirect.API.Services;
 using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Broot.Redirect.API.Configuration;
 using System.Text.Json;
 
 namespace Broot.Redirect.API.Controllers
@@ -13,6 +15,10 @@ namespace Broot.Redirect.API.Controllers
     {
         private readonly IRedirectRuleRepository _repository;
         private readonly IRuleCacheService _cacheService;
+        private readonly IRuleMatchingService _ruleMatchingService;
+        private readonly IUrlTransformService _urlTransformService;
+        private readonly IAppSettingsCacheService _settingsCache;
+        private readonly BrootRedirectOptions _options;
         private readonly ILogger<RulesController> _logger;
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, JobProgress> ActiveJobs = new();
@@ -26,10 +32,18 @@ namespace Broot.Redirect.API.Controllers
         public RulesController(
             IRedirectRuleRepository repository,
             IRuleCacheService cacheService,
+            IRuleMatchingService ruleMatchingService,
+            IUrlTransformService urlTransformService,
+            IAppSettingsCacheService settingsCache,
+            IOptions<BrootRedirectOptions> options,
             ILogger<RulesController> logger)
         {
             _repository = repository;
             _cacheService = cacheService;
+            _ruleMatchingService = ruleMatchingService;
+            _urlTransformService = urlTransformService;
+            _settingsCache = settingsCache;
+            _options = options.Value;
             _logger = logger;
         }
 
@@ -784,6 +798,103 @@ namespace Broot.Redirect.API.Controllers
                             "rules.json");
                     }
             }
+        }
+
+        /// <summary>
+        /// POST /api/rules/validate
+        /// Runs an array of URLs through the matching and transformation pipeline,
+        /// returning match details and resolved URLs for each. (Phase 5.1)
+        /// </summary>
+        [HttpPost("validate")]
+        public IActionResult Validate([FromBody] ValidateUrlsRequest request)
+        {
+            if (request.Urls == null || request.Urls.Count == 0)
+            {
+                return BadRequest(new { error = "At least one URL is required" });
+            }
+
+            const int maxUrls = 500;
+
+            if (request.Urls.Count > maxUrls)
+            {
+                return BadRequest(new { error = $"Maximum {maxUrls} URLs per request" });
+            }
+
+            var matchingConfig = RuleMatchingConfigFactory.Create(_options);
+            var appSettings = _settingsCache.GetSettings();
+            var results = new List<ValidateUrlResult>();
+            var matchedCount = 0;
+
+            foreach (var url in request.Urls)
+            {
+                var trimmedUrl = url?.Trim() ?? string.Empty;
+
+                if (string.IsNullOrEmpty(trimmedUrl))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var matchResult = _ruleMatchingService.ResolveMatch(trimmedUrl, matchingConfig);
+
+                    if (matchResult != null)
+                    {
+                        var resolvedUrl = _urlTransformService.ResolveTargetUrl(
+                            trimmedUrl,
+                            matchResult.Rule,
+                            appSettings.DefaultNewDomain);
+
+                        matchedCount++;
+
+                        results.Add(new ValidateUrlResult
+                        {
+                            Url = trimmedUrl,
+                            Matched = true,
+                            RuleId = matchResult.Rule.Id,
+                            Matcher = matchResult.Rule.Matcher,
+                            RedirectType = matchResult.Rule.RedirectType.ToString().ToLowerInvariant(),
+                            Score = matchResult.Score,
+                            Quality = matchResult.Quality,
+                            Level = matchResult.Level,
+                            ResolvedUrl = resolvedUrl
+                        });
+                    }
+                    else
+                    {
+                        results.Add(new ValidateUrlResult
+                        {
+                            Url = trimmedUrl,
+                            Matched = false,
+                            Level = MatchQualityLevel.Red
+                        });
+                    }
+                }
+                catch (Exception exception)
+                {
+                    results.Add(new ValidateUrlResult
+                    {
+                        Url = trimmedUrl,
+                        Matched = false,
+                        Level = MatchQualityLevel.Red,
+                        Error = exception.Message
+                    });
+                }
+            }
+
+            _logger.LogInformation(
+                "Validate: {Total} URLs processed, {Matched} matched, {Unmatched} unmatched",
+                results.Count,
+                matchedCount,
+                results.Count - matchedCount);
+
+            return Ok(new ValidateUrlsResponse
+            {
+                Total = results.Count,
+                Matched = matchedCount,
+                Unmatched = results.Count - matchedCount,
+                Results = results
+            });
         }
 
         private static bool TryParseRedirectType(string value, out RedirectType redirectType)

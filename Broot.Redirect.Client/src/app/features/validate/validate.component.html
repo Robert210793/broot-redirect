@@ -1,0 +1,144 @@
+<div class="page-container">
+    <div class="page-header">
+        <h1>URL Validierung</h1>
+        @if (response()) {
+            <div class="page-actions">
+                <button class="btn btn-secondary" (click)="onClear()">
+                    Zuruecksetzen
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- Input area -->
+    <div class="card input-card">
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label" for="urlTextarea">URLs eingeben (eine pro Zeile)</label>
+                <textarea
+                    id="urlTextarea"
+                    class="form-textarea mono url-textarea"
+                    placeholder="/alte-seite/dokument&#10;/projekte/uebersicht?lang=de&#10;/archiv/2024/bericht"
+                    [(ngModel)]="urlInput"
+                    [disabled]="isValidating()"
+                    rows="8"
+                ></textarea>
+                <span class="form-hint">Maximal 500 URLs. Relative Pfade (z.B. /seite) oder vollstaendige URLs werden unterstuetzt.</span>
+            </div>
+            <div class="input-actions">
+                <button
+                    class="btn btn-primary"
+                    (click)="onValidate()"
+                    [disabled]="isValidating() || !urlInput.trim()"
+                >
+                    @if (isValidating()) {
+                        <span class="spinner"></span>
+                    }
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 11 12 14 22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                    Validieren
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if (response()) {
+        <!-- Summary counts -->
+        <div class="results-summary">
+            <button
+                class="summary-badge"
+                [class.active]="filterMode() === 'all'"
+                (click)="onFilterChange('all')"
+            >
+                Alle: {{ response()!.total }}
+            </button>
+            <button
+                class="summary-badge summary-badge-matched"
+                [class.active]="filterMode() === 'matched'"
+                (click)="onFilterChange('matched')"
+            >
+                Treffer: {{ response()!.matched }}
+            </button>
+            <button
+                class="summary-badge summary-badge-unmatched"
+                [class.active]="filterMode() === 'unmatched'"
+                (click)="onFilterChange('unmatched')"
+            >
+                Kein Treffer: {{ response()!.unmatched }}
+            </button>
+        </div>
+
+        <!-- Results table -->
+        <div class="card">
+            @if (filteredResults().length === 0) {
+                <div class="card-body">
+                    <div class="empty-state">
+                        <p>Keine Ergebnisse fuer den gewaehlten Filter.</p>
+                    </div>
+                </div>
+            } @else {
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="col-url">Eingegebene URL</th>
+                                <th class="col-status">Status</th>
+                                <th class="col-quality">Qualitaet</th>
+                                <th class="col-matcher">Matcher</th>
+                                <th class="col-type">Typ</th>
+                                <th class="col-resolved">Aufgeloeste URL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (result of filteredResults(); track result.url) {
+                                <tr [ngClass]="{ 'row-unmatched': !result.matched }">
+                                    <td class="col-url" [title]="result.url">
+                                        <code class="cell-truncate">{{ result.url }}</code>
+                                    </td>
+                                    <td class="col-status">
+                                        @if (result.matched) {
+                                            <span class="badge badge-matched">Treffer</span>
+                                        } @else {
+                                            <span class="badge badge-no-match">Kein Treffer</span>
+                                        }
+                                    </td>
+                                    <td class="col-quality">
+                                        <span class="quality-badge" [ngClass]="qualityClass(result)">
+                                            {{ levelLabel(result) }}
+                                        </span>
+                                    </td>
+                                    <td class="col-matcher" [title]="result.matcher || ''">
+                                        @if (result.matcher) {
+                                            <code class="cell-truncate">{{ result.matcher }}</code>
+                                        } @else {
+                                            <span class="text-tertiary">-</span>
+                                        }
+                                    </td>
+                                    <td class="col-type">
+                                        @if (result.redirectType) {
+                                            <span class="badge" [ngClass]="'badge-' + result.redirectType">{{ result.redirectType }}</span>
+                                        } @else {
+                                            <span class="text-tertiary">-</span>
+                                        }
+                                    </td>
+                                    <td class="col-resolved" [title]="result.resolvedUrl || ''">
+                                        @if (result.resolvedUrl) {
+                                            <code class="cell-truncate">{{ result.resolvedUrl }}</code>
+                                        } @else if (result.error) {
+                                            <span class="text-danger">{{ result.error }}</span>
+                                        } @else {
+                                            <span class="text-tertiary">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>

@@ -230,4 +230,46 @@ namespace Broot.Redirect.API.Dtos
 
         public string? Error { get; set; }
     }
+
+    // -- URL Validation/Trace (Phase 5.1) --
+
+    public class ValidateUrlsRequest
+    {
+        [Required]
+        public List<string> Urls { get; set; } = new();
+    }
+
+    public class ValidateUrlResult
+    {
+        public string Url { get; set; } = string.Empty;
+
+        public bool Matched { get; set; }
+
+        public Guid? RuleId { get; set; }
+
+        public string? Matcher { get; set; }
+
+        public string? RedirectType { get; set; }
+
+        public int Score { get; set; }
+
+        public int Quality { get; set; }
+
+        public MatchQualityLevel Level { get; set; }
+
+        public string? ResolvedUrl { get; set; }
+
+        public string? Error { get; set; }
+    }
+
+    public class ValidateUrlsResponse
+    {
+        public int Total { get; set; }
+
+        public int Matched { get; set; }
+
+        public int Unmatched { get; set; }
+
+        public List<ValidateUrlResult> Results { get; set; } = new();
+    }
 }

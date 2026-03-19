@@ -16,7 +16,9 @@ namespace Broot.Redirect.API.Middleware
             "/global-rules",
             "/settings",
             "/import",
-            "/stats"
+            "/stats",
+            "/blocked-ips",
+            "/validate"
         };
 
         public RedirectMiddleware(RequestDelegate next, ILogger<RedirectMiddleware> logger)

@@ -10,7 +10,8 @@ import {
     BulkDeleteResponse,
     ImportResult,
     ImportPreviewResponse,
-    RulesQueryParams
+    RulesQueryParams,
+    ValidateUrlsResponse
 } from '../models/redirect-rule';
 
 export type ExportFormat = 'json' | 'csv' | 'xlsx';
@@ -146,6 +147,13 @@ export class RulesService {
             params,
             responseType: 'blob'
         });
+    }
+
+    /**
+     * Validate an array of URLs against the current ruleset. (Phase 5.1)
+     */
+    validateUrls(urls: string[]): Observable<ValidateUrlsResponse> {
+        return this.httpClient.post<ValidateUrlsResponse>(`${this.baseUrl}/validate`, { urls });
     }
 
     // -- Private polling helper --
