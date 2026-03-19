@@ -74,6 +74,36 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// ---------------------------------------------------------------------------
+// SPA fallback wrapper
+// ---------------------------------------------------------------------------
+// Placed BEFORE UseStaticFiles so it wraps the entire downstream pipeline.
+// After await next() returns, every other middleware (static files, routing,
+// controllers, RedirectMiddleware) has already had its chance.
+//
+// Conditions to serve index.html:
+//   1. No middleware wrote a response body  (HasStarted == false)
+//   2. No middleware changed the status code (still the default 200)
+//      -- RedirectMiddleware sets 301/302, controllers set 4xx/5xx, etc.
+//   3. The path is not under /api (safety net for controller 404s
+//      that return StatusCodeResult without a body)
+// ---------------------------------------------------------------------------
+var indexPath = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
+
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (!context.Response.HasStarted
+        && context.Response.StatusCode == 200
+        && !context.Request.Path.StartsWithSegments("/api"))
+    {
+        context.Response.ContentType = "text/html";
+
+        await context.Response.SendFileAsync(indexPath);
+    }
+});
+
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -95,13 +125,5 @@ app.UseMiddleware<AdminSessionMiddleware>();
 app.MapControllers();
 
 app.UseMiddleware<RedirectMiddleware>();
-
-app.MapFallback("{*path}", async context =>
-{
-    context.Response.ContentType = "text/html";
-
-    await context.Response.SendFileAsync(
-        Path.Combine(app.Environment.WebRootPath, "index.html"));
-});
 
 app.Run();
