@@ -1,0 +1,263 @@
+<div class="page-container">
+    <div class="page-header">
+        <h1>Redirect Rules</h1>
+        <div class="page-actions">
+            <div class="export-dropdown">
+                <button
+                    class="btn btn-secondary"
+                    (click)="onToggleExportMenu()"
+                    [disabled]="isExporting()"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    @if (isExporting()) {
+                        <span class="spinner"></span>
+                        Exporting...
+                    } @else {
+                        Export
+                    }
+                </button>
+                @if (showExportMenu()) {
+                    <div class="export-menu">
+                        <button class="export-menu-item" (click)="onExport('json')">JSON</button>
+                        <button class="export-menu-item" (click)="onExport('csv')">CSV</button>
+                        <button class="export-menu-item" (click)="onExport('xlsx')">XLSX</button>
+                    </div>
+                }
+            </div>
+            <button class="btn btn-primary" (click)="onNewRule()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                New Rule
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <input
+                type="text"
+                class="form-input search-input"
+                placeholder="Search rules..."
+                [ngModel]="searchText"
+                (ngModelChange)="onSearchChange($event)"
+            />
+
+            @if (selectedIds().size > 0) {
+                <div class="toolbar-right">
+                    <span class="text-secondary" style="font-size: 0.83rem">
+                        {{ selectedIds().size }} selected
+                    </span>
+                    <button class="btn btn-danger btn-sm" (click)="onBulkDelete()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Delete Selected
+                    </button>
+                </div>
+            } @else {
+                <div class="toolbar-right">
+                    <button class="btn btn-ghost btn-sm text-danger" (click)="onDeleteAll()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Delete All
+                    </button>
+                </div>
+            }
+        </div>
+
+        <!-- Table -->
+        @if (isDeleting()) {
+            <div class="loading-overlay deleting-overlay">
+                <span class="spinner"></span>
+                <strong>Deleting rules...</strong>
+                @if (deleteProgress(); as progress) {
+                    <div class="progress-info">
+                        {{ progress.processed }} / {{ progress.total }} deleted
+                    </div>
+                    <div class="progress-bar-track">
+                        <div
+                            class="progress-bar-fill progress-bar-danger"
+                            [style.width.%]="progress.total > 0 ? (progress.processed / progress.total * 100) : 0"
+                        ></div>
+                    </div>
+                }
+            </div>
+        } @else if (isLoading() && rules().length === 0) {
+            <div class="loading-overlay">
+                <span class="spinner"></span>
+                Loading rules...
+            </div>
+        } @else if (rules().length === 0) {
+            <div class="empty-state">
+                <p>No redirect rules found.</p>
+                <p>Create your first rule to get started.</p>
+            </div>
+        } @else {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px">
+                            <input
+                                type="checkbox"
+                                class="checkbox"
+                                [checked]="allSelected()"
+                                (change)="onToggleAll($event)"
+                            />
+                        </th>
+                        <th class="sortable" (click)="onSort('matcher')" style="width: 38%">
+                            Matcher
+                            @if (queryParams.sortBy === 'matcher') {
+                                <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
+                            }
+                        </th>
+                        <th class="sortable" (click)="onSort('targetUrl')" style="width: 38%">
+                            Target URL
+                            @if (queryParams.sortBy === 'targetUrl') {
+                                <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
+                            }
+                        </th>
+                        <th class="sortable" (click)="onSort('redirectType')" style="width: 80px">
+                            Type
+                            @if (queryParams.sortBy === 'redirectType') {
+                                <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
+                            }
+                        </th>
+                        <th style="width: 60px">Auto</th>
+                        <th class="sortable" (click)="onSort('createdAt')" style="width: 110px">
+                            Created
+                            @if (queryParams.sortBy === 'createdAt') {
+                                <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
+                            }
+                        </th>
+                        <th style="width: 48px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (rule of rules(); track rule.id) {
+                        <tr class="clickable" (click)="onRowClick(rule, $event)">
+                            <td (click)="$event.stopPropagation()">
+                                <input
+                                    type="checkbox"
+                                    class="checkbox"
+                                    [checked]="selectedIds().has(rule.id)"
+                                    (change)="onToggleSelection(rule.id)"
+                                />
+                            </td>
+                            <td>
+                                <span class="mono cell-truncate" [title]="rule.matcher">{{ rule.matcher }}</span>
+                            </td>
+                            <td>
+                                <span class="mono cell-truncate" [title]="rule.targetUrl || ''">{{ rule.targetUrl || '(default)' }}</span>
+                            </td>
+                            <td>
+                                <span class="badge" [class]="'badge-' + rule.redirectType">{{ rule.redirectType }}</span>
+                            </td>
+                            <td>
+                                @if (rule.autoRedirect) {
+                                    <span class="text-success" style="font-size: 0.8rem">301</span>
+                                } @else {
+                                    <span class="text-tertiary" style="font-size: 0.8rem">info</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="text-secondary" style="font-size: 0.8rem">{{ formatDate(rule.createdAt) }}</span>
+                            </td>
+                            <td (click)="$event.stopPropagation()">
+                                <button
+                                    class="btn btn-ghost btn-icon"
+                                    (click)="onDeleteSingle(rule)"
+                                    title="Delete rule"
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6" />
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <span>{{ total() }} rules total. Page {{ currentPage() }} of {{ totalPages() }}.</span>
+                <div class="pagination-controls">
+                    <button
+                        class="pagination-btn"
+                        [disabled]="currentPage() <= 1"
+                        (click)="onPageChange(1)"
+                        title="First page"
+                    >
+                        &#171;
+                    </button>
+                    <button
+                        class="pagination-btn"
+                        [disabled]="currentPage() <= 1"
+                        (click)="onPageChange(currentPage() - 1)"
+                        title="Previous page"
+                    >
+                        &#8249;
+                    </button>
+
+                    @for (pageNumber of visiblePages(); track pageNumber) {
+                        <button
+                            class="pagination-btn"
+                            [class.active]="pageNumber === currentPage()"
+                            (click)="onPageChange(pageNumber)"
+                        >
+                            {{ pageNumber }}
+                        </button>
+                    }
+
+                    <button
+                        class="pagination-btn"
+                        [disabled]="currentPage() >= totalPages()"
+                        (click)="onPageChange(currentPage() + 1)"
+                        title="Next page"
+                    >
+                        &#8250;
+                    </button>
+                    <button
+                        class="pagination-btn"
+                        [disabled]="currentPage() >= totalPages()"
+                        (click)="onPageChange(totalPages())"
+                        title="Last page"
+                    >
+                        &#187;
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Rule Modal -->
+<app-rule-modal
+    [isOpen]="showRuleModal()"
+    [rule]="editingRule()"
+    (saved)="onRuleModalSaved($event)"
+    (closed)="onRuleModalClosed()"
+/>
+
+<!-- Confirm Dialog -->
+<app-confirm-dialog
+    [isOpen]="showConfirmDialog()"
+    [title]="confirmTitle()"
+    [message]="confirmMessage()"
+    confirmText="Delete"
+    cancelText="Cancel"
+    variant="danger"
+    (confirmed)="onConfirmDialogConfirmed()"
+    (cancelled)="onConfirmDialogCancelled()"
+/>

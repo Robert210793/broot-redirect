@@ -1,0 +1,28 @@
+@if (isOpen()) {
+    <div
+        class="confirm-backdrop"
+        (click)="onBackdropClick($event)"
+        (keydown)="onKeydown($event)"
+    >
+        <div class="confirm-content" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+            <h2 id="confirm-title" class="confirm-title">{{ title() }}</h2>
+            <p id="confirm-message" class="confirm-message">{{ message() }}</p>
+
+            <div class="confirm-actions">
+                <button
+                    [class]="confirmButtonClass"
+                    (click)="onConfirm()"
+                    autofocus
+                >
+                    {{ confirmText() }}
+                </button>
+                <button
+                    class="btn btn-secondary"
+                    (click)="onCancel()"
+                >
+                    {{ cancelText() }}
+                </button>
+            </div>
+        </div>
+    </div>
+}

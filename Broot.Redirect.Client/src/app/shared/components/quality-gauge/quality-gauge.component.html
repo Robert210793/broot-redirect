@@ -1,0 +1,35 @@
+<div
+    class="gauge-pill"
+    [class]="colorClass"
+    [attr.aria-label]="ariaLabel"
+    role="status"
+    tabindex="0"
+    (mouseenter)="showTooltip = true"
+    (mouseleave)="showTooltip = false"
+    (focus)="showTooltip = true"
+    (blur)="showTooltip = false"
+>
+    <svg
+        class="gauge-icon"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+    >
+        <path d="m12 14 4-4" />
+        <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+    </svg>
+    <span class="gauge-value">{{ quality() }}%</span>
+
+    @if (showTooltip) {
+        <div class="gauge-tooltip">
+            <p class="gauge-tooltip-title">Link-Qualitaet: {{ quality() }}%</p>
+            <p class="gauge-tooltip-text">{{ explanation() || 'Einschaetzung der Qualitaet dieses Links.' }}</p>
+        </div>
+    }
+</div>

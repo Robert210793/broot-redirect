@@ -1,0 +1,190 @@
+<div class="page-container">
+    <div class="page-header">
+        <h1>Global Rules</h1>
+        <div class="page-actions">
+            <button class="btn btn-primary" (click)="onNewRule()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                New Global Rule
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        @if (isLoading() && rules().length === 0) {
+            <div class="loading-overlay">
+                <span class="spinner"></span>
+                Loading global rules...
+            </div>
+        } @else if (rules().length === 0) {
+            <div class="empty-state">
+                <p>No global rules defined.</p>
+                <p>Global rules apply search-and-replace transformations to all resolved URLs in priority order.</p>
+            </div>
+        } @else {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px">Priority</th>
+                        <th>Search</th>
+                        <th>Replace</th>
+                        <th style="width: 110px">Case Sens.</th>
+                        <th style="width: 100px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (rule of rules(); track rule.id) {
+                        <tr class="clickable" (click)="onEditRule(rule)">
+                            <td>
+                                <span class="priority-badge">{{ rule.priority }}</span>
+                            </td>
+                            <td>
+                                <span class="mono cell-truncate" [title]="rule.search">{{ rule.search }}</span>
+                            </td>
+                            <td>
+                                <span class="mono cell-truncate" [title]="rule.replace">{{ rule.replace || '(empty)' }}</span>
+                            </td>
+                            <td>
+                                @if (rule.caseSensitive) {
+                                    <span class="text-success" style="font-size: 0.8rem">Yes</span>
+                                } @else {
+                                    <span class="text-tertiary" style="font-size: 0.8rem">No</span>
+                                }
+                            </td>
+                            <td (click)="$event.stopPropagation()">
+                                <div class="row-actions">
+                                    <button
+                                        class="btn btn-ghost btn-icon"
+                                        (click)="onEditRule(rule)"
+                                        title="Edit rule"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        class="btn btn-ghost btn-icon"
+                                        (click)="onDeleteRule(rule)"
+                                        title="Delete rule"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <div class="info-hint">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <span>Global rules run after per-rule search-and-replace. Lower priority numbers execute first.</span>
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+@if (showModal()) {
+    <div
+        class="global-rule-modal-backdrop"
+        (click)="onModalBackdropClick($event)"
+        (keydown)="onModalKeydown($event)"
+    >
+        <div class="global-rule-modal-content" role="dialog" aria-labelledby="global-rule-modal-title">
+            <div class="global-rule-modal-header">
+                <h2 id="global-rule-modal-title" class="global-rule-modal-title">{{ modalTitle }}</h2>
+                <div class="global-rule-modal-actions">
+                    <button class="btn btn-secondary" (click)="onModalClose()" [disabled]="isSaving()">
+                        Cancel
+                    </button>
+                    <button class="btn btn-primary" (click)="onModalSave()" [disabled]="isSaving()">
+                        @if (isSaving()) {
+                            <span class="spinner"></span>
+                        }
+                        {{ isEditMode ? 'Update' : 'Create' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="global-rule-modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="gr-search">Search *</label>
+                        <input
+                            id="gr-search"
+                            type="text"
+                            class="form-input mono"
+                            [(ngModel)]="formSearch"
+                            placeholder="old-domain.com"
+                            [class.invalid]="formErrors()['search']"
+                            autofocus
+                        />
+                        @if (formErrors()['search']) {
+                            <span class="form-error">{{ formErrors()['search'] }}</span>
+                        }
+                        <span class="form-hint">Literal text to find in resolved URLs.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="gr-replace">Replace</label>
+                        <input
+                            id="gr-replace"
+                            type="text"
+                            class="form-input mono"
+                            [(ngModel)]="formReplace"
+                            placeholder="new-domain.com"
+                        />
+                        <span class="form-hint">Replacement text. Leave empty to remove matches.</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="gr-priority">Priority</label>
+                        <input
+                            id="gr-priority"
+                            type="number"
+                            class="form-input"
+                            [(ngModel)]="formPriority"
+                            style="max-width: 120px"
+                        />
+                        <span class="form-hint">Lower numbers execute first.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Case Sensitive</label>
+                        <div class="toggle-wrapper" style="margin-top: 4px">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="formCaseSensitive" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">{{ formCaseSensitive ? 'Exact case' : 'Ignore case' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirm Dialog -->
+<app-confirm-dialog
+    [isOpen]="showConfirmDialog()"
+    [title]="confirmTitle()"
+    [message]="confirmMessage()"
+    confirmText="Delete"
+    cancelText="Cancel"
+    variant="danger"
+    (confirmed)="onConfirmDialogConfirmed()"
+    (cancelled)="onConfirmDialogCancelled()"
+/>

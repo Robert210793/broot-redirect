@@ -1,0 +1,378 @@
+<div class="page-container">
+    <div class="page-header">
+        <h1>Settings</h1>
+        <div class="page-actions">
+            <button
+                class="btn btn-secondary"
+                (click)="onReset()"
+                [disabled]="isSaving() || isLoading()"
+            >
+                Reset
+            </button>
+            <button
+                class="btn btn-primary"
+                (click)="onSave()"
+                [disabled]="isSaving() || isLoading()"
+            >
+                @if (isSaving()) {
+                    <span class="spinner"></span>
+                }
+                Save Settings
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading()) {
+        <div class="loading-overlay">
+            <span class="spinner"></span>
+            Loading settings...
+        </div>
+    } @else {
+        <div class="settings-sections">
+
+            <!-- Redirect Behavior -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Redirect Behavior</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-group">
+                        <label class="form-label" for="defaultNewDomain">Default New Domain</label>
+                        <input
+                            id="defaultNewDomain"
+                            type="text"
+                            class="form-input mono"
+                            [(ngModel)]="defaultNewDomain"
+                            placeholder="https://new.example.com"
+                        />
+                        <span class="form-hint">Base URL used when a rule has no explicit target URL.</span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="noMatchBehavior">No Match Behavior</label>
+                            <select
+                                id="noMatchBehavior"
+                                class="form-select"
+                                [(ngModel)]="noMatchBehavior"
+                            >
+                                <option value="RedirectToDefault">Redirect to Default Domain</option>
+                                <option value="SmartSearch">Smart Search Fallback</option>
+                                <option value="Return404">Return 404</option>
+                            </select>
+                            <span class="form-hint">What happens when no rule matches an incoming URL.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Auto Redirect (Global)</label>
+                            <div class="toggle-wrapper" style="margin-top: 4px">
+                                <label class="toggle">
+                                    <input type="checkbox" [(ngModel)]="autoRedirect" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                                <span class="toggle-label">{{ autoRedirect ? 'HTTP 301 redirect' : 'Show info page' }}</span>
+                            </div>
+                            <span class="form-hint">When off, all matched URLs show the info page regardless of per-rule settings.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Info Page: Header -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Info Page: Header</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-group">
+                        <label class="form-label" for="headerTitle">Header Title</label>
+                        <input
+                            id="headerTitle"
+                            type="text"
+                            class="form-input"
+                            [(ngModel)]="headerTitle"
+                            placeholder="SmartRedirect Suite"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <!-- Info Page: Main Content -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Info Page: Main Content</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-group">
+                        <label class="form-label" for="infoPageTitle">Page Title</label>
+                        <input
+                            id="infoPageTitle"
+                            type="text"
+                            class="form-input"
+                            [(ngModel)]="infoPageTitle"
+                            placeholder="URL veraltet - Aktualisierung erforderlich"
+                        />
+                        <span class="form-hint">Title shown in the inline alert banner or popup dialog.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="infoPageMessage">Page Message</label>
+                        <textarea
+                            id="infoPageMessage"
+                            class="form-textarea"
+                            [(ngModel)]="infoPageMessage"
+                            placeholder="Du verwendest einen alten Link..."
+                            rows="3"
+                        ></textarea>
+                        <span class="form-hint">Description shown below the title in the alert banner or popup.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="popupMode">Popup Mode</label>
+                        <select
+                            id="popupMode"
+                            class="form-select"
+                            [(ngModel)]="popupMode"
+                            style="max-width: 300px"
+                        >
+                            <option value="inline">Inline (alert banner at top)</option>
+                            <option value="active">Active (modal dialog on load)</option>
+                        </select>
+                        <span class="form-hint">"Inline" shows the URL comparison immediately. "Active" hides it behind a button click.</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Info Page: URL Labels -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Info Page: URL Labels and Buttons</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="newUrlLabel">New URL Label</label>
+                            <input
+                                id="newUrlLabel"
+                                type="text"
+                                class="form-input"
+                                [(ngModel)]="newUrlLabel"
+                                placeholder="Neue URL"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="oldUrlLabel">Old URL Label</label>
+                            <input
+                                id="oldUrlLabel"
+                                type="text"
+                                class="form-input"
+                                [(ngModel)]="oldUrlLabel"
+                                placeholder="Alte aufgerufene URL"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="copyButtonText">Copy Button Text</label>
+                            <input
+                                id="copyButtonText"
+                                type="text"
+                                class="form-input"
+                                [(ngModel)]="copyButtonText"
+                                placeholder="URL kopieren"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="openButtonText">Open Button Text</label>
+                            <input
+                                id="openButtonText"
+                                type="text"
+                                class="form-input"
+                                [(ngModel)]="openButtonText"
+                                placeholder="In neuem Tab oeffnen"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Info Page: Special Hints -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Info Page: Special Hints</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-group">
+                        <label class="form-label" for="specialHintsTitle">Hints Title</label>
+                        <input
+                            id="specialHintsTitle"
+                            type="text"
+                            class="form-input"
+                            [(ngModel)]="specialHintsTitle"
+                            placeholder="Bitte beachte folgendes fuer diese URL:"
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="specialHintsDescription">Default Hints Description</label>
+                        <textarea
+                            id="specialHintsDescription"
+                            class="form-textarea"
+                            [(ngModel)]="specialHintsDescription"
+                            placeholder="Die neue URL wurde automatisch generiert..."
+                            rows="3"
+                        ></textarea>
+                        <span class="form-hint">Shown when a rule has no rule-specific infoText.</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Info Page: Footer -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Info Page: Footer</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-group">
+                        <label class="form-label" for="footerCopyright">Footer Copyright</label>
+                        <input
+                            id="footerCopyright"
+                            type="text"
+                            class="form-input"
+                            [(ngModel)]="footerCopyright"
+                            placeholder=""
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <!-- Smart Search Fallback -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Smart Search Fallback</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-group">
+                        <label class="form-label" for="smartSearchUrl">Search URL Template</label>
+                        <input
+                            id="smartSearchUrl"
+                            type="text"
+                            class="form-input mono"
+                            [(ngModel)]="smartSearchUrl"
+                            placeholder="https://new.example.com/search?q="
+                        />
+                        <span class="form-hint">The extracted search term is appended to this URL. Leave empty to disable smart search.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="smartSearchRegex">Search Term Regex</label>
+                        <input
+                            id="smartSearchRegex"
+                            type="text"
+                            class="form-input mono"
+                            [(ngModel)]="smartSearchRegex"
+                            placeholder="e.g. /content/([^/]+)$"
+                        />
+                        <span class="form-hint">Optional regex with a capture group to extract the search term from the path. Leave empty to use the last path segment.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Skip URL Encoding</label>
+                        <div class="toggle-wrapper" style="margin-top: 4px">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="smartSearchSkipEncoding" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">{{ smartSearchSkipEncoding ? 'Raw (no encoding)' : 'URL-encode search term' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Match Quality Explanations -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Match Quality Explanations</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-group">
+                        <label class="form-label" for="matchHighExplanation">
+                            <span class="quality-dot quality-dot-green"></span>
+                            High Quality (90-100%)
+                        </label>
+                        <textarea
+                            id="matchHighExplanation"
+                            class="form-textarea"
+                            [(ngModel)]="matchHighExplanation"
+                            rows="2"
+                        ></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="matchMediumExplanation">
+                            <span class="quality-dot quality-dot-yellow"></span>
+                            Medium Quality (60-89%)
+                        </label>
+                        <textarea
+                            id="matchMediumExplanation"
+                            class="form-textarea"
+                            [(ngModel)]="matchMediumExplanation"
+                            rows="2"
+                        ></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="matchLowExplanation">
+                            <span class="quality-dot quality-dot-red"></span>
+                            Low Quality (0-59%)
+                        </label>
+                        <textarea
+                            id="matchLowExplanation"
+                            class="form-textarea"
+                            [(ngModel)]="matchLowExplanation"
+                            rows="2"
+                        ></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="matchNoneExplanation">
+                            No Match
+                        </label>
+                        <textarea
+                            id="matchNoneExplanation"
+                            class="form-textarea"
+                            [(ngModel)]="matchNoneExplanation"
+                            rows="2"
+                        ></textarea>
+                        <span class="form-hint">Shown when no rule matched and there is no smart search fallback.</span>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Bottom save bar -->
+        <div class="settings-bottom-bar">
+            <button
+                class="btn btn-secondary"
+                (click)="onReset()"
+                [disabled]="isSaving()"
+            >
+                Reset
+            </button>
+            <button
+                class="btn btn-primary"
+                (click)="onSave()"
+                [disabled]="isSaving()"
+            >
+                @if (isSaving()) {
+                    <span class="spinner"></span>
+                }
+                Save Settings
+            </button>
+        </div>
+    }
+</div>

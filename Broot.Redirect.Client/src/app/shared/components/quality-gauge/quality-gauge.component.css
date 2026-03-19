@@ -1,0 +1,92 @@
+.gauge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.87rem;
+    font-weight: 700;
+    cursor: help;
+    border: 1px solid transparent;
+    transition: border-color 150ms ease;
+    position: relative;
+}
+
+.gauge-pill:hover,
+.gauge-pill:focus-visible {
+    border-color: currentColor;
+    outline: none;
+}
+
+.gauge-icon {
+    flex-shrink: 0;
+}
+
+/* -- Traffic-light colors -- */
+
+.gauge-green {
+    background: var(--color-success-light, #f0fdf4);
+    color: var(--color-success, #16a34a);
+}
+
+.gauge-yellow {
+    background: var(--color-warning-light, #fffbeb);
+    color: var(--color-warning, #d97706);
+}
+
+.gauge-red {
+    background: var(--color-danger-light, #fef2f2);
+    color: var(--color-danger, #dc2626);
+}
+
+/* -- Tooltip -- */
+
+.gauge-tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 240px;
+    padding: 10px 12px;
+    background: var(--color-text, #1a1a1a);
+    color: var(--color-text-inverse, #ffffff);
+    border-radius: var(--radius-md, 6px);
+    box-shadow: var(--shadow-lg, 0 4px 16px rgba(0, 0, 0, 0.1));
+    z-index: 50;
+    pointer-events: none;
+    animation: gauge-tooltip-in 120ms ease;
+}
+
+.gauge-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: 16px;
+    width: 8px;
+    height: 8px;
+    background: var(--color-text, #1a1a1a);
+    transform: rotate(45deg);
+}
+
+.gauge-tooltip-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.gauge-tooltip-text {
+    font-size: 0.73rem;
+    font-weight: 400;
+    opacity: 0.8;
+    line-height: 1.4;
+}
+
+@keyframes gauge-tooltip-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

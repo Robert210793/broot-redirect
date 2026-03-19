@@ -1,0 +1,327 @@
+@if (isOpen()) {
+    <div
+        class="rule-modal-backdrop"
+        (click)="onBackdropClick($event)"
+        (keydown)="onKeydown($event)"
+    >
+        <div class="rule-modal-content" role="dialog" aria-labelledby="rule-modal-title">
+
+            <!-- Header -->
+            <div class="rule-modal-header">
+                <h2 id="rule-modal-title" class="rule-modal-title">{{ modalTitle }}</h2>
+                <div class="rule-modal-header-actions">
+                    <button
+                        class="btn btn-secondary"
+                        (click)="onClose()"
+                        [disabled]="isSaving()"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        class="btn btn-primary"
+                        (click)="onSave()"
+                        [disabled]="isSaving()"
+                    >
+                        @if (isSaving()) {
+                            <span class="spinner"></span>
+                        }
+                        {{ isEditMode ? 'Update' : 'Create' }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scrollable body -->
+            <div class="rule-modal-body">
+
+                <!-- Core fields -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="modal-matcher">Matcher *</label>
+                        <input
+                            id="modal-matcher"
+                            type="text"
+                            class="form-input mono"
+                            [(ngModel)]="matcher"
+                            placeholder="/old-path or domain.com"
+                            [class.invalid]="errors()['matcher']"
+                        />
+                        @if (errors()['matcher']) {
+                            <span class="form-error">{{ errors()['matcher'] }}</span>
+                        }
+                        <span class="form-hint">Path (with leading /) or domain (without /).</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="modal-targetUrl">Target URL</label>
+                        <input
+                            id="modal-targetUrl"
+                            type="text"
+                            class="form-input mono"
+                            [(ngModel)]="targetUrl"
+                            placeholder="https://new.example.com/new-path"
+                        />
+                        <span class="form-hint">Leave empty to use default domain.</span>
+                    </div>
+                </div>
+
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label class="form-label" for="modal-redirectType">Redirect Type</label>
+                        <select
+                            id="modal-redirectType"
+                            class="form-select"
+                            [(ngModel)]="redirectType"
+                        >
+                            <option value="partial">Partial (prefix match)</option>
+                            <option value="wildcard">Wildcard (exact path)</option>
+                            <option value="domain">Domain</option>
+                            <option value="regex">Regex</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Auto Redirect</label>
+                        <div class="toggle-wrapper" style="margin-top: 4px">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="autoRedirect" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">{{ autoRedirect ? 'HTTP 301 redirect' : 'Show info page' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="display: flex; flex-direction: column; gap: 8px">
+                        <label class="form-label">Query Params</label>
+                        <div class="toggle-wrapper">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="forwardQueryParams" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">Forward</span>
+                        </div>
+                        <div class="toggle-wrapper">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="discardQueryParams" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">Discard</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="modal-infoText">Info Text</label>
+                    <textarea
+                        id="modal-infoText"
+                        class="form-textarea"
+                        [(ngModel)]="infoText"
+                        placeholder="Optional note shown on the info page"
+                        rows="3"
+                    ></textarea>
+                </div>
+
+                @if (redirectType === 'regex') {
+                    <div class="alert alert-info">
+                        Regex matcher is tested against the full incoming path. Use capture groups ($1, $2) in the target URL.
+                    </div>
+                }
+
+                <!-- Kept Query Params -->
+                <div>
+                    <div class="sub-array-header">
+                        <label class="form-label" style="margin: 0">Kept Query Params</label>
+                        <button class="btn btn-secondary btn-sm" (click)="addKeptQueryParam()">
+                            + Add
+                        </button>
+                    </div>
+                    @if (keptQueryParams.length > 0) {
+                        <table class="data-table" style="font-size: 0.83rem">
+                            <thead>
+                                <tr>
+                                    <th>Key Pattern</th>
+                                    <th>Value Pattern</th>
+                                    <th>Target Key</th>
+                                    <th style="width: 80px">Skip Enc.</th>
+                                    <th style="width: 40px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (kept of keptQueryParams; track $index; let i = $index) {
+                                    <tr>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                class="form-input mono"
+                                                style="padding: 4px 8px; font-size: 0.8rem"
+                                                [(ngModel)]="kept.keyPattern"
+                                                placeholder="^utm_.*"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                class="form-input mono"
+                                                style="padding: 4px 8px; font-size: 0.8rem"
+                                                [(ngModel)]="kept.valuePattern"
+                                                placeholder="(optional)"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                class="form-input mono"
+                                                style="padding: 4px 8px; font-size: 0.8rem"
+                                                [(ngModel)]="kept.targetKey"
+                                                placeholder="(optional rename)"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                class="checkbox"
+                                                [(ngModel)]="kept.skipEncoding"
+                                            />
+                                        </td>
+                                        <td>
+                                            <button
+                                                class="btn btn-ghost btn-icon"
+                                                (click)="removeKeptQueryParam(i)"
+                                                title="Remove"
+                                            >
+                                                &times;
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+
+                <!-- Static Query Params -->
+                <div>
+                    <div class="sub-array-header">
+                        <label class="form-label" style="margin: 0">Static Query Params</label>
+                        <button class="btn btn-secondary btn-sm" (click)="addStaticQueryParam()">
+                            + Add
+                        </button>
+                    </div>
+                    @if (staticQueryParams.length > 0) {
+                        <table class="data-table" style="font-size: 0.83rem">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th style="width: 80px">Skip Enc.</th>
+                                    <th style="width: 40px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (param of staticQueryParams; track $index; let i = $index) {
+                                    <tr>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                class="form-input mono"
+                                                style="padding: 4px 8px; font-size: 0.8rem"
+                                                [(ngModel)]="param.key"
+                                                placeholder="utm_source"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                class="form-input mono"
+                                                style="padding: 4px 8px; font-size: 0.8rem"
+                                                [(ngModel)]="param.value"
+                                                placeholder="migration"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                class="checkbox"
+                                                [(ngModel)]="param.skipEncoding"
+                                            />
+                                        </td>
+                                        <td>
+                                            <button
+                                                class="btn btn-ghost btn-icon"
+                                                (click)="removeStaticQueryParam(i)"
+                                                title="Remove"
+                                            >
+                                                &times;
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+
+                <!-- Search and Replace -->
+                <div>
+                    <div class="sub-array-header">
+                        <label class="form-label" style="margin: 0">Search and Replace</label>
+                        <button class="btn btn-secondary btn-sm" (click)="addSearchAndReplace()">
+                            + Add
+                        </button>
+                    </div>
+                    @if (searchAndReplace.length > 0) {
+                        <table class="data-table" style="font-size: 0.83rem">
+                            <thead>
+                                <tr>
+                                    <th>Search</th>
+                                    <th>Replace</th>
+                                    <th style="width: 100px">Case Sens.</th>
+                                    <th style="width: 40px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (entry of searchAndReplace; track $index; let i = $index) {
+                                    <tr>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                class="form-input mono"
+                                                style="padding: 4px 8px; font-size: 0.8rem"
+                                                [(ngModel)]="entry.search"
+                                                placeholder="old-domain.com"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                class="form-input mono"
+                                                style="padding: 4px 8px; font-size: 0.8rem"
+                                                [(ngModel)]="entry.replace"
+                                                placeholder="new-domain.com"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                class="checkbox"
+                                                [(ngModel)]="entry.caseSensitive"
+                                            />
+                                        </td>
+                                        <td>
+                                            <button
+                                                class="btn btn-ghost btn-icon"
+                                                (click)="removeSearchAndReplace(i)"
+                                                title="Remove"
+                                            >
+                                                &times;
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}

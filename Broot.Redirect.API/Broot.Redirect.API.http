@@ -1,0 +1,6 @@
+@Broot.Redirect.API_HostAddress = http://localhost:5264
+
+GET {{Broot.Redirect.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

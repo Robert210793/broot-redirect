@@ -1,0 +1,142 @@
+.import-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.import-mode-selector {
+    display: flex;
+    gap: 4px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 4px;
+}
+
+.import-mode-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-family: var(--font-body);
+    font-size: 0.87rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.import-mode-btn:hover {
+    color: var(--color-text);
+}
+
+.import-mode-btn.active {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+
+.selected-file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.87rem;
+    color: var(--color-text-secondary);
+}
+
+.selected-file-info svg {
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+
+.preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.import-errors {
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 0.83rem;
+}
+
+.import-result-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* -- Import progress state -- */
+
+.import-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    gap: 16px;
+    text-align: center;
+}
+
+.import-progress-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.import-progress-text {
+    font-size: 0.87rem;
+    color: var(--color-text-secondary);
+    max-width: 360px;
+}
+
+.spinner-lg {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+}
+
+/* -- Import result state -- */
+
+.import-result-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 24px 16px;
+    gap: 12px;
+    text-align: center;
+}
+
+.import-result-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.import-result-icon-success {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+
+.import-result-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.import-result-text {
+    font-size: 0.87rem;
+    color: var(--color-text-secondary);
+}

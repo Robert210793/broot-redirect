@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
+    <File Path="docker-compose.yaml" />
+    <File Path="Dockerfile" />
+  </Folder>
+  <Project Path="Broot.Redirect.API/Broot.Redirect.API.csproj" />
+  <Project Path="Broot.Redirect.Core/Broot.Redirect.Core.csproj" />
+  <Project Path="Broot.Redirect.Infrastructure/Broot.Redirect.Infrastructure.csproj" />
+</Solution>

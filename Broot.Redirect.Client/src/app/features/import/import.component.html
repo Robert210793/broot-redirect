@@ -1,0 +1,211 @@
+<div class="page-container">
+    <div class="page-header">
+        <h1>Import Rules</h1>
+        <div class="page-actions">
+            <button class="btn btn-secondary" (click)="router.navigate(['/rules'])">
+                Back to Rules
+            </button>
+        </div>
+    </div>
+
+    <div class="card card-body import-card">
+
+        <!-- Phase 1: Input -->
+        @if (!previewRows() && !importResult() && !isImporting()) {
+
+            <!-- Mode selector -->
+            <div class="import-mode-selector">
+                <button
+                    class="import-mode-btn"
+                    [class.active]="importMode === 'file'"
+                    (click)="importMode = 'file'; onFullReset()"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                        <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    Upload File
+                </button>
+                <button
+                    class="import-mode-btn"
+                    [class.active]="importMode === 'paste'"
+                    (click)="importMode = 'paste'; onFullReset()"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Paste JSON
+                </button>
+            </div>
+
+            @if (importMode === 'file') {
+                <div class="form-group">
+                    <label class="form-label">Select File</label>
+                    <input
+                        type="file"
+                        accept=".json,.csv,.xlsx,.xls"
+                        class="form-input"
+                        (change)="onFileSelected($event)"
+                    />
+                    <span class="form-hint">Supported formats: JSON, CSV, XLSX. CSV and XLSX files are sent directly to the server for parsing.</span>
+                </div>
+
+                @if (selectedFileName()) {
+                    <div class="selected-file-info">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        <span class="mono">{{ selectedFileName() }}</span>
+                        @if (isCsvOrXlsxFile) {
+                            <span class="badge badge-update">server-side parsing</span>
+                        }
+                    </div>
+                }
+            }
+
+            @if (importMode === 'paste') {
+                <div class="form-group">
+                    <label class="form-label">Paste JSON</label>
+                    <textarea
+                        class="form-textarea mono"
+                        [(ngModel)]="jsonText"
+                        placeholder='[{ "matcher": "/old", "targetUrl": "https://new.example.com" }]'
+                        rows="10"
+                    ></textarea>
+                </div>
+            }
+
+            @if (parseError()) {
+                <div class="alert alert-danger">{{ parseError() }}</div>
+            }
+
+            <button
+                class="btn btn-primary"
+                (click)="onPreview()"
+                [disabled]="!canPreview"
+            >
+                @if (isCsvOrXlsxFile) {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    Import File
+                } @else {
+                    Preview Import
+                }
+            </button>
+        }
+
+        <!-- Phase 2: Preview (JSON only, not yet imported) -->
+        @if (previewRows() && !importResult() && !isImporting()) {
+            <div class="preview-header">
+                <div>
+                    <strong>{{ previewRows()!.length }} rules</strong> to import.
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-secondary" (click)="onReset()">Back</button>
+                    <button
+                        class="btn btn-primary"
+                        (click)="onConfirmImport()"
+                    >
+                        Confirm Import
+                    </button>
+                </div>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Matcher</th>
+                        <th>Target URL</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of previewRows()!; track $index) {
+                        <tr>
+                            <td>
+                                <span class="mono cell-truncate" [title]="row.matcher">{{ row.matcher }}</span>
+                            </td>
+                            <td>
+                                <span class="mono cell-truncate" [title]="row.targetUrl">{{ row.targetUrl || '(default)' }}</span>
+                            </td>
+                            <td>
+                                <span class="badge" [class]="'badge-' + row.redirectType">{{ row.redirectType }}</span>
+                            </td>
+                            <td>
+                                @if (row.status === 'new') {
+                                    <span class="badge badge-new">new</span>
+                                } @else if (row.status === 'update') {
+                                    <span class="badge badge-update">update</span>
+                                } @else {
+                                    <span class="badge" style="background: var(--color-bg); color: var(--color-text-secondary)">unknown</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        <!-- Phase 3: In-progress -->
+        @if (isImporting()) {
+            <div class="import-progress">
+                <span class="spinner spinner-lg"></span>
+                <h3 class="import-progress-title">Importing rules...</h3>
+                @if (importProgress(); as progress) {
+                    <div class="progress-info">
+                        {{ progress.processed }} / {{ progress.total }} processed
+                        @if (progress.imported !== undefined) {
+                            ({{ progress.imported }} new, {{ progress.updated }} updated)
+                        }
+                    </div>
+                    <div class="progress-bar-track">
+                        <div
+                            class="progress-bar-fill progress-bar-primary"
+                            [style.width.%]="progress.total > 0 ? (progress.processed / progress.total * 100) : 0"
+                        ></div>
+                    </div>
+                } @else {
+                    <p class="import-progress-text">Parsing file on server...</p>
+                }
+            </div>
+        }
+
+        <!-- Phase 4: Result -->
+        @if (importResult() && !isImporting()) {
+            <div class="import-result-summary">
+                <div class="import-result-icon import-result-icon-success">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                </div>
+                <h3 class="import-result-title">Import Complete</h3>
+                <p class="import-result-text">
+                    {{ importResult()!.imported }} new, {{ importResult()!.updated }} updated.
+                    @if (importResult()!.errors.length > 0) {
+                        {{ importResult()!.errors.length }} error(s).
+                    }
+                </p>
+            </div>
+
+            @if (importResult()!.errors.length > 0) {
+                <div class="alert alert-warning import-errors">
+                    @for (errorMessage of importResult()!.errors; track $index) {
+                        <div>{{ errorMessage }}</div>
+                    }
+                </div>
+            }
+
+            <div class="import-result-actions">
+                <button class="btn btn-secondary" (click)="onFullReset()">Import More</button>
+                <button class="btn btn-primary" (click)="router.navigate(['/rules'])">View Rules</button>
+            </div>
+        }
+    </div>
+</div>
