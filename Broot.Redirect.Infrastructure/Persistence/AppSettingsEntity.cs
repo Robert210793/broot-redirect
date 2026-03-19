@@ -9,6 +9,12 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Infrastructure.Persistence
 {
+    /// <summary>
+    /// Azure Table Storage entity for AppSettings.
+    /// Single-row table with PartitionKey = "Settings", RowKey = "default".
+    /// All properties are scalar strings/bools -- no JSON serialization needed.
+    /// </summary>
+    /// 
     public class AppSettingsEntity : ITableEntity
     {
         public const string DefaultPartitionKey = "Settings";
@@ -64,6 +70,22 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public string MatchNoneExplanation { get; set; } = string.Empty;
 
+        public bool CaseSensitiveLinkDetection { get; set; }
+
+        public bool EncodeImportedUrls { get; set; } = true;
+
+        public bool EnableReferrerTracking { get; set; } = true;
+
+        public bool EnableFeedbackSurvey { get; set; }
+
+        public bool EnableFeedbackComment { get; set; }
+
+        public bool ShowLinkQualityGauge { get; set; } = true;
+
+        /// <summary>
+        /// Maps a domain AppSettings to a Table Storage entity.
+        /// </summary>
+        /// 
         public static AppSettingsEntity FromDomainModel(AppSettings settings)
         {
             return new AppSettingsEntity
@@ -90,10 +112,20 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 MatchHighExplanation = settings.MatchHighExplanation,
                 MatchMediumExplanation = settings.MatchMediumExplanation,
                 MatchLowExplanation = settings.MatchLowExplanation,
-                MatchNoneExplanation = settings.MatchNoneExplanation
+                MatchNoneExplanation = settings.MatchNoneExplanation,
+                CaseSensitiveLinkDetection = settings.CaseSensitiveLinkDetection,
+                EncodeImportedUrls = settings.EncodeImportedUrls,
+                EnableReferrerTracking = settings.EnableReferrerTracking,
+                EnableFeedbackSurvey = settings.EnableFeedbackSurvey,
+                EnableFeedbackComment = settings.EnableFeedbackComment,
+                ShowLinkQualityGauge = settings.ShowLinkQualityGauge
             };
         }
 
+        /// <summary>
+        /// Maps a Table Storage entity back to a domain AppSettings.
+        /// </summary>
+        /// 
         public AppSettings ToDomainModel()
         {
             return new AppSettings
@@ -118,7 +150,13 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 MatchHighExplanation = MatchHighExplanation,
                 MatchMediumExplanation = MatchMediumExplanation,
                 MatchLowExplanation = MatchLowExplanation,
-                MatchNoneExplanation = MatchNoneExplanation
+                MatchNoneExplanation = MatchNoneExplanation,
+                CaseSensitiveLinkDetection = CaseSensitiveLinkDetection,
+                EncodeImportedUrls = EncodeImportedUrls,
+                EnableReferrerTracking = EnableReferrerTracking,
+                EnableFeedbackSurvey = EnableFeedbackSurvey,
+                EnableFeedbackComment = EnableFeedbackComment,
+                ShowLinkQualityGauge = ShowLinkQualityGauge
             };
         }
     }

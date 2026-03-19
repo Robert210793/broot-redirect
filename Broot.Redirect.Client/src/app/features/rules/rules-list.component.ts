@@ -6,10 +6,11 @@ import { ToastService } from '../../shared/services/toast.service';
 import { RedirectRule, RulesQueryParams } from '../../shared/models/redirect-rule';
 import { RuleModalComponent } from './rule-modal.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ResizableColumnsDirective } from '../../shared/directives/resizable-columns.directive';
 
 @Component({
     selector: 'app-rules-list',
-    imports: [FormsModule, RuleModalComponent, ConfirmDialogComponent],
+    imports: [FormsModule, RuleModalComponent, ConfirmDialogComponent, ResizableColumnsDirective],
     templateUrl: './rules-list.component.html',
     styleUrl: './rules-list.component.css'
 })

@@ -1,5 +1,10 @@
 ﻿namespace Broot.Redirect.API.Dtos
 {
+    /// <summary>
+    /// Partial update request for PUT /api/settings.
+    /// All properties are nullable -- only provided fields are merged into existing settings.
+    /// </summary>
+    /// 
     public class UpdateSettingsRequest
     {
         public string? DefaultNewDomain { get; set; }
@@ -43,5 +48,17 @@
         public string? MatchLowExplanation { get; set; }
 
         public string? MatchNoneExplanation { get; set; }
+
+        public bool? CaseSensitiveLinkDetection { get; set; }
+
+        public bool? EncodeImportedUrls { get; set; }
+
+        public bool? EnableReferrerTracking { get; set; }
+
+        public bool? EnableFeedbackSurvey { get; set; }
+
+        public bool? EnableFeedbackComment { get; set; }
+
+        public bool? ShowLinkQualityGauge { get; set; }
     }
 }

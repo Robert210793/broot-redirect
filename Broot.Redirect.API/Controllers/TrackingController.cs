@@ -27,6 +27,11 @@ namespace Broot.Redirect.API.Controllers
             _retentionDays = options.Value.TrackingRetentionDays;
         }
 
+        /// <summary>
+        /// POST /api/track
+        /// Public endpoint. Records a tracking entry when the info page displays a resolved URL.
+        /// Returns the generated tracking ID for subsequent feedback calls.
+        /// </summary>
         [HttpPost("api/track")]
         public async Task<IActionResult> Track([FromBody] TrackRequest request)
         {
@@ -57,6 +62,11 @@ namespace Broot.Redirect.API.Controllers
             return Ok(new TrackResponse { Id = id.ToString("N") });
         }
 
+        /// <summary>
+        /// POST /api/feedback
+        /// Public endpoint. Updates an existing tracking entry with user feedback (OK/NOK)
+        /// and an optional user-proposed URL.
+        /// </summary>
         [HttpPost("api/feedback")]
         public async Task<IActionResult> Feedback([FromBody] FeedbackRequest request)
         {
@@ -98,10 +108,14 @@ namespace Broot.Redirect.API.Controllers
             return Ok(new { success = true });
         }
 
+        /// <summary>
+        /// GET /api/stats
+        /// Admin-protected. Returns aggregated statistics across all tracking entries.
+        /// </summary>
         [HttpGet("api/stats")]
-        public async Task<IActionResult> GetStats()
+        public async Task<IActionResult> GetStats([FromQuery] string? timeRange = null)
         {
-            var stats = await _repository.GetStatsAsync(_retentionDays);
+            var stats = await _repository.GetStatsAsync(_retentionDays, timeRange);
 
             var response = new StatsResponse
             {
@@ -123,6 +137,26 @@ namespace Broot.Redirect.API.Controllers
             return Ok(response);
         }
 
+        /// <summary>
+        /// DELETE /api/stats/all
+        /// Admin-protected. Deletes all tracking entries.
+        /// </summary>
+        [HttpDelete("api/stats/all")]
+        public async Task<IActionResult> DeleteAll()
+        {
+            _logger.LogWarning("Delete all tracking data requested.");
+
+            var deleted = await _repository.DeleteAllAsync();
+
+            _logger.LogInformation("Deleted {Count} tracking entries.", deleted);
+
+            return Ok(new { success = true, deleted });
+        }
+
+        /// <summary>
+        /// GET /api/stats/entries?page=1&limit=50&search=
+        /// Admin-protected. Returns paginated raw tracking entries.
+        /// </summary>
         [HttpGet("api/stats/entries")]
         public async Task<IActionResult> GetEntries(
             [FromQuery] int page = 1,

@@ -53,14 +53,21 @@ namespace Broot.Redirect.Core.Interfaces
 
         /// <summary>
         /// Returns aggregated statistics across tracking entries within the given date range.
+        /// Optional timeRange: "24h", "7d", or "all" (default uses retentionDays).
         /// </summary>
-        Task<TrackingStats> GetStatsAsync(int retentionDays = 30, CancellationToken cancellationToken = default);
+        Task<TrackingStats> GetStatsAsync(int retentionDays = 30, string? timeRange = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Deletes all tracking entries with a partition key older than the specified date.
         /// Returns the number of entries deleted.
         /// </summary>
         Task<int> DeleteOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Deletes all tracking entries regardless of date.
+        /// Returns the number of entries deleted.
+        /// </summary>
+        Task<int> DeleteAllAsync(CancellationToken cancellationToken = default);
     }
 
     /// <summary>

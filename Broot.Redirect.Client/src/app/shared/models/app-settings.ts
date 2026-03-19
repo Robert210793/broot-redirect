@@ -37,4 +37,12 @@ export interface AppSettings {
     matchMediumExplanation: string;
     matchLowExplanation: string;
     matchNoneExplanation: string;
+
+    // -- Behavioral toggles --
+    caseSensitiveLinkDetection: boolean;
+    encodeImportedUrls: boolean;
+    enableReferrerTracking: boolean;
+    enableFeedbackSurvey: boolean;
+    enableFeedbackComment: boolean;
+    showLinkQualityGauge: boolean;
 }

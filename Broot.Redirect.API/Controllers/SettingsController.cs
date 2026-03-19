@@ -21,6 +21,12 @@ namespace Broot.Redirect.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// GET /api/settings
+        /// Returns current runtime settings from cache.
+        /// Public endpoint -- no authentication required.
+        /// Used by the Angular info page to render labels, messages, and behavior toggles.
+        /// </summary>
         [HttpGet]
         public IActionResult Get()
         {
@@ -29,6 +35,12 @@ namespace Broot.Redirect.API.Controllers
             return Ok(settings);
         }
 
+        /// <summary>
+        /// PUT /api/settings
+        /// Partial update -- merges provided fields into existing settings.
+        /// Admin-protected (enforced by AdminSessionMiddleware).
+        /// Writes through to Table Storage, then updates the in-memory cache.
+        /// </summary>
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] UpdateSettingsRequest request)
         {
@@ -56,7 +68,13 @@ namespace Broot.Redirect.API.Controllers
                 MatchHighExplanation = request.MatchHighExplanation ?? existing.MatchHighExplanation,
                 MatchMediumExplanation = request.MatchMediumExplanation ?? existing.MatchMediumExplanation,
                 MatchLowExplanation = request.MatchLowExplanation ?? existing.MatchLowExplanation,
-                MatchNoneExplanation = request.MatchNoneExplanation ?? existing.MatchNoneExplanation
+                MatchNoneExplanation = request.MatchNoneExplanation ?? existing.MatchNoneExplanation,
+                CaseSensitiveLinkDetection = request.CaseSensitiveLinkDetection ?? existing.CaseSensitiveLinkDetection,
+                EncodeImportedUrls = request.EncodeImportedUrls ?? existing.EncodeImportedUrls,
+                EnableReferrerTracking = request.EnableReferrerTracking ?? existing.EnableReferrerTracking,
+                EnableFeedbackSurvey = request.EnableFeedbackSurvey ?? existing.EnableFeedbackSurvey,
+                EnableFeedbackComment = request.EnableFeedbackComment ?? existing.EnableFeedbackComment,
+                ShowLinkQualityGauge = request.ShowLinkQualityGauge ?? existing.ShowLinkQualityGauge
             };
 
             var validBehaviors = new[] { "RedirectToDefault", "SmartSearch", "Return404" };

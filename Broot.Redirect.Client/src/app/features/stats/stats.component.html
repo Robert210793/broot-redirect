@@ -2,6 +2,9 @@
     <div class="page-header">
         <h1>Statistiken</h1>
         <div class="page-actions">
+            <button class="btn btn-secondary btn-danger-text" (click)="onDeleteAll()">
+                Delete All
+            </button>
             <button class="btn btn-secondary" (click)="onRefresh()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -13,6 +16,50 @@
             </button>
         </div>
     </div>
+
+    <!-- Time range filter -->
+    <div class="time-range-filter">
+        <button
+            class="time-range-btn"
+            [class.active]="timeRange === '24h'"
+            (click)="onTimeRangeChange('24h')"
+        >
+            Last 24h
+        </button>
+        <button
+            class="time-range-btn"
+            [class.active]="timeRange === '7d'"
+            (click)="onTimeRangeChange('7d')"
+        >
+            Last 7 days
+        </button>
+        <button
+            class="time-range-btn"
+            [class.active]="timeRange === 'all'"
+            (click)="onTimeRangeChange('all')"
+        >
+            All time
+        </button>
+    </div>
+
+    <!-- Delete confirm overlay -->
+    @if (showDeleteConfirm()) {
+        <div class="confirm-overlay">
+            <div class="confirm-dialog">
+                <h3>Delete all tracking data?</h3>
+                <p>This will permanently remove all tracking entries and statistics. This cannot be undone.</p>
+                <div class="confirm-actions">
+                    <button class="btn btn-secondary" (click)="onCancelDelete()" [disabled]="isDeleting()">Cancel</button>
+                    <button class="btn btn-danger" (click)="onConfirmDelete()" [disabled]="isDeleting()">
+                        @if (isDeleting()) {
+                            <span class="spinner"></span>
+                        }
+                        Delete All Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
 
     <!-- Aggregation Cards -->
     @if (isLoadingStats()) {
@@ -104,7 +151,7 @@
             </div>
         } @else {
             <div class="table-wrapper">
-                <table class="data-table">
+                <table class="data-table" appResizableColumns="stats-entries-table">
                     <thead>
                         <tr>
                             <th>Zeitpunkt</th>

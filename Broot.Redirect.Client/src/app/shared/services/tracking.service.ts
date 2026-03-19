@@ -34,9 +34,23 @@ export class TrackingService {
 
     /**
      * Retrieves aggregated statistics. Admin-protected.
+     * Optional timeRange: '24h', '7d', or 'all'.
      */
-    getStats(): Observable<StatsResponse> {
-        return this.httpClient.get<StatsResponse>('/api/stats');
+    getStats(timeRange?: string): Observable<StatsResponse> {
+        let params = new HttpParams();
+
+        if (timeRange) {
+            params = params.set('timeRange', timeRange);
+        }
+
+        return this.httpClient.get<StatsResponse>('/api/stats', { params });
+    }
+
+    /**
+     * Deletes all tracking data. Admin-protected.
+     */
+    deleteAll(): Observable<{ success: boolean; deleted: number }> {
+        return this.httpClient.delete<{ success: boolean; deleted: number }>('/api/stats/all');
     }
 
     /**

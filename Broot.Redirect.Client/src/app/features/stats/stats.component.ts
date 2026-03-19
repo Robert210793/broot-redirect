@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { TrackingService } from '../../shared/services/tracking.service';
 import { StatsResponse, TrackingEntry } from '../../shared/models/tracking';
+import { ResizableColumnsDirective } from '../../shared/directives/resizable-columns.directive';
 
 @Component({
     selector: 'app-stats',
-    imports: [FormsModule, NgClass],
+    imports: [FormsModule, NgClass, ResizableColumnsDirective],
     templateUrl: './stats.component.html',
     styleUrl: './stats.component.css'
 })
@@ -19,6 +20,9 @@ export class StatsComponent implements OnInit, OnDestroy {
     private readonly searchSubject = new Subject<string>();
 
     searchText = '';
+    timeRange: '24h' | '7d' | 'all' = 'all';
+    showDeleteConfirm = signal(false);
+    isDeleting = signal(false);
 
     // -- Aggregation state --
 
@@ -90,6 +94,37 @@ export class StatsComponent implements OnInit, OnDestroy {
     onRefresh(): void {
         this.loadStats();
         this.loadEntries(this.currentPage(), this.searchText);
+    }
+
+    onTimeRangeChange(range: '24h' | '7d' | 'all'): void {
+        this.timeRange = range;
+        this.loadStats();
+    }
+
+    onDeleteAll(): void {
+        this.showDeleteConfirm.set(true);
+    }
+
+    onCancelDelete(): void {
+        this.showDeleteConfirm.set(false);
+    }
+
+    onConfirmDelete(): void {
+        this.isDeleting.set(true);
+
+        this.trackingService.deleteAll().subscribe({
+            next: () => {
+                this.isDeleting.set(false);
+                this.showDeleteConfirm.set(false);
+                this.loadStats();
+                this.loadEntries(1, '');
+                this.searchText = '';
+            },
+            error: () => {
+                this.isDeleting.set(false);
+                this.showDeleteConfirm.set(false);
+            }
+        });
     }
 
     formatDate(isoDate: string): string {
@@ -175,7 +210,7 @@ export class StatsComponent implements OnInit, OnDestroy {
     private loadStats(): void {
         this.isLoadingStats.set(true);
 
-        this.trackingService.getStats().subscribe({
+        this.trackingService.getStats(this.timeRange).subscribe({
             next: (response) => {
                 this.stats.set(response);
                 this.isLoadingStats.set(false);

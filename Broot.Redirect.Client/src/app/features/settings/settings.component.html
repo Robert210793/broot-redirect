@@ -352,6 +352,88 @@
                 </div>
             </section>
 
+            <!-- Behavioral Settings -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Behavioral Settings</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <div class="form-group">
+                        <label class="form-label">Case-Sensitive Link Detection</label>
+                        <div class="toggle-wrapper" style="margin-top: 4px">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="caseSensitiveLinkDetection" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">{{ caseSensitiveLinkDetection ? 'Case-sensitive' : 'Case-insensitive' }}</span>
+                        </div>
+                        <span class="form-hint">Controls whether rule matching treats /Page and /page as different paths.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Encode Imported URLs</label>
+                        <div class="toggle-wrapper" style="margin-top: 4px">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="encodeImportedUrls" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">{{ encodeImportedUrls ? 'Percent-encode on import' : 'Import raw (no encoding)' }}</span>
+                        </div>
+                        <span class="form-hint">When enabled, imported matchers and target URLs are percent-encoded automatically.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Referrer Tracking</label>
+                        <div class="toggle-wrapper" style="margin-top: 4px">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="enableReferrerTracking" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">{{ enableReferrerTracking ? 'Store referrer in tracking' : 'Disabled (privacy)' }}</span>
+                        </div>
+                        <span class="form-hint">Some deployments may need this disabled for data privacy compliance.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Show Link Quality Gauge</label>
+                        <div class="toggle-wrapper" style="margin-top: 4px">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="showLinkQualityGauge" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">{{ showLinkQualityGauge ? 'Visible' : 'Hidden' }}</span>
+                        </div>
+                        <span class="form-hint">Controls whether the green/yellow/red quality gauge is shown on the info page.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Feedback Survey</label>
+                        <div class="toggle-wrapper" style="margin-top: 4px">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="enableFeedbackSurvey" />
+                                <span class="toggle-track"></span>
+                            </label>
+                            <span class="toggle-label">{{ enableFeedbackSurvey ? 'Ask OK/NOK after copy or open' : 'Disabled' }}</span>
+                        </div>
+                        <span class="form-hint">When enabled, users see a feedback prompt after copying or opening the new URL.</span>
+                    </div>
+
+                    @if (enableFeedbackSurvey) {
+                        <div class="form-group" style="margin-left: 24px">
+                            <label class="form-label">Feedback Comment (URL Suggestion)</label>
+                            <div class="toggle-wrapper" style="margin-top: 4px">
+                                <label class="toggle">
+                                    <input type="checkbox" [(ngModel)]="enableFeedbackComment" />
+                                    <span class="toggle-track"></span>
+                                </label>
+                                <span class="toggle-label">{{ enableFeedbackComment ? 'Allow suggesting correct URL' : 'Simple OK/NOK only' }}</span>
+                            </div>
+                            <span class="form-hint">When enabled, the NOK step includes a text field for the user to suggest the correct URL.</span>
+                        </div>
+                    }
+                </div>
+            </section>
+
         </div>
 
         <!-- Bottom save bar -->
