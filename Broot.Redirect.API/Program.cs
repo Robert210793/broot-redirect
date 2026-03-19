@@ -74,6 +74,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+
 app.UseStaticFiles();
 
 app.Use(async (context, next) =>
@@ -94,6 +95,12 @@ app.MapControllers();
 
 app.UseMiddleware<RedirectMiddleware>();
 
-app.MapFallbackToFile("index.html");
+app.MapFallback(async context =>
+{
+    context.Response.ContentType = "text/html";
+
+    await context.Response.SendFileAsync(
+        Path.Combine(app.Environment.WebRootPath, "index.html"));
+});
 
 app.Run();
