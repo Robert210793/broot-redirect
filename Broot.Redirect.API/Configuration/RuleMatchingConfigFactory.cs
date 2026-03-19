@@ -19,6 +19,7 @@ namespace Broot.Redirect.API.Configuration
             return new RuleMatchingConfig
             {
                 CaseSensitivePath = options.CaseSensitivePath,
+                CaseSensitiveQuery = options.CaseSensitiveQuery,
                 TrailingSlashPolicy = trailingSlashPolicy,
                 WeightPathSegment = options.WeightPathSegment,
                 WeightQueryPair = options.WeightQueryPair,

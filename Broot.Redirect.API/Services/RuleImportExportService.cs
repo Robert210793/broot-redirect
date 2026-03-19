@@ -223,10 +223,10 @@ namespace Broot.Redirect.API.Services
 
             entry.Id = string.IsNullOrWhiteSpace(idValue) ? null : idValue.Trim();
 
-            entry.Matcher = getValue("Matcher") ?? string.Empty;
-            entry.TargetUrl = getValue("TargetUrl");
+            entry.Matcher = UnsanitizeCsvValue(getValue("Matcher")) ?? string.Empty;
+            entry.TargetUrl = UnsanitizeCsvValue(getValue("TargetUrl"));
             entry.RedirectType = NormalizeRedirectType(getValue("RedirectType"));
-            entry.InfoText = getValue("InfoText");
+            entry.InfoText = UnsanitizeCsvValue(getValue("InfoText"));
             entry.CreatedAt = getValue("CreatedAt");
 
             entry.AutoRedirect = ParseBool(getValue("AutoRedirect"));
@@ -375,10 +375,25 @@ namespace Broot.Redirect.API.Services
         }
 
         /// <summary>
+        /// Reverses SanitizeForCsv by stripping the leading single quote
+        /// if the character after it is one of the sanitized formula triggers.
+        /// </summary>
+        private static string? UnsanitizeCsvValue(string? value)
+        {
+            if (value != null && value.Length >= 2 && value[0] == '\''
+                && (value[1] == '=' || value[1] == '+' || value[1] == '-' || value[1] == '@'))
+            {
+                return value[1..];
+            }
+
+            return value;
+        }
+
+        /// <summary>
         /// Prevents CSV/Excel formula injection by prepending a single quote
         /// to values starting with =, +, -, or @.
         /// </summary>
-        /// 
+        ///
         private static string SanitizeForCsv(string? value)
         {
             if (string.IsNullOrEmpty(value))

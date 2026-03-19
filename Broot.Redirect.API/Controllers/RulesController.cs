@@ -474,6 +474,10 @@ namespace Broot.Redirect.API.Controllers
 
                 try
                 {
+                    var matcherLookup = cacheService.GetAll()
+                        .GroupBy(r => r.Matcher, StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
                     for (var index = 0; index < entries.Count; index++)
                     {
                         var entry = entries[index];
@@ -517,8 +521,7 @@ namespace Broot.Redirect.API.Controllers
                             }
                             else
                             {
-                                existingRule = cacheService.GetAll().FirstOrDefault(r =>
-                                    string.Equals(r.Matcher, entry.Matcher, StringComparison.OrdinalIgnoreCase));
+                                matcherLookup.TryGetValue(entry.Matcher, out existingRule);
                                 ruleId = existingRule?.Id ?? Guid.NewGuid();
                             }
 
@@ -624,14 +627,6 @@ namespace Broot.Redirect.API.Controllers
                             "rules.json");
                     }
             }
-        }
-
-        private RedirectRule? FindRuleByMatcher(string matcher)
-        {
-            var allRules = _cacheService.GetAll();
-
-            return allRules.FirstOrDefault(rule =>
-                string.Equals(rule.Matcher, matcher, StringComparison.OrdinalIgnoreCase));
         }
 
         private static bool TryParseRedirectType(string value, out RedirectType redirectType)

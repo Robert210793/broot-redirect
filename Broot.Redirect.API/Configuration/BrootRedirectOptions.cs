@@ -17,6 +17,8 @@
 
         public bool CaseSensitivePath { get; set; } = false;
 
+        public bool CaseSensitiveQuery { get; set; } = false;
+
         public string TrailingSlashPolicy { get; set; } = "ignore";
 
         public int WeightPathSegment { get; set; } = 10;
@@ -28,5 +30,7 @@
         public int BonusExactMatch { get; set; } = 50;
 
         public int RegexMatchTimeoutSeconds { get; set; } = 1;
+
+        public int TrackingRetentionDays { get; set; } = 30;
     }
 }

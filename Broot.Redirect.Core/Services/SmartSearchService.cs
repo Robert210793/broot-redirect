@@ -14,8 +14,11 @@ namespace Broot.Redirect.Core.Services
         /// <summary>
         /// Regex match timeout to prevent ReDoS from user-supplied patterns.
         /// </summary>
-        /// 
+        ///
         private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
+
+        private string? _cachedPattern;
+        private Regex? _cachedRegex;
 
         public string? BuildSearchUrl(string path, AppSettings settings)
         {
@@ -45,7 +48,7 @@ namespace Broot.Redirect.Core.Services
         /// Otherwise falls back to extracting and cleaning the last path segment.
         /// </summary>
         /// 
-        internal static string? ExtractSearchTerm(string path, string? regexPattern)
+        internal string? ExtractSearchTerm(string path, string? regexPattern)
         {
             if (!string.IsNullOrWhiteSpace(regexPattern))
             {
@@ -65,11 +68,17 @@ namespace Broot.Redirect.Core.Services
         /// Returns the first capture group match, or null if no match.
         /// </summary>
         /// 
-        private static string? ExtractViaRegex(string path, string regexPattern)
+        private string? ExtractViaRegex(string path, string regexPattern)
         {
             try
             {
-                var regex = new Regex(regexPattern, RegexOptions.None, RegexTimeout);
+                if (_cachedRegex == null || _cachedPattern != regexPattern)
+                {
+                    _cachedPattern = regexPattern;
+                    _cachedRegex = new Regex(regexPattern, RegexOptions.Compiled, RegexTimeout);
+                }
+
+                var regex = _cachedRegex;
 
                 var match = regex.Match(path);
 

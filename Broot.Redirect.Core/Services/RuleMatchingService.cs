@@ -315,10 +315,7 @@ namespace Broot.Redirect.Core.Services
                 pathname = pathname.TrimEnd('/');
             }
 
-            while (pathname.Contains("//"))
-            {
-                pathname = pathname.Replace("//", "/");
-            }
+            pathname = Regex.Replace(pathname, "//{1,}", "/");
 
             var segments = pathname
                 .Split('/', StringSplitOptions.RemoveEmptyEntries)
@@ -373,7 +370,7 @@ namespace Broot.Redirect.Core.Services
 
                 foreach (var value in values)
                 {
-                    list.Add(Uri.UnescapeDataString(value));
+                    list.Add(value);
                 }
             }
 

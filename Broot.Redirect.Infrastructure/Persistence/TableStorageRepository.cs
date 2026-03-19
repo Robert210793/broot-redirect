@@ -108,11 +108,14 @@ namespace Broot.Redirect.Infrastructure.Persistence
             int page,
             int limit,
             string? search = null,
+            int retentionDays = 30,
             CancellationToken cancellationToken = default)
         {
             var allEntries = new List<TrackingEntry>();
+            var filter = BuildDateRangeFilter(retentionDays);
 
             await foreach (var entity in _tableClient.QueryAsync<TrackingEntity>(
+                filter: filter,
                 cancellationToken: cancellationToken))
             {
                 allEntries.Add(entity.ToDomainModel());
@@ -143,11 +146,13 @@ namespace Broot.Redirect.Infrastructure.Persistence
             return (paged, totalCount);
         }
 
-        public async Task<TrackingStats> GetStatsAsync(CancellationToken cancellationToken = default)
+        public async Task<TrackingStats> GetStatsAsync(int retentionDays = 30, CancellationToken cancellationToken = default)
         {
             var allEntries = new List<TrackingEntry>();
+            var filter = BuildDateRangeFilter(retentionDays);
 
             await foreach (var entity in _tableClient.QueryAsync<TrackingEntity>(
+                filter: filter,
                 cancellationToken: cancellationToken))
             {
                 allEntries.Add(entity.ToDomainModel());
@@ -193,6 +198,39 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 FeedbackNone = feedbackNone,
                 TopRules = topRules
             };
+        }
+
+        public async Task<int> DeleteOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+        {
+            var cutoffPartition = TrackingEntity.ToDatePartition(cutoff);
+            var filter = $"PartitionKey lt '{cutoffPartition}'";
+            var deleted = 0;
+
+            await foreach (var entity in _tableClient.QueryAsync<TrackingEntity>(
+                filter: filter,
+                select: new[] { "PartitionKey", "RowKey" },
+                cancellationToken: cancellationToken))
+            {
+                try
+                {
+                    await _tableClient.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, cancellationToken: cancellationToken);
+                    deleted++;
+                }
+                catch (RequestFailedException exception) when (exception.Status == 404)
+                {
+                    // Already deleted, skip.
+                }
+            }
+
+            return deleted;
+        }
+
+        private static string BuildDateRangeFilter(int retentionDays)
+        {
+            var from = TrackingEntity.ToDatePartition(DateTimeOffset.UtcNow.AddDays(-retentionDays));
+            var to = TrackingEntity.ToDatePartition(DateTimeOffset.UtcNow);
+
+            return $"PartitionKey ge '{from}' and PartitionKey le '{to}'";
         }
     }
 }

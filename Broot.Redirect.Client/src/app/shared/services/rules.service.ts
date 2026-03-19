@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, switchMap, timer, takeWhile, tap, map } from 'rxjs';
 import {
     RedirectRule,
     PaginatedRulesResponse,
@@ -21,6 +21,21 @@ export interface StreamProgress {
     imported?: number;
     updated?: number;
     errors?: string[];
+}
+
+interface JobStartResponse {
+    jobId: string;
+    total: number;
+}
+
+interface JobStatusResponse {
+    processed: number;
+    total: number;
+    isComplete: boolean;
+    imported?: number;
+    updated?: number;
+    errors?: string[];
+    error?: string;
 }
 
 @Injectable({
@@ -72,14 +87,18 @@ export class RulesService {
      * Deletes all rules with polling progress.
      */
     deleteAllWithProgress(): Observable<StreamProgress> {
-        return this.startJobAndPoll(`${this.baseUrl}/all`, 'DELETE');
+        return this.httpClient.delete<JobStartResponse>(`${this.baseUrl}/all`).pipe(
+            switchMap(({ jobId, total }) => this.pollJob(jobId, total))
+        );
     }
 
     /**
      * Import rules from JSON body with polling progress.
      */
     importRulesJsonWithProgress(rules: unknown[]): Observable<StreamProgress> {
-        return this.startJobAndPoll(`${this.baseUrl}/import`, 'POST', JSON.stringify(rules), 'application/json');
+        return this.httpClient.post<JobStartResponse>(`${this.baseUrl}/import`, rules).pipe(
+            switchMap(({ jobId, total }) => this.pollJob(jobId, total))
+        );
     }
 
     /**
@@ -90,22 +109,9 @@ export class RulesService {
 
         formData.append('file', file, file.name);
 
-        return new Observable<StreamProgress>((subscriber) => {
-            fetch(`${this.baseUrl}/import`, { method: 'POST', body: formData })
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-
-                    return response.json();
-                })
-                .then(({ jobId, total }) => {
-                    subscriber.next({ type: 'progress', processed: 0, total });
-
-                    this.pollJob(jobId, subscriber);
-                })
-                .catch((error) => subscriber.error(error));
-        });
+        return this.httpClient.post<JobStartResponse>(`${this.baseUrl}/import`, formData).pipe(
+            switchMap(({ jobId, total }) => this.pollJob(jobId, total))
+        );
     }
 
     /**
@@ -121,64 +127,32 @@ export class RulesService {
         });
     }
 
-    // -- Private polling helpers --
+    // -- Private polling helper --
 
-    private startJobAndPoll(url: string, method: string, body?: string, contentType?: string): Observable<StreamProgress> {
+    private pollJob(jobId: string, total: number): Observable<StreamProgress> {
         return new Observable<StreamProgress>((subscriber) => {
-            const headers: Record<string, string> = {};
+            subscriber.next({ type: 'progress', processed: 0, total });
 
-            if (contentType) {
-                headers['Content-Type'] = contentType;
-            }
+            const poll = timer(0, 500).pipe(
+                switchMap(() => this.httpClient.get<JobStatusResponse>(`${this.baseUrl}/jobs/${jobId}`)),
+                map((data) => ({
+                    type: (data.isComplete ? 'complete' : 'progress') as 'progress' | 'complete',
+                    processed: data.processed,
+                    total: data.total,
+                    imported: data.imported,
+                    updated: data.updated,
+                    errors: data.errors
+                })),
+                tap((progress) => subscriber.next(progress)),
+                takeWhile((progress) => progress.type !== 'complete')
+            );
 
-            fetch(url, { method, headers, body })
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
+            const subscription = poll.subscribe({
+                complete: () => subscriber.complete(),
+                error: (error) => subscriber.error(error)
+            });
 
-                    return response.json();
-                })
-                .then(({ jobId, total }) => {
-                    subscriber.next({ type: 'progress', processed: 0, total });
-
-                    this.pollJob(jobId, subscriber);
-                })
-                .catch((error) => subscriber.error(error));
+            return () => subscription.unsubscribe();
         });
-    }
-
-    private pollJob(jobId: string, subscriber: { next: (value: StreamProgress) => void; complete: () => void; error: (error: unknown) => void }): void {
-        const interval = setInterval(() => {
-            fetch(`${this.baseUrl}/jobs/${jobId}`)
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-
-                    return response.json();
-                })
-                .then((data) => {
-                    subscriber.next({
-                        type: data.isComplete ? 'complete' : 'progress',
-                        processed: data.processed,
-                        total: data.total,
-                        imported: data.imported,
-                        updated: data.updated,
-                        errors: data.errors
-                    });
-
-                    if (data.isComplete) {
-                        clearInterval(interval);
-
-                        subscriber.complete();
-                    }
-                })
-                .catch((error) => {
-                    clearInterval(interval);
-
-                    subscriber.error(error);
-                });
-        }, 500);
     }
 }

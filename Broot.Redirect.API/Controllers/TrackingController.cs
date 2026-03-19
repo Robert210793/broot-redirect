@@ -1,7 +1,9 @@
-﻿using Broot.Redirect.API.Dtos;
+﻿using Broot.Redirect.API.Configuration;
+using Broot.Redirect.API.Dtos;
 using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,13 +15,16 @@ namespace Broot.Redirect.API.Controllers
     {
         private readonly ITrackingRepository _repository;
         private readonly ILogger<TrackingController> _logger;
+        private readonly int _retentionDays;
 
         public TrackingController(
             ITrackingRepository repository,
-            ILogger<TrackingController> logger)
+            ILogger<TrackingController> logger,
+            IOptions<BrootRedirectOptions> options)
         {
             _repository = repository;
             _logger = logger;
+            _retentionDays = options.Value.TrackingRetentionDays;
         }
 
         /// <summary>
@@ -110,7 +115,7 @@ namespace Broot.Redirect.API.Controllers
         [HttpGet("api/stats")]
         public async Task<IActionResult> GetStats()
         {
-            var stats = await _repository.GetStatsAsync();
+            var stats = await _repository.GetStatsAsync(_retentionDays);
 
             var response = new StatsResponse
             {
@@ -152,7 +157,7 @@ namespace Broot.Redirect.API.Controllers
                 limit = 50;
             }
 
-            var (entries, totalCount) = await _repository.GetPagedAsync(page, limit, search);
+            var (entries, totalCount) = await _repository.GetPagedAsync(page, limit, search, _retentionDays);
 
             var totalPages = (int)Math.Ceiling((double)totalCount / limit);
 

@@ -44,23 +44,13 @@ namespace Broot.Redirect.Core.Services
                 currentUrl = ApplyGlobalRule(currentUrl, globalRule);
             }
 
-            if (rule.RedirectType == RedirectType.Wildcard)
+            if (rule.ForwardQueryParams)
             {
-                if (rule.ForwardQueryParams)
-                {
-                    currentUrl = ForwardOriginalQueryParams(originalUrl, currentUrl);
-                }
-                else if (rule.DiscardQueryParams && rule.KeptQueryParams.Count > 0)
-                {
-                    currentUrl = ApplyKeptQueryParams(originalUrl, currentUrl, rule.KeptQueryParams);
-                }
+                currentUrl = ForwardOriginalQueryParams(originalUrl, currentUrl);
             }
-            else
+            else if (rule.DiscardQueryParams && rule.KeptQueryParams.Count > 0)
             {
-                if (rule.DiscardQueryParams && rule.KeptQueryParams.Count > 0)
-                {
-                    currentUrl = ApplyKeptQueryParams(originalUrl, currentUrl, rule.KeptQueryParams);
-                }
+                currentUrl = ApplyKeptQueryParams(originalUrl, currentUrl, rule.KeptQueryParams);
             }
 
             if (rule.StaticQueryParams.Count > 0)

@@ -74,7 +74,7 @@ namespace Broot.Redirect.API.Middleware
                             targetUrl,
                             rule.Id);
 
-                        WritePermanentRedirect(context.Response, targetUrl);
+                        WriteRedirect(context.Response, targetUrl);
 
                         return;
                     }
@@ -95,7 +95,7 @@ namespace Broot.Redirect.API.Middleware
             {
                 _logger.LogInformation("No match for {Path}, redirecting to default domain", path);
 
-                WritePermanentRedirect(context.Response, appSettings.DefaultNewDomain);
+                WriteRedirect(context.Response, appSettings.DefaultNewDomain);
 
                 return;
             }
@@ -108,7 +108,7 @@ namespace Broot.Redirect.API.Middleware
                 {
                     _logger.LogInformation("No match for {Path}, smart search redirect to {SearchUrl}", path, searchUrl);
 
-                    WritePermanentRedirect(context.Response, searchUrl);
+                    WriteRedirect(context.Response, searchUrl);
 
                     return;
                 }
@@ -119,15 +119,10 @@ namespace Broot.Redirect.API.Middleware
             await _next(context);
         }
 
-        /// <summary>
-        /// Writes a 301 redirect with no-cache so browsers revalidate on every
-        /// request. This prevents stale cached redirects when rules change.
-        /// </summary>
-        private static void WritePermanentRedirect(HttpResponse response, string targetUrl)
+        private static void WriteRedirect(HttpResponse response, string targetUrl)
         {
-            response.StatusCode = StatusCodes.Status301MovedPermanently;
+            response.StatusCode = StatusCodes.Status302Found;
             response.Headers.Location = targetUrl;
-            response.Headers.CacheControl = "no-cache";
         }
 
         private static bool ShouldSkip(string path)

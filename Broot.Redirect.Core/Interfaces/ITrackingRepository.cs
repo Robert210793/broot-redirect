@@ -40,7 +40,7 @@ namespace Broot.Redirect.Core.Interfaces
         Task<TrackingEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Returns paginated tracking entries across all date partitions.
+        /// Returns paginated tracking entries within the retention window.
         /// Ordered by timestamp descending (newest first).
         /// Supports an optional search filter (matches against OldUrl, NewUrl, Path, RuleId, Feedback).
         /// </summary>
@@ -48,12 +48,19 @@ namespace Broot.Redirect.Core.Interfaces
             int page,
             int limit,
             string? search = null,
+            int retentionDays = 30,
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Returns aggregated statistics across all tracking entries.
+        /// Returns aggregated statistics across tracking entries within the given date range.
         /// </summary>
-        Task<TrackingStats> GetStatsAsync(CancellationToken cancellationToken = default);
+        Task<TrackingStats> GetStatsAsync(int retentionDays = 30, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Deletes all tracking entries with a partition key older than the specified date.
+        /// Returns the number of entries deleted.
+        /// </summary>
+        Task<int> DeleteOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default);
     }
 
     /// <summary>

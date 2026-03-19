@@ -1,7 +1,10 @@
 ﻿using System.Diagnostics;
+using Azure.Data.Tables;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Broot.Redirect.API.Dtos;
 using Broot.Redirect.Core.Interfaces;
+using Broot.Redirect.Infrastructure.Persistence;
 
 namespace Broot.Redirect.API.Controllers
 {
@@ -11,17 +14,18 @@ namespace Broot.Redirect.API.Controllers
     {
         private static readonly DateTimeOffset StartTime = DateTimeOffset.UtcNow;
 
-        private readonly IRedirectRuleRepository _repository;
         private readonly IRuleCacheService _cacheService;
+        private readonly TableClient _tableClient;
         private readonly ILogger<HealthController> _logger;
 
         public HealthController(
-            IRedirectRuleRepository repository,
             IRuleCacheService cacheService,
+            IOptions<TableStorageOptions> tableStorageOptions,
             ILogger<HealthController> logger)
         {
-            _repository = repository;
             _cacheService = cacheService;
+            _tableClient = new TableServiceClient(tableStorageOptions.Value.ConnectionString)
+                .GetTableClient(tableStorageOptions.Value.TableName);
             _logger = logger;
         }
 
@@ -69,7 +73,10 @@ namespace Broot.Redirect.API.Controllers
 
             try
             {
-                await _repository.GetAllAsync();
+                await _tableClient.QueryAsync<TableEntity>(
+                    maxPerPage: 1)
+                    .GetAsyncEnumerator()
+                    .MoveNextAsync();
 
                 stopwatch.Stop();
 

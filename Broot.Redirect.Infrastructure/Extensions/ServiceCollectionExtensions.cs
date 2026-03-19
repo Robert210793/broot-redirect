@@ -33,7 +33,7 @@ namespace Broot.Redirect.Infrastructure.Extensions
             {
                 var section = configuration.GetSection("SmartRedirect");
 
-                options.CaseSensitiveMatching = section.GetValue<bool>("CaseSensitiveMatching", false);
+                options.CaseSensitiveMatching = section.GetValue<bool>("CaseSensitivePath", false);
                 options.TrailingSlashPolicy = section.GetValue<string>("TrailingSlashPolicy", "ignore") ?? "ignore";
 
                 var regexTimeoutSeconds = section.GetValue<int>("RegexMatchTimeoutSeconds", 1);
@@ -60,6 +60,15 @@ namespace Broot.Redirect.Infrastructure.Extensions
             services.AddSingleton<ITrackingRepository>(provider => provider.GetRequiredService<TableStorageTrackingRepository>());
 
             services.AddHostedService<CacheWarmupService>();
+
+            var retentionDays = configuration.GetSection("SmartRedirect").GetValue<int>("TrackingRetentionDays", 30);
+
+            services.AddSingleton(provider => new TrackingCleanupService(
+                provider.GetRequiredService<ITrackingRepository>(),
+                retentionDays,
+                provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TrackingCleanupService>>()));
+
+            services.AddHostedService(provider => provider.GetRequiredService<TrackingCleanupService>());
 
             return services;
         }
