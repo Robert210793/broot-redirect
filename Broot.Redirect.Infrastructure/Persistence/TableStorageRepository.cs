@@ -143,10 +143,10 @@ namespace Broot.Redirect.Infrastructure.Persistence
             return (paged, totalCount);
         }
 
-        public async Task<TrackingStats> GetStatsAsync(int retentionDays = 30, CancellationToken cancellationToken = default)
+        public async Task<TrackingStats> GetStatsAsync(int retentionDays = 30, string? timeRange = null, CancellationToken cancellationToken = default)
         {
             var allEntries = new List<TrackingEntry>();
-            var filter = BuildDateRangeFilter(retentionDays);
+            var filter = BuildDateRangeFilter(retentionDays, timeRange);
 
             await foreach (var entity in _tableClient.QueryAsync<TrackingEntity>(
                 filter: filter,
@@ -220,6 +220,46 @@ namespace Broot.Redirect.Infrastructure.Persistence
             }
 
             return deleted;
+        }
+
+        public async Task<int> DeleteAllAsync(CancellationToken cancellationToken = default)
+        {
+            var deleted = 0;
+
+            await foreach (var entity in _tableClient.QueryAsync<TrackingEntity>(
+                select: new[] { "PartitionKey", "RowKey" },
+                cancellationToken: cancellationToken))
+            {
+                try
+                {
+                    await _tableClient.DeleteEntityAsync(entity.PartitionKey, entity.RowKey, cancellationToken: cancellationToken);
+
+                    deleted++;
+                }
+                catch (RequestFailedException exception) when (exception.Status == 404)
+                {
+                    // Already deleted, skip.
+                }
+            }
+
+            _logger.LogInformation("Deleted all tracking entries. Count: {Deleted}.", deleted);
+
+            return deleted;
+        }
+
+        private static string BuildDateRangeFilter(int retentionDays, string? timeRange = null)
+        {
+            var effectiveDays = timeRange switch
+            {
+                "24h" => 1,
+                "7d" => 7,
+                _ => retentionDays
+            };
+
+            var from = TrackingEntity.ToDatePartition(DateTimeOffset.UtcNow.AddDays(-effectiveDays));
+            var to = TrackingEntity.ToDatePartition(DateTimeOffset.UtcNow);
+
+            return $"PartitionKey ge '{from}' and PartitionKey le '{to}'";
         }
 
         private static string BuildDateRangeFilter(int retentionDays)
