@@ -117,4 +117,30 @@ namespace Broot.Redirect.API.Dtos
 
         public string? RedirectStrategy { get; set; }
     }
+
+    // -- Satisfaction Trend (Phase 5.4) --
+
+    public class TrendResponse
+    {
+        public int Days { get; set; }
+
+        public string Aggregation { get; set; } = "day";
+
+        public List<TrendDataPointDto> DataPoints { get; set; } = new();
+    }
+
+    public class TrendDataPointDto
+    {
+        public string Date { get; set; } = string.Empty;
+
+        public int Ok { get; set; }
+
+        public int Nok { get; set; }
+
+        public int AutoRedirect { get; set; }
+
+        public int None { get; set; }
+
+        public int Total { get; set; }
+    }
 }

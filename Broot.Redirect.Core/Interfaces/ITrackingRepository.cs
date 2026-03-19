@@ -43,12 +43,39 @@ namespace Broot.Redirect.Core.Interfaces
         /// Returns paginated tracking entries within the retention window.
         /// Ordered by timestamp descending (newest first).
         /// Supports an optional search filter (matches against OldUrl, NewUrl, Path, RuleId, Feedback).
+        /// Optional advanced filters: qualityMin/qualityMax (0-100), feedbackType (OK/NOK/auto-redirect/none), ruleId.
         /// </summary>
         Task<(List<TrackingEntry> Entries, int TotalCount)> GetPagedAsync(
             int page,
             int limit,
             string? search = null,
             int retentionDays = 30,
+            int? qualityMin = null,
+            int? qualityMax = null,
+            string? feedbackType = null,
+            string? ruleId = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Returns all tracking entries matching the given filters (no pagination).
+        /// Used for CSV/JSON export. Ordered by timestamp descending.
+        /// </summary>
+        Task<List<TrackingEntry>> GetAllFilteredAsync(
+            int retentionDays = 30,
+            string? search = null,
+            int? qualityMin = null,
+            int? qualityMax = null,
+            string? feedbackType = null,
+            string? ruleId = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Returns aggregated feedback counts per time bucket for trend visualization.
+        /// The aggregation parameter controls bucket size: "day", "week", or "month".
+        /// </summary>
+        Task<List<TrendDataPoint>> GetTrendAsync(
+            int days = 30,
+            string aggregation = "day",
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -73,6 +100,7 @@ namespace Broot.Redirect.Core.Interfaces
     /// <summary>
     /// Aggregated tracking statistics returned by GetStatsAsync.
     /// </summary>
+    /// 
     public sealed class TrackingStats
     {
         public int TotalVisits { get; set; }
@@ -103,5 +131,28 @@ namespace Broot.Redirect.Core.Interfaces
         public string RuleId { get; set; } = string.Empty;
 
         public int Count { get; set; }
+    }
+
+    /// <summary>
+    /// A single data point in the satisfaction trend chart.
+    /// Represents aggregated feedback counts for a time bucket.
+    /// </summary>
+    /// 
+    public sealed class TrendDataPoint
+    {
+        /// <summary>
+        /// The start date of this time bucket (ISO 8601).
+        /// </summary>
+        public string Date { get; set; } = string.Empty;
+
+        public int Ok { get; set; }
+
+        public int Nok { get; set; }
+
+        public int AutoRedirect { get; set; }
+
+        public int None { get; set; }
+
+        public int Total { get; set; }
     }
 }

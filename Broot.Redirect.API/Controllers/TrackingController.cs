@@ -154,14 +154,18 @@ namespace Broot.Redirect.API.Controllers
         }
 
         /// <summary>
-        /// GET /api/stats/entries?page=1&limit=50&search=
-        /// Admin-protected. Returns paginated raw tracking entries.
+        /// GET /api/stats/entries?page=1&amp;limit=50&amp;search=&amp;qualityMin=&amp;qualityMax=&amp;feedbackType=&amp;ruleId=
+        /// Admin-protected. Returns paginated raw tracking entries with optional filters.
         /// </summary>
         [HttpGet("api/stats/entries")]
         public async Task<IActionResult> GetEntries(
             [FromQuery] int page = 1,
             [FromQuery] int limit = 50,
-            [FromQuery] string? search = null)
+            [FromQuery] string? search = null,
+            [FromQuery] int? qualityMin = null,
+            [FromQuery] int? qualityMax = null,
+            [FromQuery] string? feedbackType = null,
+            [FromQuery] string? ruleId = null)
         {
             if (page < 1)
             {
@@ -173,7 +177,15 @@ namespace Broot.Redirect.API.Controllers
                 limit = 50;
             }
 
-            var (entries, totalCount) = await _repository.GetPagedAsync(page, limit, search, _retentionDays);
+            var (entries, totalCount) = await _repository.GetPagedAsync(
+                page,
+                limit,
+                search,
+                _retentionDays,
+                qualityMin,
+                qualityMax,
+                feedbackType,
+                ruleId);
 
             var totalPages = (int)Math.Ceiling((double)totalCount / limit);
 
@@ -200,6 +212,135 @@ namespace Broot.Redirect.API.Controllers
             };
 
             return Ok(response);
+        }
+
+        /// <summary>
+        /// GET /api/stats/entries/export?format=csv|json&amp;search=&amp;qualityMin=&amp;qualityMax=&amp;feedbackType=&amp;ruleId=
+        /// Admin-protected. Exports all matching tracking entries as a file download.
+        /// </summary>
+        [HttpGet("api/stats/entries/export")]
+        public async Task<IActionResult> ExportEntries(
+            [FromQuery] string format = "csv",
+            [FromQuery] string? search = null,
+            [FromQuery] int? qualityMin = null,
+            [FromQuery] int? qualityMax = null,
+            [FromQuery] string? feedbackType = null,
+            [FromQuery] string? ruleId = null)
+        {
+            var entries = await _repository.GetAllFilteredAsync(
+                _retentionDays,
+                search,
+                qualityMin,
+                qualityMax,
+                feedbackType,
+                ruleId);
+
+            if (format.Equals("json", StringComparison.OrdinalIgnoreCase))
+            {
+                var dtos = entries.Select(entry => new TrackingEntryDto
+                {
+                    Id = entry.Id.ToString("N"),
+                    OldUrl = entry.OldUrl,
+                    NewUrl = entry.NewUrl,
+                    Path = entry.Path,
+                    Timestamp = entry.Timestamp.ToString("o"),
+                    UserAgent = entry.UserAgent,
+                    Referrer = entry.Referrer,
+                    RuleId = entry.RuleId,
+                    MatchQuality = entry.MatchQuality,
+                    Feedback = entry.Feedback,
+                    UserProposedUrl = entry.UserProposedUrl,
+                    RedirectStrategy = entry.RedirectStrategy
+                }).ToList();
+
+                var json = System.Text.Json.JsonSerializer.Serialize(dtos, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    WriteIndented = true
+                });
+
+                return File(
+                    System.Text.Encoding.UTF8.GetBytes(json),
+                    "application/json",
+                    "tracking-export.json");
+            }
+
+            // Default: CSV
+            var csvBuilder = new System.Text.StringBuilder();
+
+            csvBuilder.AppendLine("Timestamp,Path,OldUrl,NewUrl,MatchQuality,Feedback,RedirectStrategy,RuleId,UserProposedUrl");
+
+            foreach (var entry in entries)
+            {
+                csvBuilder.AppendLine(string.Join(",",
+                    CsvEscape(entry.Timestamp.ToString("o")),
+                    CsvEscape(entry.Path),
+                    CsvEscape(entry.OldUrl),
+                    CsvEscape(entry.NewUrl),
+                    entry.MatchQuality.ToString(),
+                    CsvEscape(entry.Feedback ?? ""),
+                    CsvEscape(entry.RedirectStrategy ?? ""),
+                    CsvEscape(entry.RuleId ?? ""),
+                    CsvEscape(entry.UserProposedUrl ?? "")));
+            }
+
+            _logger.LogInformation("Exported {Count} tracking entries as {Format}", entries.Count, format);
+
+            return File(
+                System.Text.Encoding.UTF8.GetBytes(csvBuilder.ToString()),
+                "text/csv",
+                "tracking-export.csv");
+        }
+
+        /// <summary>
+        /// GET /api/stats/trend?days=30&amp;aggregation=day
+        /// Admin-protected. Returns aggregated feedback counts per time bucket for trend visualization.
+        /// </summary>
+        [HttpGet("api/stats/trend")]
+        public async Task<IActionResult> GetTrend(
+            [FromQuery] int days = 30,
+            [FromQuery] string aggregation = "day")
+        {
+            if (days < 1 || days > 365)
+            {
+                days = 30;
+            }
+
+            var validAggregations = new[] { "day", "week", "month" };
+
+            if (!validAggregations.Contains(aggregation, StringComparer.OrdinalIgnoreCase))
+            {
+                aggregation = "day";
+            }
+
+            var dataPoints = await _repository.GetTrendAsync(days, aggregation);
+
+            var response = new TrendResponse
+            {
+                Days = days,
+                Aggregation = aggregation,
+                DataPoints = dataPoints.Select(dataPoint => new TrendDataPointDto
+                {
+                    Date = dataPoint.Date,
+                    Ok = dataPoint.Ok,
+                    Nok = dataPoint.Nok,
+                    AutoRedirect = dataPoint.AutoRedirect,
+                    None = dataPoint.None,
+                    Total = dataPoint.Total
+                }).ToList()
+            };
+
+            return Ok(response);
+        }
+
+        private static string CsvEscape(string value)
+        {
+            if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+            {
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            }
+
+            return value;
         }
     }
 }

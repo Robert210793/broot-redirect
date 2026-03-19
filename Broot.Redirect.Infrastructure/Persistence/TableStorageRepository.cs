@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -106,31 +107,20 @@ namespace Broot.Redirect.Infrastructure.Persistence
             int limit,
             string? search = null,
             int retentionDays = 30,
+            int? qualityMin = null,
+            int? qualityMax = null,
+            string? feedbackType = null,
+            string? ruleId = null,
             CancellationToken cancellationToken = default)
         {
-            var allEntries = new List<TrackingEntry>();
-            var filter = BuildDateRangeFilter(retentionDays);
-
-            await foreach (var entity in _tableClient.QueryAsync<TrackingEntity>(
-                filter: filter,
-                cancellationToken: cancellationToken))
-            {
-                allEntries.Add(entity.ToDomainModel());
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var searchLower = search.ToLowerInvariant();
-
-                allEntries = allEntries.Where(entry =>
-                    entry.OldUrl.ToLowerInvariant().Contains(searchLower) ||
-                    entry.NewUrl.ToLowerInvariant().Contains(searchLower) ||
-                    entry.Path.ToLowerInvariant().Contains(searchLower) ||
-                    (entry.RuleId != null && entry.RuleId.ToLowerInvariant().Contains(searchLower)) ||
-                    (entry.Feedback != null && entry.Feedback.ToLowerInvariant().Contains(searchLower)) ||
-                    (entry.RedirectStrategy != null && entry.RedirectStrategy.ToLowerInvariant().Contains(searchLower))
-                ).ToList();
-            }
+            var allEntries = await LoadFilteredEntriesAsync(
+                retentionDays,
+                search,
+                qualityMin,
+                qualityMax,
+                feedbackType,
+                ruleId,
+                cancellationToken);
 
             var totalCount = allEntries.Count;
 
@@ -141,6 +131,85 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 .ToList();
 
             return (paged, totalCount);
+        }
+
+        public async Task<List<TrackingEntry>> GetAllFilteredAsync(
+            int retentionDays = 30,
+            string? search = null,
+            int? qualityMin = null,
+            int? qualityMax = null,
+            string? feedbackType = null,
+            string? ruleId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var allEntries = await LoadFilteredEntriesAsync(
+                retentionDays,
+                search,
+                qualityMin,
+                qualityMax,
+                feedbackType,
+                ruleId,
+                cancellationToken);
+
+            return allEntries
+                .OrderByDescending(entry => entry.Timestamp)
+                .ToList();
+        }
+
+        public async Task<List<TrendDataPoint>> GetTrendAsync(
+            int days = 30,
+            string aggregation = "day",
+            CancellationToken cancellationToken = default)
+        {
+            var allEntries = new List<TrackingEntry>();
+            var filter = BuildDateRangeFilter(days);
+
+            await foreach (var entity in _tableClient.QueryAsync<TrackingEntity>(
+                filter: filter,
+                cancellationToken: cancellationToken))
+            {
+                allEntries.Add(entity.ToDomainModel());
+            }
+
+            var grouped = allEntries
+                .GroupBy(entry => GetTrendBucketKey(entry.Timestamp, aggregation))
+                .ToDictionary(group => group.Key, group => group.ToList());
+
+            // Build complete set of buckets so the chart has no gaps
+            var buckets = GenerateTrendBuckets(days, aggregation);
+            var result = new List<TrendDataPoint>();
+
+            foreach (var bucketDate in buckets)
+            {
+                var bucketKey = GetTrendBucketKey(bucketDate, aggregation);
+
+                if (grouped.TryGetValue(bucketKey, out var entries))
+                {
+                    result.Add(new TrendDataPoint
+                    {
+                        Date = bucketKey,
+                        Ok = entries.Count(entry => entry.Feedback == "OK"),
+                        Nok = entries.Count(entry => entry.Feedback == "NOK"),
+                        AutoRedirect = entries.Count(entry => entry.Feedback == "auto-redirect"),
+                        None = entries.Count(entry => string.IsNullOrEmpty(entry.Feedback)),
+                        Total = entries.Count
+                    });
+                }
+                else
+                {
+                    result.Add(new TrendDataPoint
+                    {
+                        Date = bucketKey,
+                        Ok = 0,
+                        Nok = 0,
+                        AutoRedirect = 0,
+                        None = 0,
+                        Total = 0
+                    });
+                }
+            }
+
+            return result;
         }
 
         public async Task<TrackingStats> GetStatsAsync(int retentionDays = 30, string? timeRange = null, CancellationToken cancellationToken = default)
@@ -247,6 +316,155 @@ namespace Broot.Redirect.Infrastructure.Persistence
             return deleted;
         }
 
+        // -- Private helpers --
+
+        private async Task<List<TrackingEntry>> LoadFilteredEntriesAsync(
+            int retentionDays,
+            string? search,
+            int? qualityMin,
+            int? qualityMax,
+            string? feedbackType,
+            string? ruleId,
+            CancellationToken cancellationToken)
+        {
+            var allEntries = new List<TrackingEntry>();
+            var filter = BuildDateRangeFilter(retentionDays);
+
+            await foreach (var entity in _tableClient.QueryAsync<TrackingEntity>(
+                filter: filter,
+                cancellationToken: cancellationToken))
+            {
+                allEntries.Add(entity.ToDomainModel());
+            }
+
+            // Text search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchLower = search.ToLowerInvariant();
+
+                allEntries = allEntries.Where(entry =>
+                    entry.OldUrl.ToLowerInvariant().Contains(searchLower) ||
+                    entry.NewUrl.ToLowerInvariant().Contains(searchLower) ||
+                    entry.Path.ToLowerInvariant().Contains(searchLower) ||
+                    (entry.RuleId != null && entry.RuleId.ToLowerInvariant().Contains(searchLower)) ||
+                    (entry.Feedback != null && entry.Feedback.ToLowerInvariant().Contains(searchLower)) ||
+                    (entry.RedirectStrategy != null && entry.RedirectStrategy.ToLowerInvariant().Contains(searchLower))
+                ).ToList();
+            }
+
+            // Quality range filter
+            if (qualityMin.HasValue)
+            {
+                allEntries = allEntries.Where(entry => entry.MatchQuality >= qualityMin.Value).ToList();
+            }
+
+            if (qualityMax.HasValue)
+            {
+                allEntries = allEntries.Where(entry => entry.MatchQuality <= qualityMax.Value).ToList();
+            }
+
+            // Feedback type filter
+            if (!string.IsNullOrEmpty(feedbackType))
+            {
+                if (feedbackType.Equals("none", StringComparison.OrdinalIgnoreCase))
+                {
+                    allEntries = allEntries.Where(entry => string.IsNullOrEmpty(entry.Feedback)).ToList();
+                }
+                else
+                {
+                    allEntries = allEntries.Where(entry =>
+                        entry.Feedback != null &&
+                        entry.Feedback.Equals(feedbackType, StringComparison.OrdinalIgnoreCase)
+                    ).ToList();
+                }
+            }
+
+            // Rule ID filter
+            if (!string.IsNullOrEmpty(ruleId))
+            {
+                allEntries = allEntries.Where(entry =>
+                    entry.RuleId != null &&
+                    entry.RuleId.Equals(ruleId, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+            }
+
+            return allEntries;
+        }
+
+        private static string GetTrendBucketKey(DateTimeOffset timestamp, string aggregation)
+        {
+            return aggregation.ToLowerInvariant() switch
+            {
+                "week" => GetIsoWeekStart(timestamp).ToString("yyyy-MM-dd"),
+                "month" => new DateTimeOffset(timestamp.Year, timestamp.Month, 1, 0, 0, 0, TimeSpan.Zero).ToString("yyyy-MM-dd"),
+                _ => timestamp.ToString("yyyy-MM-dd")
+            };
+        }
+
+        private static DateTimeOffset GetIsoWeekStart(DateTimeOffset date)
+        {
+            var dayOfWeek = (int)date.DayOfWeek;
+
+            // ISO week starts on Monday (DayOfWeek.Sunday = 0, Monday = 1)
+            var daysToSubtract = dayOfWeek == 0 ? 6 : dayOfWeek - 1;
+
+            return new DateTimeOffset(date.Year, date.Month, date.Day, 0, 0, 0, TimeSpan.Zero).AddDays(-daysToSubtract);
+        }
+
+        private static List<DateTimeOffset> GenerateTrendBuckets(int days, string aggregation)
+        {
+            var buckets = new List<DateTimeOffset>();
+            var now = DateTimeOffset.UtcNow;
+            var start = now.AddDays(-days);
+
+            switch (aggregation.ToLowerInvariant())
+            {
+                case "week":
+                    {
+                        var current = GetIsoWeekStart(start);
+                        var end = GetIsoWeekStart(now);
+
+                        while (current <= end)
+                        {
+                            buckets.Add(current);
+                            current = current.AddDays(7);
+                        }
+
+                        break;
+                    }
+
+                case "month":
+                    {
+                        var current = new DateTimeOffset(start.Year, start.Month, 1, 0, 0, 0, TimeSpan.Zero);
+                        var end = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+
+                        while (current <= end)
+                        {
+                            buckets.Add(current);
+                            current = current.AddMonths(1);
+                        }
+
+                        break;
+                    }
+
+                default:
+                    {
+                        var current = new DateTimeOffset(start.Year, start.Month, start.Day, 0, 0, 0, TimeSpan.Zero);
+                        var end = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
+
+                        while (current <= end)
+                        {
+                            buckets.Add(current);
+                            current = current.AddDays(1);
+                        }
+
+                        break;
+                    }
+            }
+
+            return buckets;
+        }
+
         private static string BuildDateRangeFilter(int retentionDays, string? timeRange = null)
         {
             var effectiveDays = timeRange switch
@@ -257,14 +475,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
             };
 
             var from = TrackingEntity.ToDatePartition(DateTimeOffset.UtcNow.AddDays(-effectiveDays));
-            var to = TrackingEntity.ToDatePartition(DateTimeOffset.UtcNow);
-
-            return $"PartitionKey ge '{from}' and PartitionKey le '{to}'";
-        }
-
-        private static string BuildDateRangeFilter(int retentionDays)
-        {
-            var from = TrackingEntity.ToDatePartition(DateTimeOffset.UtcNow.AddDays(-retentionDays));
             var to = TrackingEntity.ToDatePartition(DateTimeOffset.UtcNow);
 
             return $"PartitionKey ge '{from}' and PartitionKey le '{to}'";
