@@ -311,6 +311,9 @@ namespace Broot.Redirect.Infrastructure.Cache
         {
             var normalized = matcher;
 
+            try { normalized = Uri.UnescapeDataString(normalized); }
+            catch { /* keep original if decoding fails */ }
+
             if (string.Equals(_options.TrailingSlashPolicy, "ignore", StringComparison.OrdinalIgnoreCase))
             {
                 if (normalized.Length > 1 && normalized.EndsWith('/'))
