@@ -14,24 +14,10 @@ namespace Broot.Redirect.Infrastructure.Cache
 {
     public class CacheOptions
     {
-        /// <summary>
-        /// Whether path matching is case-sensitive.
-        /// When false (default), wildcard dictionary keys are lowercased.
-        /// </summary>
-        /// 
         public bool CaseSensitiveMatching { get; set; } = false;
 
-        /// <summary>
-        /// "ignore" strips trailing slashes from wildcard dictionary keys.
-        /// "strict" preserves them.
-        /// </summary>
-        /// 
         public string TrailingSlashPolicy { get; set; } = "ignore";
 
-        /// <summary>
-        /// Timeout for individual regex match attempts (prevents ReDoS).
-        /// </summary>
-        /// 
         public TimeSpan RegexMatchTimeout { get; set; } = TimeSpan.FromSeconds(1);
     }
 
@@ -220,12 +206,6 @@ namespace Broot.Redirect.Infrastructure.Cache
             _logger.LogInformation("Cache replaced with {RuleCount} rules.", rules.Count);
         }
 
-        /// <summary>
-        /// Rebuilds all secondary indexes from the primary ConcurrentDictionary.
-        /// Called after every write operation. At 25,000 rules this takes &lt;10ms
-        /// and happens only on admin writes, not on public redirect requests.
-        /// </summary>
-        /// 
         private void RebuildIndexes()
         {
             var wildcardIndex = new Dictionary<string, RedirectRule>(
@@ -302,11 +282,6 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
         }
 
-        /// <summary>
-        /// Normalizes a matcher value for the wildcard dictionary key.
-        /// Applies the same rules the matching engine uses on incoming paths.
-        /// </summary>
-        /// 
         private string NormalizeMatcher(string matcher)
         {
             var normalized = matcher;

@@ -9,12 +9,6 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Infrastructure.Cache
 {
-    /// <summary>
-    /// In-memory cache for AppSettings. Mirrors the RuleCacheService pattern:
-    /// reads hit the cache, writes go through Table Storage first then update the cache.
-    /// Thread-safe via volatile reference swap (single-row, no indexes needed).
-    /// </summary>
-    /// 
     public class AppSettingsCacheService : IAppSettingsCacheService
     {
         private readonly IAppSettingsRepository _repository;

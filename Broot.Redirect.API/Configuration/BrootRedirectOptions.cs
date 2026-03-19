@@ -1,12 +1,5 @@
 ﻿namespace Broot.Redirect.API.Configuration
 {
-    /// <summary>
-    /// Static configuration that does not change at runtime.
-    /// Bound from appsettings.json section "SmartRedirect".
-    ///
-    /// Runtime-editable settings (DefaultNewDomain, NoMatchBehavior, InfoPageTitle, etc.)
-    /// have been moved to AppSettings (stored in Azure Table Storage, served via /api/settings).
-    /// </summary>
     public class BrootRedirectOptions
     {
         public const string SectionName = "SmartRedirect";
@@ -32,5 +25,21 @@
         public int RegexMatchTimeoutSeconds { get; set; } = 1;
 
         public int TrackingRetentionDays { get; set; } = 30;
+
+        // -- Rate limiting --
+
+        public int RateLimitGlobalMax { get; set; } = 300;
+
+        public int RateLimitTrackingMax { get; set; } = 300;
+
+        public int RateLimitAdminMax { get; set; } = 60;
+
+        public int RateLimitWindowSeconds { get; set; } = 60;
+
+        // -- Brute force protection --
+
+        public int LoginMaxAttempts { get; set; } = 5;
+
+        public int LoginBlockDurationMinutes { get; set; } = 1440;
     }
 }

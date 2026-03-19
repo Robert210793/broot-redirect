@@ -11,10 +11,6 @@ namespace Broot.Redirect.Core.Services
 {
     public sealed class SmartSearchService : ISmartSearchService
     {
-        /// <summary>
-        /// Regex match timeout to prevent ReDoS from user-supplied patterns.
-        /// </summary>
-        ///
         private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
 
         private string? _cachedPattern;
@@ -42,12 +38,6 @@ namespace Broot.Redirect.Core.Services
             return settings.SmartSearchUrl + searchTerm;
         }
 
-        /// <summary>
-        /// Extracts a search term from the path.
-        /// If a regex is configured, uses the first capture group.
-        /// Otherwise falls back to extracting and cleaning the last path segment.
-        /// </summary>
-        /// 
         internal string? ExtractSearchTerm(string path, string? regexPattern)
         {
             if (!string.IsNullOrWhiteSpace(regexPattern))
@@ -63,11 +53,6 @@ namespace Broot.Redirect.Core.Services
             return ExtractLastPathSegment(path);
         }
 
-        /// <summary>
-        /// Attempts to extract a search term using the configured regex pattern.
-        /// Returns the first capture group match, or null if no match.
-        /// </summary>
-        /// 
         private string? ExtractViaRegex(string path, string regexPattern)
         {
             try
@@ -101,12 +86,6 @@ namespace Broot.Redirect.Core.Services
             return null;
         }
 
-        /// <summary>
-        /// Extracts the last path segment and cleans it for use as a search term.
-        /// Strips query params and fragment, decodes percent-encoding,
-        /// replaces hyphens and underscores with spaces, removes file extensions.
-        /// </summary>
-        /// 
         internal static string? ExtractLastPathSegment(string path)
         {
             try

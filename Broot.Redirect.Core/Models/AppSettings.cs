@@ -6,28 +6,12 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Core.Models
 {
-    /// <summary>
-    /// Runtime-editable application settings stored in Azure Table Storage.
-    /// These values can be changed by admins via the settings API.
-    /// Static configuration (AdminPassword, scoring weights, session timeout, etc.)
-    /// remains in BrootRedirectOptions / appsettings.json.
-    /// </summary>
-    /// 
     public sealed class AppSettings
     {
         public string DefaultNewDomain { get; set; } = "https://new.example.com";
 
-        /// <summary>
-        /// What to do when no rule matches: "RedirectToDefault" | "SmartSearch" | "Return404"
-        /// </summary>
-        /// 
         public string NoMatchBehavior { get; set; } = "RedirectToDefault";
 
-        /// <summary>
-        /// Global auto-redirect toggle. When false, all matched URLs show the info page
-        /// regardless of per-rule AutoRedirect settings.
-        /// </summary>
-        /// 
         public bool AutoRedirect { get; set; } = true;
 
         public string HeaderTitle { get; set; } = "SmartRedirect Suite";
@@ -36,11 +20,6 @@ namespace Broot.Redirect.Core.Models
 
         public string InfoPageMessage { get; set; } = "Du verwendest einen alten Link. Dieser Link ist nicht mehr aktuell und wird bald nicht mehr funktionieren. Bitte verwende die neue URL und aktualisiere deine Verknuepfungen.";
 
-        /// <summary>
-        /// "inline" shows the URL comparison immediately.
-        /// "active" hides it behind a button click.
-        /// </summary>
-        /// 
         public string PopupMode { get; set; } = "inline";
 
         public string NewUrlLabel { get; set; } = "Neue URL";

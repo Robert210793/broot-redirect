@@ -5,11 +5,6 @@ using System;
 
 namespace Broot.Redirect.Infrastructure.Persistence
 {
-    /// <summary>
-    /// Azure Table Storage entity for TrackingEntry.
-    /// PartitionKey = date string (yyyy-MM-dd) for efficient range queries.
-    /// RowKey = Id (GUID without hyphens).
-    /// </summary>
     public class TrackingEntity : ITableEntity
     {
         public string PartitionKey { get; set; } = string.Empty;
@@ -42,17 +37,11 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public string? RedirectStrategy { get; set; }
 
-        /// <summary>
-        /// Derives the date partition key from a DateTimeOffset.
-        /// </summary>
         public static string ToDatePartition(DateTimeOffset timestamp)
         {
             return timestamp.UtcDateTime.ToString("yyyy-MM-dd");
         }
 
-        /// <summary>
-        /// Maps a domain TrackingEntry to a Table Storage entity.
-        /// </summary>
         public static TrackingEntity FromDomainModel(TrackingEntry entry)
         {
             return new TrackingEntity
@@ -73,9 +62,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
             };
         }
 
-        /// <summary>
-        /// Maps a Table Storage entity back to a domain TrackingEntry.
-        /// </summary>
         public TrackingEntry ToDomainModel()
         {
             return new TrackingEntry

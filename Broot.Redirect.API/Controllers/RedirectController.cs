@@ -34,13 +34,6 @@ namespace Broot.Redirect.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// GET /api/redirect/resolve?path=/old-path
-        /// Called by the Angular info page component.
-        /// Returns the matched rule with the fully resolved target URL,
-        /// or a smart search fallback URL if configured, or 404 if no match.
-        /// No authentication required (public endpoint).
-        /// </summary>
         [HttpGet("resolve")]
         public IActionResult Resolve([FromQuery] string? path)
         {

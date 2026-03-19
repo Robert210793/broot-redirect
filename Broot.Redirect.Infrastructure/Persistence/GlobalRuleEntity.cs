@@ -9,11 +9,6 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Infrastructure.Persistence
 {
-    /// <summary>
-    /// Azure Table Storage entity for GlobalRule.
-    /// PartitionKey = "GlobalRule", RowKey = Id (GUID without hyphens).
-    /// All properties are scalar -- no JSON serialization needed.
-    /// </summary>
     public class GlobalRuleEntity : ITableEntity
     {
         public const string DefaultPartitionKey = "GlobalRule";
@@ -36,9 +31,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public DateTimeOffset CreatedAt { get; set; }
 
-        /// <summary>
-        /// Maps a domain GlobalRule to a Table Storage entity.
-        /// </summary>
         public static GlobalRuleEntity FromDomainModel(GlobalRule rule)
         {
             return new GlobalRuleEntity
@@ -53,9 +45,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
             };
         }
 
-        /// <summary>
-        /// Maps a Table Storage entity back to a domain GlobalRule.
-        /// </summary>
         public GlobalRule ToDomainModel()
         {
             return new GlobalRule

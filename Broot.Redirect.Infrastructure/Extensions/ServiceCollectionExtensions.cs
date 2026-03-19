@@ -13,16 +13,6 @@ namespace Broot.Redirect.Infrastructure.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        /// <summary>
-        /// Registers all Infrastructure layer services:
-        /// - Azure Table Storage repositories (rules, settings, global rules, tracking)
-        /// - In-memory caches (rules with type-partitioned indexes, settings, global rules)
-        /// - Cache warmup hosted service (populates all caches on startup)
-        ///
-        /// Configuration sections expected:
-        /// - "AzureTableStorage" for TableStorageOptions (ConnectionString, TableName)
-        /// - "SmartRedirect" for CacheOptions (CaseSensitiveMatching, TrailingSlashPolicy)
-        /// </summary>
         public static IServiceCollection AddSmartRedirectInfrastructure(
             this IServiceCollection services,
             IConfiguration configuration)

@@ -6,10 +6,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Broot.Redirect.API.Dtos
 {
-    /// <summary>
-    /// Request body for POST /api/track.
-    /// Records a redirect visit from the info page.
-    /// </summary>
     public class TrackRequest
     {
         [Required]
@@ -34,53 +30,28 @@ namespace Broot.Redirect.API.Dtos
 
         public int MatchQuality { get; set; }
 
-        /// <summary>
-        /// Optional initial feedback (e.g. "auto-redirect" when the middleware auto-redirected).
-        /// </summary>
         public string? Feedback { get; set; }
 
-        /// <summary>
-        /// How the redirect was resolved: "rule", "smart-search", or "domain-fallback".
-        /// </summary>
         public string? RedirectStrategy { get; set; }
     }
 
-    /// <summary>
-    /// Response body for POST /api/track.
-    /// </summary>
     public class TrackResponse
     {
         public string Id { get; set; } = string.Empty;
     }
 
-    /// <summary>
-    /// Request body for POST /api/feedback.
-    /// Updates an existing tracking entry with user feedback.
-    /// </summary>
     public class FeedbackRequest
     {
-        /// <summary>
-        /// The tracking entry ID returned by POST /api/track.
-        /// </summary>
         [Required]
         public string TrackingId { get; set; } = string.Empty;
 
-        /// <summary>
-        /// User feedback: "OK" or "NOK".
-        /// </summary>
         [Required]
         public string Feedback { get; set; } = string.Empty;
 
-        /// <summary>
-        /// If the user reported NOK, they may suggest the correct URL.
-        /// </summary>
         [MaxLength(8000)]
         public string? UserProposedUrl { get; set; }
     }
 
-    /// <summary>
-    /// Response body for GET /api/stats.
-    /// </summary>
     public class StatsResponse
     {
         public int TotalVisits { get; set; }
@@ -109,9 +80,6 @@ namespace Broot.Redirect.API.Dtos
         public int Count { get; set; }
     }
 
-    /// <summary>
-    /// Response body for GET /api/stats/entries.
-    /// </summary>
     public class PaginatedTrackingResponse
     {
         public List<TrackingEntryDto> Entries { get; set; } = new();

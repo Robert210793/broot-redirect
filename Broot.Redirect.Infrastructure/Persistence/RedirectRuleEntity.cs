@@ -10,13 +10,6 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Infrastructure.Persistence
 {
-    /// <summary>
-    /// Azure Table Storage entity for RedirectRule.
-    /// Flat property mapping with JSON serialization for nested collections.
-    /// PartitionKey is fixed "rule" for single-tenant deployment.
-    /// RowKey is the Rule ID as GUID without hyphens.
-    /// </summary>
-    /// 
     public class RedirectRuleEntity : ITableEntity
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -55,9 +48,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public string? SearchAndReplaceJson { get; set; }
 
-        /// <summary>
-        /// Maps a domain RedirectRule to a Table Storage entity.
-        /// </summary>
         public static RedirectRuleEntity FromDomainModel(RedirectRule rule)
         {
             var entity = new RedirectRuleEntity
@@ -92,10 +82,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
             return entity;
         }
 
-        /// <summary>
-        /// Maps a Table Storage entity back to a domain RedirectRule.
-        /// </summary>
-        /// 
         public RedirectRule ToDomainModel()
         {
             var rule = new RedirectRule

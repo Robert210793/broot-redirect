@@ -7,10 +7,6 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Infrastructure.Cache
 {
-    /// <summary>
-    /// Background service that periodically deletes tracking entries older than the configured retention period.
-    /// Runs once daily.
-    /// </summary>
     public class TrackingCleanupService : BackgroundService
     {
         private readonly ITrackingRepository _trackingRepository;

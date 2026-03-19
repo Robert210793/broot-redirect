@@ -9,11 +9,6 @@ namespace Broot.Redirect.API.Middleware
         private readonly RequestDelegate _next;
         private readonly ILogger<RedirectMiddleware> _logger;
 
-        /// <summary>
-        /// Angular SPA routes that must not be processed as redirect paths.
-        /// Without this, visiting /rules or /settings would trigger a redirect
-        /// to the default domain or return 404 instead of loading the SPA.
-        /// </summary>
         private static readonly string[] SpaRoutes =
         {
             "/login",

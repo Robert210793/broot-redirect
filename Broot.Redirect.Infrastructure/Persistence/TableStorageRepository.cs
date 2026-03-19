@@ -28,9 +28,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
             _tableClient = tableServiceClient.GetTableClient("Tracking");
         }
 
-        /// <summary>
-        /// Ensures the Tracking table exists. Called once on startup by the warmup service.
-        /// </summary>
         public async Task EnsureTableExistsAsync(CancellationToken cancellationToken = default)
         {
             await _tableClient.CreateIfNotExistsAsync(cancellationToken);

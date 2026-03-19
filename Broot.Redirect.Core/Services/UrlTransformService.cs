@@ -202,12 +202,6 @@ namespace Broot.Redirect.Core.Services
             return GenerateNewUrl(originalUrl, targetDomain);
         }
 
-        /// <summary>
-        /// Applies a single global search-and-replace rule to the URL.
-        /// Uses Regex.Escape on the Search value for literal string matching,
-        /// with case sensitivity controlled by the CaseSensitive flag.
-        /// Same pattern as per-rule ApplySearchAndReplace.
-        /// </summary>
         internal static string ApplyGlobalRule(string url, GlobalRule globalRule)
         {
             if (string.IsNullOrEmpty(globalRule.Search))

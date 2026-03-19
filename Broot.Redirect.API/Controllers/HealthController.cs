@@ -29,12 +29,6 @@ namespace Broot.Redirect.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// GET /api/health
-        /// Returns system health including Table Storage connectivity, cache status,
-        /// rule count, and uptime. No authentication required.
-        /// Returns 200 for healthy, 503 for unhealthy.
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetHealth()
         {

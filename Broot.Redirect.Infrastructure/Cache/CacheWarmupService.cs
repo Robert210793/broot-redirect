@@ -11,16 +11,6 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Infrastructure.Cache
 {
-    /// <summary>
-    /// Hosted service that runs once on application startup to:
-    /// 1. Ensure the Table Storage tables exist (rules, settings, global rules, tracking).
-    /// 2. Load all redirect rules into the in-memory cache.
-    /// 3. Load (or seed) AppSettings into the in-memory cache.
-    /// 4. Load all global rules into the in-memory cache.
-    ///
-    /// At the 25,000-rule ceiling, this takes 1-3 seconds (Table Storage pagination).
-    /// The application starts accepting requests only after the cache is warm.
-    /// </summary>
     public class CacheWarmupService : IHostedService
     {
         private readonly TableStorageRuleRepository _ruleRepository;

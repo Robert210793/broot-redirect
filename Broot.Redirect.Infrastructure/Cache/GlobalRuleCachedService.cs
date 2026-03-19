@@ -9,12 +9,6 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Infrastructure.Cache
 {
-    /// <summary>
-    /// In-memory cache for global search-and-replace rules.
-    /// Rules are always stored sorted by Priority ascending (lower = applied first).
-    /// Thread-safe via ReaderWriterLockSlim -- same pattern as RuleCacheService.
-    /// </summary>
-    /// 
     public class GlobalRuleCacheService : IGlobalRuleCacheService
     {
         private readonly ILogger<GlobalRuleCacheService> _logger;
@@ -144,11 +138,6 @@ namespace Broot.Redirect.Infrastructure.Cache
             _logger.LogDebug("Removed global rule {RuleId} from cache.", ruleId);
         }
 
-        /// <summary>
-        /// Full rebuild: clears everything and rebuilds from a new list.
-        /// Used by Initialize.
-        /// </summary>
-        /// 
         private void RebuildFromList(IReadOnlyList<GlobalRule> rules)
         {
             _lock.EnterWriteLock();
@@ -170,11 +159,6 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
         }
 
-        /// <summary>
-        /// Rebuilds the sorted list from the ID dictionary.
-        /// Must be called under write lock.
-        /// </summary>
-        /// 
         private void RebuildSortedList()
         {
             var sorted = _rulesById.Values.ToList();

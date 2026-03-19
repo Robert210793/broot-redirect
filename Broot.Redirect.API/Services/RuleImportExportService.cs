@@ -9,12 +9,6 @@ using Broot.Redirect.API.Dtos;
 
 namespace Broot.Redirect.API.Services
 {
-    /// <summary>
-    /// Handles CSV and XLSX import/export for redirect rules.
-    /// Complex collection fields (KeptQueryParams, StaticQueryParams, SearchAndReplace)
-    /// are serialized as JSON strings in CSV/XLSX cells.
-    /// Includes CSV injection protection on export.
-    /// </summary>
     public static class RuleImportExportService
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -211,10 +205,6 @@ namespace Broot.Redirect.API.Services
             return entries;
         }
 
-        /// <summary>
-        /// Maps a row (from either CSV or XLSX) to an ImportRuleEntry.
-        /// The getValue function abstracts the difference between CSV and XLSX access.
-        /// </summary>
         private static ImportRuleEntry MapRowToEntry(Func<string, string?> getValue)
         {
             var entry = new ImportRuleEntry();
@@ -240,10 +230,6 @@ namespace Broot.Redirect.API.Services
             return entry;
         }
 
-        /// <summary>
-        /// Gets a field value from a CsvReader using flexible column mapping.
-        /// Tries all known header variations for the given field name.
-        /// </summary>
         private static string? GetFieldValue(CsvReader csv, string[] headers, string fieldName)
         {
             if (!ColumnMapping.TryGetValue(fieldName, out var variations))
@@ -267,9 +253,6 @@ namespace Broot.Redirect.API.Services
             return null;
         }
 
-        /// <summary>
-        /// Finds the column index in XLSX headers using flexible column mapping.
-        /// </summary>
         private static int FindColumnIndex(string[] headers, string fieldName)
         {
             if (!ColumnMapping.TryGetValue(fieldName, out var variations))
@@ -374,10 +357,6 @@ namespace Broot.Redirect.API.Services
             return JsonSerializer.Serialize(collection, JsonOptions);
         }
 
-        /// <summary>
-        /// Reverses SanitizeForCsv by stripping the leading single quote
-        /// if the character after it is one of the sanitized formula triggers.
-        /// </summary>
         private static string? UnsanitizeCsvValue(string? value)
         {
             if (value != null && value.Length >= 2 && value[0] == '\''
@@ -389,11 +368,6 @@ namespace Broot.Redirect.API.Services
             return value;
         }
 
-        /// <summary>
-        /// Prevents CSV/Excel formula injection by prepending a single quote
-        /// to values starting with =, +, -, or @.
-        /// </summary>
-        ///
         private static string SanitizeForCsv(string? value)
         {
             if (string.IsNullOrEmpty(value))

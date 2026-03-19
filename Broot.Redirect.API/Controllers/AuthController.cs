@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Broot.Redirect.API.Configuration;
 using Broot.Redirect.API.Dtos;
+using Broot.Redirect.API.Services;
 
 namespace Broot.Redirect.API.Controllers
 {
@@ -12,26 +13,35 @@ namespace Broot.Redirect.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly BrootRedirectOptions _options;
+        private readonly BruteForceProtectionService _bruteForce;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IOptions<BrootRedirectOptions> options,
+            BruteForceProtectionService bruteForce,
             ILogger<AuthController> logger)
         {
             _options = options.Value;
+            _bruteForce = bruteForce;
             _logger = logger;
         }
 
-        /// <summary>
-        /// POST /api/auth/login
-        /// Authenticates admin with simple password comparison.
-        /// Both submitted and stored passwords are SHA256-hashed and compared using
-        /// CryptographicOperations.FixedTimeEquals to prevent timing attacks.
-        /// On success, sets session cookie (HttpOnly, Secure in production, SameSite=Lax).
-        /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+            // Check if IP is blocked before processing the request
+            if (_bruteForce.IsBlocked(ip))
+            {
+                _logger.LogWarning("Blocked login attempt from {RemoteIp}", ip);
+
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    error = "Too many failed login attempts. Try again later."
+                });
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(new { error = "Password is required" });
@@ -42,10 +52,15 @@ namespace Broot.Redirect.API.Controllers
 
             if (!CryptographicOperations.FixedTimeEquals(inputHash, storedHash))
             {
-                _logger.LogWarning("Failed login attempt from {RemoteIp}", HttpContext.Connection.RemoteIpAddress);
+                _bruteForce.RecordFailure(ip);
+
+                _logger.LogWarning("Failed login attempt from {RemoteIp}", ip);
 
                 return Unauthorized(new { error = "Wrong password" });
             }
+
+            // Successful login: reset brute force counter
+            _bruteForce.ResetAttempts(ip);
 
             HttpContext.Session.Clear();
 
@@ -56,16 +71,11 @@ namespace Broot.Redirect.API.Controllers
 
             await HttpContext.Session.CommitAsync();
 
-            _logger.LogInformation("Successful admin login from {RemoteIp}", HttpContext.Connection.RemoteIpAddress);
+            _logger.LogInformation("Successful admin login from {RemoteIp}", ip);
 
             return Ok(new LoginResponse { Success = true });
         }
 
-        /// <summary>
-        /// GET /api/auth/status
-        /// Returns whether the current session is authenticated.
-        /// Requires an active session (enforced by AdminSessionMiddleware).
-        /// </summary>
         [HttpGet("status")]
         public IActionResult Status()
         {
@@ -86,10 +96,6 @@ namespace Broot.Redirect.API.Controllers
             });
         }
 
-        /// <summary>
-        /// POST /api/auth/logout
-        /// Destroys the current session and clears the session cookie.
-        /// </summary>
         [HttpPost("logout")]
         public IActionResult Logout()
         {

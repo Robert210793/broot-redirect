@@ -1,5 +1,6 @@
 using Broot.Redirect.API.Configuration;
 using Broot.Redirect.API.Middleware;
+using Broot.Redirect.API.Services;
 using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Services;
 using Broot.Redirect.Infrastructure.Extensions;
@@ -17,6 +18,7 @@ builder.Services.AddSmartRedirectInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<IRuleMatchingService, RuleMatchingService>();
 builder.Services.AddSingleton<IUrlTransformService, UrlTransformService>();
 builder.Services.AddSingleton<ISmartSearchService, SmartSearchService>();
+builder.Services.AddSingleton<BruteForceProtectionService>();
 
 builder.Services.AddDistributedMemoryCache();
 
@@ -104,6 +106,12 @@ app.Use(async (context, next) =>
 
     await next();
 });
+
+// Rate limiting: reject floods before doing any real work
+app.UseMiddleware<RateLimitMiddleware>();
+
+// CSRF: reject cross-origin state-changing requests before session processing
+app.UseMiddleware<CsrfProtectionMiddleware>();
 
 app.UseSession();
 

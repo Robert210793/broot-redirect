@@ -2,11 +2,6 @@
 
 namespace Broot.Redirect.API.Configuration
 {
-    /// <summary>
-    /// Builds RuleMatchingConfig from the appsettings-bound SmartRedirectOptions.
-    /// Centralizes the string-to-enum conversion for TrailingSlashPolicy.
-    /// </summary>
-    /// 
     public static class RuleMatchingConfigFactory
     {
         public static RuleMatchingConfig Create(BrootRedirectOptions options)

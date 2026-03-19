@@ -27,11 +27,6 @@ namespace Broot.Redirect.API.Controllers
             _retentionDays = options.Value.TrackingRetentionDays;
         }
 
-        /// <summary>
-        /// POST /api/track
-        /// Public endpoint. Records a tracking entry when the info page displays a resolved URL.
-        /// Returns the generated tracking ID for subsequent feedback calls.
-        /// </summary>
         [HttpPost("api/track")]
         public async Task<IActionResult> Track([FromBody] TrackRequest request)
         {
@@ -62,11 +57,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(new TrackResponse { Id = id.ToString("N") });
         }
 
-        /// <summary>
-        /// POST /api/feedback
-        /// Public endpoint. Updates an existing tracking entry with user feedback (OK/NOK)
-        /// and an optional user-proposed URL.
-        /// </summary>
         [HttpPost("api/feedback")]
         public async Task<IActionResult> Feedback([FromBody] FeedbackRequest request)
         {
@@ -108,10 +98,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(new { success = true });
         }
 
-        /// <summary>
-        /// GET /api/stats
-        /// Admin-protected. Returns aggregated statistics across all tracking entries.
-        /// </summary>
         [HttpGet("api/stats")]
         public async Task<IActionResult> GetStats()
         {
@@ -137,10 +123,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(response);
         }
 
-        /// <summary>
-        /// GET /api/stats/entries?page=1&limit=50&search=
-        /// Admin-protected. Returns paginated raw tracking entries.
-        /// </summary>
         [HttpGet("api/stats/entries")]
         public async Task<IActionResult> GetEntries(
             [FromQuery] int page = 1,

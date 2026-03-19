@@ -24,12 +24,6 @@ namespace Broot.Redirect.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// GET /api/global-rules
-        /// Returns all global rules ordered by priority (ascending).
-        /// Admin-protected.
-        /// </summary>
-        /// 
         [HttpGet]
         public IActionResult GetAll()
         {
@@ -38,12 +32,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(rules);
         }
 
-        /// <summary>
-        /// GET /api/global-rules/{id}
-        /// Returns a single global rule by ID from cache.
-        /// Admin-protected.
-        /// </summary>
-        /// 
         [HttpGet("{id:guid}")]
         public IActionResult GetById(Guid id)
         {
@@ -57,13 +45,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(rule);
         }
 
-        /// <summary>
-        /// POST /api/global-rules
-        /// Creates a new global rule.
-        /// Writes to Table Storage first, then updates cache.
-        /// Admin-protected.
-        /// </summary>
-        /// 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateGlobalRuleRequest request)
         {
@@ -95,13 +76,6 @@ namespace Broot.Redirect.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = rule.Id }, rule);
         }
 
-        /// <summary>
-        /// PUT /api/global-rules/{id}
-        /// Partial update -- merges provided fields into existing global rule.
-        /// Writes to Table Storage first, then updates cache.
-        /// Admin-protected.
-        /// </summary>
-        /// 
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateGlobalRuleRequest request)
         {
@@ -131,12 +105,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(updated);
         }
 
-        /// <summary>
-        /// DELETE /api/global-rules/{id}
-        /// Deletes a single global rule. Returns 204 on success, 404 if not found.
-        /// Admin-protected.
-        /// </summary>
-        /// 
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {

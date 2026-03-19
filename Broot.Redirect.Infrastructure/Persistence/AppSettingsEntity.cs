@@ -9,12 +9,6 @@ using System.Threading.Tasks;
 
 namespace Broot.Redirect.Infrastructure.Persistence
 {
-    /// <summary>
-    /// Azure Table Storage entity for AppSettings.
-    /// Single-row table with PartitionKey = "Settings", RowKey = "default".
-    /// All properties are scalar strings/bools -- no JSON serialization needed.
-    /// </summary>
-    /// 
     public class AppSettingsEntity : ITableEntity
     {
         public const string DefaultPartitionKey = "Settings";
@@ -70,10 +64,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public string MatchNoneExplanation { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Maps a domain AppSettings to a Table Storage entity.
-        /// </summary>
-        /// 
         public static AppSettingsEntity FromDomainModel(AppSettings settings)
         {
             return new AppSettingsEntity
@@ -104,10 +94,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
             };
         }
 
-        /// <summary>
-        /// Maps a Table Storage entity back to a domain AppSettings.
-        /// </summary>
-        /// 
         public AppSettings ToDomainModel()
         {
             return new AppSettings

@@ -17,10 +17,6 @@
             public int Priority { get; set; } = 0;
         }
 
-        /// <summary>
-        /// Partial update request. Only provided (non-null) fields are merged.
-        /// </summary>
-        /// 
         public class UpdateGlobalRuleRequest
         {
             public string? Search { get; set; }
