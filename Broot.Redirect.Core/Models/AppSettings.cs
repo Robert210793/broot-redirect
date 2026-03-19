@@ -28,7 +28,7 @@ namespace Broot.Redirect.Core.Models
         /// regardless of per-rule AutoRedirect settings.
         /// </summary>
         /// 
-        public bool AutoRedirect { get; set; } = false;
+        public bool AutoRedirect { get; set; } = true;
 
         public string HeaderTitle { get; set; } = "SmartRedirect Suite";
 
