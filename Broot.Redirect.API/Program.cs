@@ -76,6 +76,8 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
+app.UseRouting();
+
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/api"))
