@@ -3,6 +3,7 @@ using Broot.Redirect.API.Middleware;
 using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Services;
 using Broot.Redirect.Infrastructure.Extensions;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -59,6 +60,11 @@ if (adminPassword == "Password1")
 }
 
 var app = builder.Build();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 if (app.Environment.IsDevelopment())
 {
