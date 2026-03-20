@@ -129,6 +129,65 @@
         }
     }
 
+    <!-- Satisfaction Trend Chart (Phase 5.4) -->
+    <div class="card trend-card">
+        <div class="card-header">
+            <h2>Feedback-Trend</h2>
+            <div class="trend-controls">
+                <div class="trend-days-controls">
+                    <button class="time-range-btn" [class.active]="trendDays() === 7" (click)="onTrendDaysChange(7)">7T</button>
+                    <button class="time-range-btn" [class.active]="trendDays() === 30" (click)="onTrendDaysChange(30)">30T</button>
+                    <button class="time-range-btn" [class.active]="trendDays() === 90" (click)="onTrendDaysChange(90)">90T</button>
+                </div>
+                <div class="trend-agg-controls">
+                    <button class="time-range-btn" [class.active]="trendAggregation() === 'day'" (click)="onTrendAggregationChange('day')">Tag</button>
+                    <button class="time-range-btn" [class.active]="trendAggregation() === 'week'" (click)="onTrendAggregationChange('week')">Woche</button>
+                    <button class="time-range-btn" [class.active]="trendAggregation() === 'month'" (click)="onTrendAggregationChange('month')">Monat</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (isLoadingTrend()) {
+                <div class="loading-overlay">
+                    <span class="spinner"></span>
+                    Trend-Daten werden geladen...
+                </div>
+            } @else if (trendData().length === 0) {
+                <div class="empty-state">
+                    <p>Keine Trend-Daten vorhanden.</p>
+                </div>
+            } @else {
+                <div class="trend-legend">
+                    <span class="trend-legend-item"><span class="trend-legend-swatch trend-color-ok"></span> OK</span>
+                    <span class="trend-legend-item"><span class="trend-legend-swatch trend-color-nok"></span> NOK</span>
+                    <span class="trend-legend-item"><span class="trend-legend-swatch trend-color-auto"></span> Auto</span>
+                    <span class="trend-legend-item"><span class="trend-legend-swatch trend-color-none"></span> Kein Feedback</span>
+                </div>
+                <div class="trend-chart">
+                    @for (dataPoint of trendData(); track dataPoint.date) {
+                        <div class="trend-bar-group" [title]="trendDateLabel(dataPoint.date) + ': ' + dataPoint.total + ' gesamt'">
+                            <div class="trend-bar-stack" [style.height.%]="trendBarHeight(dataPoint.total)">
+                                @if (dataPoint.ok > 0) {
+                                    <div class="trend-bar-segment trend-color-ok" [style.flex-grow]="dataPoint.ok"></div>
+                                }
+                                @if (dataPoint.nok > 0) {
+                                    <div class="trend-bar-segment trend-color-nok" [style.flex-grow]="dataPoint.nok"></div>
+                                }
+                                @if (dataPoint.autoRedirect > 0) {
+                                    <div class="trend-bar-segment trend-color-auto" [style.flex-grow]="dataPoint.autoRedirect"></div>
+                                }
+                                @if (dataPoint.none > 0) {
+                                    <div class="trend-bar-segment trend-color-none" [style.flex-grow]="dataPoint.none"></div>
+                                }
+                            </div>
+                            <span class="trend-bar-label">{{ trendDateLabel(dataPoint.date) }}</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
     <!-- Entries Table -->
     <div class="card">
         <div class="toolbar">
@@ -139,8 +198,87 @@
                 [ngModel]="searchText"
                 (ngModelChange)="onSearchChange($event)"
             />
-            <span class="toolbar-count">{{ total() }} Eintraege</span>
+            <button
+                class="btn btn-ghost btn-sm"
+                [class.active]="showFilters()"
+                (click)="onToggleFilters()"
+            >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+                Filter
+                @if (hasActiveFilters()) {
+                    <span class="filter-active-dot"></span>
+                }
+            </button>
+            <div class="toolbar-right">
+                <button class="btn btn-ghost btn-sm" (click)="onExport('csv')" [disabled]="isExporting()">
+                    @if (isExporting()) {
+                        <span class="spinner"></span>
+                    }
+                    Export CSV
+                </button>
+                <button class="btn btn-ghost btn-sm" (click)="onExport('json')" [disabled]="isExporting()">
+                    Export JSON
+                </button>
+                <span class="toolbar-count">{{ total() }} Eintraege</span>
+            </div>
         </div>
+
+        <!-- Advanced Filters (Phase 5.5) -->
+        @if (showFilters()) {
+            <div class="filter-panel">
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label class="form-label">Qualitaet Min</label>
+                        <input
+                            type="number"
+                            class="form-input"
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                            [(ngModel)]="filterQualityMin"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Qualitaet Max</label>
+                        <input
+                            type="number"
+                            class="form-input"
+                            placeholder="100"
+                            min="0"
+                            max="100"
+                            [(ngModel)]="filterQualityMax"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Feedback</label>
+                        <select class="form-select" [(ngModel)]="filterFeedbackType">
+                            <option value="">Alle</option>
+                            <option value="OK">OK</option>
+                            <option value="NOK">NOK</option>
+                            <option value="auto-redirect">Auto-Redirect</option>
+                            <option value="none">Kein Feedback</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Regel-ID</label>
+                        <input
+                            type="text"
+                            class="form-input mono"
+                            placeholder="z.B. a1b2c3d4..."
+                            [(ngModel)]="filterRuleId"
+                        />
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary btn-sm" (click)="onApplyFilters()">Anwenden</button>
+                    @if (hasActiveFilters()) {
+                        <button class="btn btn-ghost btn-sm" (click)="onClearFilters()">Zuruecksetzen</button>
+                    }
+                </div>
+            </div>
+        }
 
         @if (isLoadingEntries()) {
             <div class="card-body">

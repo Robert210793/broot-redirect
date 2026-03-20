@@ -182,6 +182,11 @@
     .stats-cards {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .trend-controls {
+        flex-direction: column;
+        gap: 6px;
+    }
 }
 
 @media (max-width: 640px) {
@@ -193,4 +198,228 @@
     .col-url {
         max-width: 140px;
     }
+
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* -- Trend Chart (Phase 5.4) -- */
+
+.trend-card {
+    margin-bottom: 24px;
+}
+
+.trend-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.trend-days-controls,
+.trend-agg-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.trend-legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 0.78rem;
+    color: var(--color-text-secondary);
+}
+
+.trend-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.trend-legend-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+
+.trend-color-ok {
+    background: #16a34a;
+}
+
+.trend-color-nok {
+    background: #dc2626;
+}
+
+.trend-color-auto {
+    background: #4f46e5;
+}
+
+.trend-color-none {
+    background: #d1d5db;
+}
+
+.trend-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 180px;
+    padding-top: 8px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.trend-bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+    justify-content: flex-end;
+}
+
+.trend-bar-stack {
+    width: 100%;
+    max-width: 32px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 2px 2px 0 0;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.trend-bar-segment {
+    min-height: 1px;
+}
+
+.trend-bar-label {
+    font-size: 0.65rem;
+    color: var(--color-text-tertiary);
+    margin-top: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
+}
+
+/* -- Filter Panel (Phase 5.5) -- */
+
+.filter-panel {
+    padding: 16px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg);
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-active-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    margin-left: 2px;
+}
+
+/* -- Time Range Filter -- */
+
+.time-range-filter {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.time-range-btn {
+    padding: 5px 12px;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.time-range-btn:hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-hover);
+}
+
+.time-range-btn.active {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+/* -- Toolbar count -- */
+
+.toolbar-count {
+    font-size: 0.8rem;
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+}
+
+/* -- Confirm overlay -- */
+
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.confirm-dialog {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 24px;
+    max-width: 420px;
+    width: 90%;
+}
+
+.confirm-dialog h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.confirm-dialog p {
+    font-size: 0.87rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* -- Danger text on secondary button -- */
+
+.btn-danger-text {
+    color: var(--color-danger);
+}
+
+.btn-danger-text:hover:not(:disabled) {
+    color: var(--color-danger-hover);
+    background: var(--color-danger-light);
+    border-color: var(--color-danger);
 }

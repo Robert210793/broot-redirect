@@ -3,7 +3,7 @@ import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { TrackingService } from '../../shared/services/tracking.service';
-import { StatsResponse, TrackingEntry } from '../../shared/models/tracking';
+import { StatsResponse, TrackingEntry, TrendDataPoint, StatsFilterParams } from '../../shared/models/tracking';
 import { ResizableColumnsDirective } from '../../shared/directives/resizable-columns.directive';
 
 @Component({
@@ -24,10 +24,29 @@ export class StatsComponent implements OnInit, OnDestroy {
     showDeleteConfirm = signal(false);
     isDeleting = signal(false);
 
+    // -- Filter state (Phase 5.5) --
+
+    showFilters = signal(false);
+    filterQualityMin: number | null = null;
+    filterQualityMax: number | null = null;
+    filterFeedbackType = '';
+    filterRuleId = '';
+
+    // -- Export state (Phase 5.5) --
+
+    isExporting = signal(false);
+
     // -- Aggregation state --
 
     stats = signal<StatsResponse | null>(null);
     isLoadingStats = signal(true);
+
+    // -- Trend state (Phase 5.4) --
+
+    trendData = signal<TrendDataPoint[]>([]);
+    trendAggregation = signal<'day' | 'week' | 'month'>('day');
+    trendDays = signal(30);
+    isLoadingTrend = signal(true);
 
     // -- Entries table state --
 
@@ -62,6 +81,16 @@ export class StatsComponent implements OnInit, OnDestroy {
         return pages;
     });
 
+    trendMaxValue = computed(() => {
+        const data = this.trendData();
+
+        if (data.length === 0) {
+            return 1;
+        }
+
+        return Math.max(...data.map((dataPoint) => dataPoint.total), 1);
+    });
+
     ngOnInit(): void {
         this.searchSubject.pipe(
             debounceTime(300),
@@ -74,6 +103,7 @@ export class StatsComponent implements OnInit, OnDestroy {
 
         this.loadStats();
         this.loadEntries(1);
+        this.loadTrend();
     }
 
     ngOnDestroy(): void {
@@ -94,6 +124,7 @@ export class StatsComponent implements OnInit, OnDestroy {
     onRefresh(): void {
         this.loadStats();
         this.loadEntries(this.currentPage(), this.searchText);
+        this.loadTrend();
     }
 
     onTimeRangeChange(range: '24h' | '7d' | 'all'): void {
@@ -118,6 +149,7 @@ export class StatsComponent implements OnInit, OnDestroy {
                 this.showDeleteConfirm.set(false);
                 this.loadStats();
                 this.loadEntries(1, '');
+                this.loadTrend();
                 this.searchText = '';
             },
             error: () => {
@@ -126,6 +158,90 @@ export class StatsComponent implements OnInit, OnDestroy {
             }
         });
     }
+
+    // -- Filter methods (Phase 5.5) --
+
+    onToggleFilters(): void {
+        this.showFilters.update((current) => !current);
+    }
+
+    onApplyFilters(): void {
+        this.currentPage.set(1);
+        this.loadEntries(1, this.searchText);
+    }
+
+    onClearFilters(): void {
+        this.filterQualityMin = null;
+        this.filterQualityMax = null;
+        this.filterFeedbackType = '';
+        this.filterRuleId = '';
+        this.currentPage.set(1);
+        this.loadEntries(1, this.searchText);
+    }
+
+    hasActiveFilters(): boolean {
+        return this.filterQualityMin != null
+            || this.filterQualityMax != null
+            || this.filterFeedbackType !== ''
+            || this.filterRuleId !== '';
+    }
+
+    // -- Export methods (Phase 5.5) --
+
+    onExport(format: 'csv' | 'json'): void {
+        this.isExporting.set(true);
+
+        this.trackingService.exportEntries(format, this.searchText || undefined, this.buildFilterParams()).subscribe({
+            next: (blob) => {
+                const url = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+
+                anchor.href = url;
+                anchor.download = `tracking-export.${format}`;
+                anchor.click();
+
+                URL.revokeObjectURL(url);
+                this.isExporting.set(false);
+            },
+            error: () => {
+                this.isExporting.set(false);
+            }
+        });
+    }
+
+    // -- Trend methods (Phase 5.4) --
+
+    onTrendAggregationChange(aggregation: 'day' | 'week' | 'month'): void {
+        this.trendAggregation.set(aggregation);
+        this.loadTrend();
+    }
+
+    onTrendDaysChange(days: number): void {
+        this.trendDays.set(days);
+        this.loadTrend();
+    }
+
+    trendBarHeight(value: number): number {
+        const maxValue = this.trendMaxValue();
+
+        if (maxValue === 0) {
+            return 0;
+        }
+
+        return (value / maxValue) * 100;
+    }
+
+    trendDateLabel(dateString: string): string {
+        const date = new Date(dateString);
+
+        if (this.trendAggregation() === 'month') {
+            return date.toLocaleDateString('de-CH', { month: 'short', year: '2-digit' });
+        }
+
+        return date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+    }
+
+    // -- Formatters --
 
     formatDate(isoDate: string): string {
         try {
@@ -207,6 +323,35 @@ export class StatsComponent implements OnInit, OnDestroy {
         return strategy;
     }
 
+    // -- Private --
+
+    private buildFilterParams(): StatsFilterParams | undefined {
+        const filters: StatsFilterParams = {};
+        let hasFilter = false;
+
+        if (this.filterQualityMin != null) {
+            filters.qualityMin = this.filterQualityMin;
+            hasFilter = true;
+        }
+
+        if (this.filterQualityMax != null) {
+            filters.qualityMax = this.filterQualityMax;
+            hasFilter = true;
+        }
+
+        if (this.filterFeedbackType) {
+            filters.feedbackType = this.filterFeedbackType;
+            hasFilter = true;
+        }
+
+        if (this.filterRuleId) {
+            filters.ruleId = this.filterRuleId;
+            hasFilter = true;
+        }
+
+        return hasFilter ? filters : undefined;
+    }
+
     private loadStats(): void {
         this.isLoadingStats.set(true);
 
@@ -224,7 +369,7 @@ export class StatsComponent implements OnInit, OnDestroy {
     private loadEntries(page: number, search?: string): void {
         this.isLoadingEntries.set(true);
 
-        this.trackingService.getEntries(page, this.limit, search || undefined).subscribe({
+        this.trackingService.getEntries(page, this.limit, search || undefined, this.buildFilterParams()).subscribe({
             next: (response) => {
                 this.entries.set(response.entries);
                 this.total.set(response.total);
@@ -233,6 +378,20 @@ export class StatsComponent implements OnInit, OnDestroy {
             },
             error: () => {
                 this.isLoadingEntries.set(false);
+            }
+        });
+    }
+
+    private loadTrend(): void {
+        this.isLoadingTrend.set(true);
+
+        this.trackingService.getTrend(this.trendDays(), this.trendAggregation()).subscribe({
+            next: (response) => {
+                this.trendData.set(response.dataPoints);
+                this.isLoadingTrend.set(false);
+            },
+            error: () => {
+                this.isLoadingTrend.set(false);
             }
         });
     }

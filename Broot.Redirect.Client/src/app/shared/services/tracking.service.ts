@@ -6,7 +6,9 @@ import {
     TrackResponse,
     FeedbackRequest,
     StatsResponse,
-    PaginatedTrackingResponse
+    PaginatedTrackingResponse,
+    TrendResponse,
+    StatsFilterParams
 } from '../models/tracking';
 
 @Injectable({
@@ -54,9 +56,9 @@ export class TrackingService {
     }
 
     /**
-     * Retrieves paginated raw tracking entries. Admin-protected.
+     * Retrieves paginated raw tracking entries with optional filters. Admin-protected.
      */
-    getEntries(page: number, limit: number, search?: string): Observable<PaginatedTrackingResponse> {
+    getEntries(page: number, limit: number, search?: string, filters?: StatsFilterParams): Observable<PaginatedTrackingResponse> {
         let params = new HttpParams()
             .set('page', page.toString())
             .set('limit', limit.toString());
@@ -65,6 +67,66 @@ export class TrackingService {
             params = params.set('search', search);
         }
 
+        if (filters) {
+            if (filters.qualityMin != null) {
+                params = params.set('qualityMin', filters.qualityMin.toString());
+            }
+
+            if (filters.qualityMax != null) {
+                params = params.set('qualityMax', filters.qualityMax.toString());
+            }
+
+            if (filters.feedbackType) {
+                params = params.set('feedbackType', filters.feedbackType);
+            }
+
+            if (filters.ruleId) {
+                params = params.set('ruleId', filters.ruleId);
+            }
+        }
+
         return this.httpClient.get<PaginatedTrackingResponse>('/api/stats/entries', { params });
+    }
+
+    /**
+     * Exports filtered tracking entries as a file download. Admin-protected.
+     */
+    exportEntries(format: 'csv' | 'json', search?: string, filters?: StatsFilterParams): Observable<Blob> {
+        let params = new HttpParams().set('format', format);
+
+        if (search) {
+            params = params.set('search', search);
+        }
+
+        if (filters) {
+            if (filters.qualityMin != null) {
+                params = params.set('qualityMin', filters.qualityMin.toString());
+            }
+
+            if (filters.qualityMax != null) {
+                params = params.set('qualityMax', filters.qualityMax.toString());
+            }
+
+            if (filters.feedbackType) {
+                params = params.set('feedbackType', filters.feedbackType);
+            }
+
+            if (filters.ruleId) {
+                params = params.set('ruleId', filters.ruleId);
+            }
+        }
+
+        return this.httpClient.get('/api/stats/entries/export', { params, responseType: 'blob' });
+    }
+
+    /**
+     * Retrieves satisfaction trend data. Admin-protected.
+     */
+    getTrend(days: number = 30, aggregation: string = 'day'): Observable<TrendResponse> {
+        const params = new HttpParams()
+            .set('days', days.toString())
+            .set('aggregation', aggregation);
+
+        return this.httpClient.get<TrendResponse>('/api/stats/trend', { params });
     }
 }
