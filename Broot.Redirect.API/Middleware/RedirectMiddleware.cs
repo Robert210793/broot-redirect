@@ -85,7 +85,7 @@ namespace Broot.Redirect.API.Middleware
                                 Timestamp = DateTimeOffset.UtcNow,
                                 UserAgent = context.Request.Headers.UserAgent.ToString(),
                                 Referrer = context.Request.Headers.Referer.ToString(),
-                                RuleId = rule.Id,
+                                RuleId = rule.Id.ToString(),
                                 MatchQuality = matchResult.Quality,
                                 Feedback = "auto-redirect",
                                 RedirectStrategy = "rule"
