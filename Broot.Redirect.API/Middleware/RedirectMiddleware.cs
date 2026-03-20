@@ -73,7 +73,6 @@ namespace Broot.Redirect.API.Middleware
                             targetUrl,
                             rule.Id);
 
-                        // Track auto-redirect so it shows up in statistics
                         try
                         {
                             var trackingEntry = new TrackingEntry

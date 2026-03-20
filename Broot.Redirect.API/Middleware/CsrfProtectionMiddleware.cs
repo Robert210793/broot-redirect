@@ -24,7 +24,6 @@
         {
             var path = context.Request.Path.Value ?? string.Empty;
 
-            // Only check API routes
             if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
             {
                 await _next(context);
@@ -32,7 +31,6 @@
                 return;
             }
 
-            // Safe methods do not need CSRF protection
             if (SafeMethods.Contains(context.Request.Method))
             {
                 await _next(context);
@@ -43,11 +41,6 @@
             var host = context.Request.Host.Host;
             var origin = context.Request.Headers.Origin.FirstOrDefault();
             var referer = context.Request.Headers.Referer.FirstOrDefault();
-
-            // Strategy:
-            // 1. If Origin is present, its hostname must match Host
-            // 2. If Origin is missing but Referer is present, referer hostname must match Host
-            // 3. If neither is present, reject (browser requests always include at least one)
 
             if (!string.IsNullOrEmpty(origin))
             {
@@ -99,7 +92,6 @@
 
         private static bool ValidateOrigin(string origin, string host)
         {
-            // Origin can be "null" (string literal) for privacy-restricted contexts
             if (origin == "null")
             {
                 return false;

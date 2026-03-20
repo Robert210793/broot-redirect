@@ -76,7 +76,6 @@ namespace Broot.Redirect.API.Middleware
                 return true;
             }
 
-            // Blocked IP management endpoints (Phase 5.2)
             if (path.StartsWith("/api/auth/blocked-ips", StringComparison.OrdinalIgnoreCase))
             {
                 return true;

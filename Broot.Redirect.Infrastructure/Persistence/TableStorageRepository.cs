@@ -175,7 +175,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 .GroupBy(entry => GetTrendBucketKey(entry.Timestamp, aggregation))
                 .ToDictionary(group => group.Key, group => group.ToList());
 
-            // Build complete set of buckets so the chart has no gaps
             var buckets = GenerateTrendBuckets(days, aggregation);
             var result = new List<TrendDataPoint>();
 
@@ -284,7 +283,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 }
                 catch (RequestFailedException exception) when (exception.Status == 404)
                 {
-                    // Already deleted, skip.
                 }
             }
 
@@ -307,7 +305,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 }
                 catch (RequestFailedException exception) when (exception.Status == 404)
                 {
-                    // Already deleted, skip.
                 }
             }
 
@@ -315,8 +312,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
             return deleted;
         }
-
-        // -- Private helpers --
 
         private async Task<List<TrackingEntry>> LoadFilteredEntriesAsync(
             int retentionDays,
@@ -337,7 +332,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 allEntries.Add(entity.ToDomainModel());
             }
 
-            // Text search
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var searchLower = search.ToLowerInvariant();
@@ -352,7 +346,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 ).ToList();
             }
 
-            // Quality range filter
             if (qualityMin.HasValue)
             {
                 allEntries = allEntries.Where(entry => entry.MatchQuality >= qualityMin.Value).ToList();
@@ -363,7 +356,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 allEntries = allEntries.Where(entry => entry.MatchQuality <= qualityMax.Value).ToList();
             }
 
-            // Feedback type filter
             if (!string.IsNullOrEmpty(feedbackType))
             {
                 if (feedbackType.Equals("none", StringComparison.OrdinalIgnoreCase))
@@ -379,7 +371,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 }
             }
 
-            // Rule ID filter
             if (!string.IsNullOrEmpty(ruleId))
             {
                 allEntries = allEntries.Where(entry =>
@@ -405,7 +396,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
         {
             var dayOfWeek = (int)date.DayOfWeek;
 
-            // ISO week starts on Monday (DayOfWeek.Sunday = 0, Monday = 1)
             var daysToSubtract = dayOfWeek == 0 ? 6 : dayOfWeek - 1;
 
             return new DateTimeOffset(date.Year, date.Month, date.Day, 0, 0, 0, TimeSpan.Zero).AddDays(-daysToSubtract);

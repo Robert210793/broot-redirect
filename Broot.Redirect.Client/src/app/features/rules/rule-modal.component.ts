@@ -12,6 +12,13 @@ import {
     SearchAndReplaceEntry
 } from '../../shared/models/redirect-rule';
 
+// Matches Node.js shared/schema.ts URL_MATCHER_PATTERN
+const MATCHER_PATTERN = /^(\/|[a-zA-Z0-9])([a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]*)$/;
+
+const MATCHER_MAX_LENGTH = 500;
+const TARGET_URL_MAX_LENGTH = 2000;
+const INFO_TEXT_MAX_LENGTH = 5000;
+
 @Component({
     selector: 'app-rule-modal',
     imports: [FormsModule],
@@ -102,10 +109,7 @@ export class RuleModalComponent {
                 },
                 error: (error) => {
                     this.isSaving.set(false);
-
-                    const message = error?.error?.message || error?.error?.title || 'Regel konnte nicht aktualisiert werden.';
-
-                    this.toastService.show(message, 'error');
+                    this.applyServerErrors(error);
                 }
             });
         } else {
@@ -130,10 +134,7 @@ export class RuleModalComponent {
                 },
                 error: (error) => {
                     this.isSaving.set(false);
-
-                    const message = error?.error?.message || error?.error?.title || 'Regel konnte nicht erstellt werden.';
-
-                    this.toastService.show(message, 'error');
+                    this.applyServerErrors(error);
                 }
             });
         }
@@ -156,6 +157,45 @@ export class RuleModalComponent {
     onKeydown(event: KeyboardEvent): void {
         if (event.key === 'Escape') {
             this.onClose();
+        }
+    }
+
+    // -- Live field error clearing --
+
+    onMatcherChange(): void {
+        const current = this.errors();
+
+        if (current['matcher']) {
+            const { matcher, ...rest } = current;
+
+            this.errors.set(rest);
+        }
+    }
+
+    onTargetUrlChange(): void {
+        const current = this.errors();
+
+        if (current['targetUrl']) {
+            const { targetUrl, ...rest } = current;
+
+            this.errors.set(rest);
+        }
+    }
+
+    onRedirectTypeChange(): void {
+        const current = this.errors();
+        const { targetUrl, ...rest } = current;
+
+        this.errors.set(rest);
+    }
+
+    onInfoTextChange(): void {
+        const current = this.errors();
+
+        if (current['infoText']) {
+            const { infoText, ...rest } = current;
+
+            this.errors.set(rest);
         }
     }
 
@@ -231,22 +271,120 @@ export class RuleModalComponent {
     private validate(): boolean {
         const validationErrors: Record<string, string> = {};
 
-        if (!this.matcher.trim()) {
-            validationErrors['matcher'] = 'Matcher ist erforderlich.';
-        } else if (this.matcher.length > 500) {
-            validationErrors['matcher'] = 'Matcher darf maximal 500 Zeichen lang sein.';
+        // -- Matcher validation --
+
+        const trimmedMatcher = this.matcher.trim();
+
+        if (!trimmedMatcher) {
+            validationErrors['matcher'] = 'URL-Muster darf nicht leer sein.';
+        } else if (trimmedMatcher.length > MATCHER_MAX_LENGTH) {
+            validationErrors['matcher'] = `URL-Muster ist zu lang (maximal ${MATCHER_MAX_LENGTH} Zeichen).`;
+        } else if (!MATCHER_PATTERN.test(trimmedMatcher)) {
+            validationErrors['matcher'] = "URL-Muster muss mit '/' beginnen oder eine Domain sein (z.B. example.com).";
         }
 
-        if (this.redirectType === 'regex') {
+        // -- Regex-specific matcher check --
+
+        if (this.redirectType === 'regex' && trimmedMatcher) {
             try {
-                new RegExp(this.matcher);
+                new RegExp(trimmedMatcher);
             } catch {
                 validationErrors['matcher'] = 'Ungueltige Regex-Syntax.';
+            }
+        }
+
+        // -- TargetUrl validation (redirect-type-specific, mirrors Node.js shared/validation.ts) --
+
+        const targetUrlTrimmed = this.targetUrl.trim();
+
+        if (targetUrlTrimmed) {
+            if (targetUrlTrimmed.length > TARGET_URL_MAX_LENGTH) {
+                validationErrors['targetUrl'] = `Ziel-URL ist zu lang (maximal ${TARGET_URL_MAX_LENGTH} Zeichen).`;
+            } else {
+                const startsWithHttp = targetUrlTrimmed.startsWith('http://') || targetUrlTrimmed.startsWith('https://');
+
+                if (this.redirectType === 'wildcard') {
+                    if (!startsWithHttp) {
+                        validationErrors['targetUrl'] = "Bei Typ 'Wildcard' muss die Ziel-URL mit http:// oder https:// beginnen.";
+                    }
+                } else if (this.redirectType === 'partial') {
+                    if (!targetUrlTrimmed.startsWith('/') && !startsWithHttp) {
+                        validationErrors['targetUrl'] = "Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen oder eine vollstaendige URL sein.";
+                    }
+                } else if (this.redirectType === 'domain') {
+                    if (!startsWithHttp) {
+                        validationErrors['targetUrl'] = "Bei Typ 'Domain' muss die Ziel-URL mit http:// oder https:// beginnen.";
+                    } else {
+                        try {
+                            const parsed = new URL(targetUrlTrimmed);
+
+                            if (parsed.pathname !== '/' && parsed.pathname !== '') {
+                                validationErrors['targetUrl'] = "Bei Typ 'Domain' darf die Ziel-URL keine Unterordner enthalten (nur https://domain.com).";
+                            }
+                        } catch {
+                            validationErrors['targetUrl'] = 'Ungueltige URL.';
+                        }
+                    }
+                }
+            }
+        }
+
+        // -- InfoText validation --
+
+        if (this.infoText && this.infoText.length > INFO_TEXT_MAX_LENGTH) {
+            validationErrors['infoText'] = `Info-Text ist zu lang (maximal ${INFO_TEXT_MAX_LENGTH} Zeichen).`;
+        }
+
+        // -- Sub-array validation --
+
+        for (let index = 0; index < this.keptQueryParams.length; index++) {
+            if (!this.keptQueryParams[index].keyPattern?.trim()) {
+                validationErrors[`keptQueryParams_${index}_keyPattern`] = 'Schluessel-Muster ist erforderlich.';
+            }
+        }
+
+        for (let index = 0; index < this.staticQueryParams.length; index++) {
+            if (!this.staticQueryParams[index].key?.trim()) {
+                validationErrors[`staticQueryParams_${index}_key`] = 'Key ist erforderlich.';
+            }
+        }
+
+        for (let index = 0; index < this.searchAndReplace.length; index++) {
+            if (!this.searchAndReplace[index].search?.trim()) {
+                validationErrors[`searchAndReplace_${index}_search`] = 'Suchbegriff ist erforderlich.';
             }
         }
 
         this.errors.set(validationErrors);
 
         return Object.keys(validationErrors).length === 0;
+    }
+
+    /// Maps server-side validation error responses into the errors signal
+    /// so field-level messages display inline, or falls back to a toast.
+    private applyServerErrors(error: any): void {
+        const body = error?.error;
+
+        // Backend returns { error: "...", details: [{ field, message }] }
+        if (body?.details && Array.isArray(body.details)) {
+            const mapped: Record<string, string> = {};
+
+            for (const detail of body.details) {
+                if (detail.field && detail.message) {
+                    mapped[detail.field] = detail.message;
+                }
+            }
+
+            if (Object.keys(mapped).length > 0) {
+                this.errors.set(mapped);
+
+                return;
+            }
+        }
+
+        // Fallback: show a toast with whatever message the server sent
+        const message = body?.error || body?.message || body?.title || 'Regel konnte nicht gespeichert werden.';
+
+        this.toastService.show(message, 'error');
     }
 }

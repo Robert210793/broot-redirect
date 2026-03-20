@@ -43,7 +43,6 @@ namespace Broot.Redirect.API.Services
 
                 if (DateTimeOffset.UtcNow >= info.BlockedUntil)
                 {
-                    // Block expired, clean up
                     _attempts.TryRemove(ip, out _);
 
                     return false;
@@ -142,7 +141,6 @@ namespace Broot.Redirect.API.Services
             {
                 lock (info)
                 {
-                    // Remove entries that are not blocked and have no recent activity
                     if (info.BlockedUntil != null && info.BlockedUntil <= now)
                     {
                         _attempts.TryRemove(ip, out _);

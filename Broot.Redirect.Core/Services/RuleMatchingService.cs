@@ -113,7 +113,6 @@ namespace Broot.Redirect.Core.Services
                 }
                 catch (RegexMatchTimeoutException)
                 {
-                    // Skip rules that time out
                 }
             }
 

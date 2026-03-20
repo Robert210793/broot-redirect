@@ -28,7 +28,6 @@ namespace Broot.Redirect.API.Middleware
             _adminMax = options.Value.RateLimitAdminMax;
             _window = TimeSpan.FromSeconds(options.Value.RateLimitWindowSeconds);
 
-            // Initialize cleanup timer once
             _cleanupTimer ??= new Timer(
                 CleanupExpiredEntries,
                 null,
@@ -40,7 +39,6 @@ namespace Broot.Redirect.API.Middleware
         {
             var path = context.Request.Path.Value ?? string.Empty;
 
-            // Only rate-limit API requests
             if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
             {
                 await _next(context);
@@ -63,7 +61,6 @@ namespace Broot.Redirect.API.Middleware
 
             lock (entry)
             {
-                // Reset window if expired
                 if (now - entry.WindowStart >= _window)
                 {
                     entry.Count = 0;
@@ -75,7 +72,6 @@ namespace Broot.Redirect.API.Middleware
                 var remaining = Math.Max(0, limit - entry.Count);
                 var resetTime = entry.WindowStart + _window;
 
-                // Always set rate limit headers
                 context.Response.Headers["X-RateLimit-Limit"] = limit.ToString();
                 context.Response.Headers["X-RateLimit-Remaining"] = remaining.ToString();
                 context.Response.Headers["X-RateLimit-Reset"] = resetTime.ToString("o");
@@ -112,7 +108,6 @@ namespace Broot.Redirect.API.Middleware
 
         private RateLimitTier ClassifyRequest(string path, string method)
         {
-            // Tracking endpoints get their own tier (higher ceiling)
             if (string.Equals(method, "POST", StringComparison.OrdinalIgnoreCase))
             {
                 if (path.Equals("/api/track", StringComparison.OrdinalIgnoreCase) ||
@@ -122,7 +117,6 @@ namespace Broot.Redirect.API.Middleware
                 }
             }
 
-            // Admin routes: anything under /api/rules, /api/global-rules, /api/stats, /api/settings (PUT)
             if (path.StartsWith("/api/rules", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/api/global-rules", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/api/stats", StringComparison.OrdinalIgnoreCase))
@@ -160,7 +154,6 @@ namespace Broot.Redirect.API.Middleware
 
             foreach (var kvp in Entries)
             {
-                // Remove entries whose window expired more than 2 minutes ago
                 if (now - kvp.Value.WindowStart > TimeSpan.FromMinutes(2))
                 {
                     Entries.TryRemove(kvp.Key, out _);

@@ -42,6 +42,7 @@
                             type="text"
                             class="form-input mono"
                             [(ngModel)]="matcher"
+                            (ngModelChange)="onMatcherChange()"
                             placeholder="/old-path or domain.com"
                             [class.invalid]="errors()['matcher']"
                         />
@@ -58,8 +59,13 @@
                             type="text"
                             class="form-input mono"
                             [(ngModel)]="targetUrl"
+                            (ngModelChange)="onTargetUrlChange()"
                             placeholder="https://new.example.com/new-path"
+                            [class.invalid]="errors()['targetUrl']"
                         />
+                        @if (errors()['targetUrl']) {
+                            <span class="form-error">{{ errors()['targetUrl'] }}</span>
+                        }
                         <span class="form-hint">Leer lassen, um die Standard-Domain zu verwenden.</span>
                     </div>
                 </div>
@@ -71,6 +77,7 @@
                             id="modal-redirectType"
                             class="form-select"
                             [(ngModel)]="redirectType"
+                            (ngModelChange)="onRedirectTypeChange()"
                         >
                             <option value="partial">Teilweise (Praefix-Abgleich)</option>
                             <option value="wildcard">Wildcard (exakter Pfad)</option>
@@ -115,9 +122,14 @@
                         id="modal-infoText"
                         class="form-textarea"
                         [(ngModel)]="infoText"
+                        (ngModelChange)="onInfoTextChange()"
                         placeholder="Optionaler Hinweis auf der Infoseite"
                         rows="3"
+                        [class.invalid]="errors()['infoText']"
                     ></textarea>
+                    @if (errors()['infoText']) {
+                        <span class="form-error">{{ errors()['infoText'] }}</span>
+                    }
                 </div>
 
                 @if (redirectType === 'regex') {
@@ -155,6 +167,8 @@
                                                 style="padding: 4px 8px; font-size: 0.8rem"
                                                 [(ngModel)]="kept.keyPattern"
                                                 placeholder="^utm_.*"
+                                                [class.invalid]="errors()['keptQueryParams_' + i + '_keyPattern']"
+                                                [title]="errors()['keptQueryParams_' + i + '_keyPattern'] || ''"
                                             />
                                         </td>
                                         <td>
@@ -226,6 +240,8 @@
                                                 style="padding: 4px 8px; font-size: 0.8rem"
                                                 [(ngModel)]="param.key"
                                                 placeholder="utm_source"
+                                                [class.invalid]="errors()['staticQueryParams_' + i + '_key']"
+                                                [title]="errors()['staticQueryParams_' + i + '_key'] || ''"
                                             />
                                         </td>
                                         <td>
@@ -288,6 +304,8 @@
                                                 style="padding: 4px 8px; font-size: 0.8rem"
                                                 [(ngModel)]="entry.search"
                                                 placeholder="old-domain.com"
+                                                [class.invalid]="errors()['searchAndReplace_' + i + '_search']"
+                                                [title]="errors()['searchAndReplace_' + i + '_search'] || ''"
                                             />
                                         </td>
                                         <td>

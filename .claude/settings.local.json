@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(find /f/source/repos/Broot.Redirect -name \"*.cs\" -type f -exec grep -l \"SearchAndReplaceEntry\\\\|KeptQueryParam\\\\|StaticQueryParam\" {})",
+      "Bash(grep -n \"MaxLength\\\\|Required\\\\|Range\\\\|RegularExpression\" /f/source/repos/Broot.Redirect/Broot.Redirect.API/Dtos/*.cs)",
+      "Bash(grep -n \"FromQuery\\\\|FromRoute\\\\|FromBody\" /f/source/repos/Broot.Redirect/Broot.Redirect.API/Controllers/*.cs)"
+    ]
+  }
+}

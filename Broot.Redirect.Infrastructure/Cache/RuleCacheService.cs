@@ -287,7 +287,7 @@ namespace Broot.Redirect.Infrastructure.Cache
             var normalized = matcher;
 
             try { normalized = Uri.UnescapeDataString(normalized); }
-            catch { /* keep original if decoding fails */ }
+            catch { }
 
             if (string.Equals(_options.TrailingSlashPolicy, "ignore", StringComparison.OrdinalIgnoreCase))
             {

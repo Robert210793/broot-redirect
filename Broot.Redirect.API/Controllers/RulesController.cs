@@ -18,6 +18,7 @@ namespace Broot.Redirect.API.Controllers
         private readonly IRuleMatchingService _ruleMatchingService;
         private readonly IUrlTransformService _urlTransformService;
         private readonly IAppSettingsCacheService _settingsCache;
+        private readonly RuleValidationService _validationService;
         private readonly BrootRedirectOptions _options;
         private readonly ILogger<RulesController> _logger;
 
@@ -35,6 +36,7 @@ namespace Broot.Redirect.API.Controllers
             IRuleMatchingService ruleMatchingService,
             IUrlTransformService urlTransformService,
             IAppSettingsCacheService settingsCache,
+            RuleValidationService validationService,
             IOptions<BrootRedirectOptions> options,
             ILogger<RulesController> logger)
         {
@@ -43,14 +45,11 @@ namespace Broot.Redirect.API.Controllers
             _ruleMatchingService = ruleMatchingService;
             _urlTransformService = urlTransformService;
             _settingsCache = settingsCache;
+            _validationService = validationService;
             _options = options.Value;
             _logger = logger;
         }
 
-        /// <summary>
-        /// GET /api/rules?page=1&amp;limit=50&amp;search=&amp;sortBy=createdAt&amp;sortOrder=desc
-        /// Returns paginated rule list from cache with server-side search and sort.
-        /// </summary>
         [HttpGet]
         public IActionResult GetPaginated(
             [FromQuery] int page = 1,
@@ -115,10 +114,6 @@ namespace Broot.Redirect.API.Controllers
             });
         }
 
-        /// <summary>
-        /// GET /api/rules/{id}
-        /// Returns a single rule by ID from cache.
-        /// </summary>
         [HttpGet("{id:guid}")]
         public IActionResult GetById(Guid id)
         {
@@ -132,17 +127,22 @@ namespace Broot.Redirect.API.Controllers
             return Ok(rule);
         }
 
-        /// <summary>
-        /// POST /api/rules
-        /// Creates a new redirect rule. Validates duplicate matcher.
-        /// Writes to Table Storage first, then updates cache.
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateRuleRequest request)
         {
-            if (!ModelState.IsValid)
+            var validationErrors = _validationService.ValidateCreate(request);
+
+            if (validationErrors.Count > 0)
             {
-                return BadRequest(new { error = "Invalid rule data" });
+                return BadRequest(new
+                {
+                    error = "Validation failed",
+                    details = validationErrors.Select(validationError => new
+                    {
+                        field = validationError.Field,
+                        message = validationError.Message
+                    })
+                });
             }
 
             if (!TryParseRedirectType(request.RedirectType, out var redirectType))
@@ -180,12 +180,6 @@ namespace Broot.Redirect.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = rule.Id }, rule);
         }
 
-        /// <summary>
-        /// PUT /api/rules/{id}
-        /// Updates an existing redirect rule with partial update semantics.
-        /// Validates duplicate matcher if changed.
-        /// Writes to Table Storage first, then updates cache.
-        /// </summary>
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateRuleRequest request)
         {
@@ -202,6 +196,21 @@ namespace Broot.Redirect.API.Controllers
                 {
                     return BadRequest(new { error = $"A rule with matcher '{request.Matcher}' already exists" });
                 }
+            }
+
+            var validationErrors = _validationService.ValidateUpdate(request, existingRule.RedirectType);
+
+            if (validationErrors.Count > 0)
+            {
+                return BadRequest(new
+                {
+                    error = "Validation failed",
+                    details = validationErrors.Select(validationError => new
+                    {
+                        field = validationError.Field,
+                        message = validationError.Message
+                    })
+                });
             }
 
             var updatedRule = new RedirectRule
@@ -239,10 +248,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(updatedRule);
         }
 
-        /// <summary>
-        /// DELETE /api/rules/{id}
-        /// Deletes a single rule. Returns 204 on success, 404 if not found.
-        /// </summary>
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -262,10 +267,6 @@ namespace Broot.Redirect.API.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// DELETE /api/rules/all
-        /// Starts deleting all rules in the background. Returns a job ID for polling progress.
-        /// </summary>
         [HttpDelete("all")]
         public IActionResult DeleteAll()
         {
@@ -313,10 +314,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(new { jobId, total = totalCount });
         }
 
-        /// <summary>
-        /// GET /api/rules/jobs/{jobId}
-        /// Returns progress for a long-running operation.
-        /// </summary>
         [HttpGet("jobs/{jobId}")]
         public IActionResult GetJobProgress(string jobId)
         {
@@ -337,10 +334,6 @@ namespace Broot.Redirect.API.Controllers
             });
         }
 
-        /// <summary>
-        /// DELETE /api/rules/bulk
-        /// Bulk deletes rules by ID array. Returns count of deleted and not found.
-        /// </summary>
         [HttpDelete("bulk")]
         public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteRequest request)
         {
@@ -401,16 +394,6 @@ namespace Broot.Redirect.API.Controllers
             });
         }
 
-        /// <summary>
-        /// POST /api/rules/import/preview
-        /// Parses an uploaded file (JSON, CSV, XLSX) and compares each entry against
-        /// existing rules in cache. Returns categorized results (new/update/invalid)
-        /// without persisting anything.
-        ///
-        /// Accepts two content types:
-        /// - application/json: JSON array of ImportRuleEntry
-        /// - multipart/form-data: CSV or XLSX file upload (field name "file")
-        /// </summary>
         [HttpPost("import/preview")]
         public async Task<IActionResult> ImportPreview()
         {
@@ -470,7 +453,6 @@ namespace Broot.Redirect.API.Controllers
                 return BadRequest(new { error = "No rules found in file" });
             }
 
-            // Build lookup from existing rules for comparison
             var matcherLookup = _cacheService.GetAll()
                 .GroupBy(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
@@ -490,7 +472,6 @@ namespace Broot.Redirect.API.Controllers
                     InfoText = entry.InfoText
                 };
 
-                // Validate required fields
                 if (string.IsNullOrWhiteSpace(entry.Matcher))
                 {
                     previewEntry.Status = "invalid";
@@ -502,7 +483,6 @@ namespace Broot.Redirect.API.Controllers
                     continue;
                 }
 
-                // Validate redirect type
                 var redirectType = entry.RedirectType ?? "partial";
 
                 if (!TryParseRedirectType(redirectType, out _))
@@ -516,7 +496,6 @@ namespace Broot.Redirect.API.Controllers
                     continue;
                 }
 
-                // Check if this is an update (by ID or matcher)
                 RedirectRule? existingRule = null;
 
                 if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
@@ -558,18 +537,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(response);
         }
 
-        /// <summary>
-        /// POST /api/rules/import
-        /// Imports rules with upsert semantics.
-        ///
-        /// Accepts two content types:
-        /// - application/json: JSON array of ImportRuleEntry (existing behavior)
-        /// - multipart/form-data: CSV or XLSX file upload (field name "file")
-        ///
-        /// If a rule has an ID and exists: update. If ID not found: create with that ID.
-        /// If no ID but matcher matches: update. If no ID and no matcher match: create new.
-        /// After import, replaces entire cache to ensure consistency.
-        /// </summary>
         [HttpPost("import")]
         public async Task<IActionResult> Import()
         {
@@ -757,13 +724,6 @@ namespace Broot.Redirect.API.Controllers
             return Ok(new { jobId, total = totalCount });
         }
 
-        /// <summary>
-        /// GET /api/rules/export?format=json|csv|xlsx
-        /// Exports all rules as a download.
-        /// - json (default): JSON array with Content-Disposition: attachment
-        /// - csv: flat CSV with header row
-        /// - xlsx: Excel workbook with header row
-        /// </summary>
         [HttpGet("export")]
         public IActionResult Export([FromQuery] string format = "json")
         {
@@ -800,11 +760,6 @@ namespace Broot.Redirect.API.Controllers
             }
         }
 
-        /// <summary>
-        /// POST /api/rules/validate
-        /// Runs an array of URLs through the matching and transformation pipeline,
-        /// returning match details and resolved URLs for each. (Phase 5.1)
-        /// </summary>
         [HttpPost("validate")]
         public IActionResult Validate([FromBody] ValidateUrlsRequest request)
         {

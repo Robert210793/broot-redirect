@@ -19,6 +19,7 @@ builder.Services.AddSingleton<IRuleMatchingService, RuleMatchingService>();
 builder.Services.AddSingleton<IUrlTransformService, UrlTransformService>();
 builder.Services.AddSingleton<ISmartSearchService, SmartSearchService>();
 builder.Services.AddSingleton<BruteForceProtectionService>();
+builder.Services.AddSingleton<RuleValidationService>();
 
 builder.Services.AddDistributedMemoryCache();
 
@@ -107,10 +108,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Rate limiting: reject floods before doing any real work
 app.UseMiddleware<RateLimitMiddleware>();
-
-// CSRF: reject cross-origin state-changing requests before session processing
 app.UseMiddleware<CsrfProtectionMiddleware>();
 
 app.UseSession();

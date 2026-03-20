@@ -26,8 +26,6 @@
 
         public int TrackingRetentionDays { get; set; } = 30;
 
-        // -- Rate limiting --
-
         public int RateLimitGlobalMax { get; set; } = 300;
 
         public int RateLimitTrackingMax { get; set; } = 300;
@@ -35,8 +33,6 @@
         public int RateLimitAdminMax { get; set; } = 60;
 
         public int RateLimitWindowSeconds { get; set; } = 60;
-
-        // -- Brute force protection --
 
         public int LoginMaxAttempts { get; set; } = 5;
 

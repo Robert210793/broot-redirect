@@ -31,7 +31,6 @@ namespace Broot.Redirect.API.Controllers
         {
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-            // Check if IP is blocked before processing the request
             if (_bruteForce.IsBlocked(ip))
             {
                 _logger.LogWarning("Blocked login attempt from {RemoteIp}", ip);
@@ -59,7 +58,6 @@ namespace Broot.Redirect.API.Controllers
                 return Unauthorized(new { error = "Wrong password" });
             }
 
-            // Successful login: reset brute force counter
             _bruteForce.ResetAttempts(ip);
 
             HttpContext.Session.Clear();
@@ -107,8 +105,6 @@ namespace Broot.Redirect.API.Controllers
 
             return Ok(new { success = true });
         }
-
-        // -- Blocked IP management (Phase 5.2) --
 
         [HttpGet("blocked-ips")]
         public IActionResult GetBlockedIps()
