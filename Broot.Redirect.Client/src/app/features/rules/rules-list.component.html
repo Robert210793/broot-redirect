@@ -1,6 +1,6 @@
 <div class="page-container">
     <div class="page-header">
-        <h1>Redirect Rules</h1>
+        <h1>Weiterleitungsregeln</h1>
         <div class="page-actions">
             <div class="export-dropdown">
                 <button
@@ -15,9 +15,9 @@
                     </svg>
                     @if (isExporting()) {
                         <span class="spinner"></span>
-                        Exporting...
+                        Exportieren...
                     } @else {
-                        Export
+                        Exportieren
                     }
                 </button>
                 @if (showExportMenu()) {
@@ -33,7 +33,7 @@
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                New Rule
+                Neue Regel
             </button>
         </div>
     </div>
@@ -44,7 +44,7 @@
             <input
                 type="text"
                 class="form-input search-input"
-                placeholder="Search rules..."
+                placeholder="Regeln durchsuchen..."
                 [ngModel]="searchText"
                 (ngModelChange)="onSearchChange($event)"
             />
@@ -52,14 +52,14 @@
             @if (selectedIds().size > 0) {
                 <div class="toolbar-right">
                     <span class="text-secondary" style="font-size: 0.83rem">
-                        {{ selectedIds().size }} selected
+                        {{ selectedIds().size }} ausgewaehlt
                     </span>
                     <button class="btn btn-danger btn-sm" (click)="onBulkDelete()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
-                        Delete Selected
+                        Ausgewaehlte loeschen
                     </button>
                 </div>
             } @else {
@@ -69,7 +69,7 @@
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
-                        Delete All
+                        Alle loeschen
                     </button>
                 </div>
             }
@@ -79,10 +79,10 @@
         @if (isDeleting()) {
             <div class="loading-overlay deleting-overlay">
                 <span class="spinner"></span>
-                <strong>Deleting rules...</strong>
+                <strong>Regeln werden geloescht...</strong>
                 @if (deleteProgress(); as progress) {
                     <div class="progress-info">
-                        {{ progress.processed }} / {{ progress.total }} deleted
+                        {{ progress.processed }} / {{ progress.total }} geloescht
                     </div>
                     <div class="progress-bar-track">
                         <div
@@ -95,12 +95,12 @@
         } @else if (isLoading() && rules().length === 0) {
             <div class="loading-overlay">
                 <span class="spinner"></span>
-                Loading rules...
+                Regeln werden geladen...
             </div>
         } @else if (rules().length === 0) {
             <div class="empty-state">
-                <p>No redirect rules found.</p>
-                <p>Create your first rule to get started.</p>
+                <p>Keine Weiterleitungsregeln gefunden.</p>
+                <p>Erstelle deine erste Regel, um zu beginnen.</p>
             </div>
         } @else {
             <table class="data-table" appResizableColumns="rules-table">
@@ -121,20 +121,20 @@
                             }
                         </th>
                         <th class="sortable" (click)="onSort('targetUrl')" style="width: 38%">
-                            Target URL
+                            Ziel-URL
                             @if (queryParams.sortBy === 'targetUrl') {
                                 <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
                             }
                         </th>
                         <th class="sortable" (click)="onSort('redirectType')" style="width: 80px">
-                            Type
+                            Typ
                             @if (queryParams.sortBy === 'redirectType') {
                                 <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
                             }
                         </th>
                         <th style="width: 60px">Auto</th>
                         <th class="sortable" (click)="onSort('createdAt')" style="width: 110px">
-                            Created
+                            Erstellt
                             @if (queryParams.sortBy === 'createdAt') {
                                 <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
                             }
@@ -164,9 +164,9 @@
                             </td>
                             <td>
                                 @if (rule.autoRedirect) {
-                                    <span class="text-success" style="font-size: 0.8rem">301</span>
+                                    <span class="text-success" style="font-size: 0.8rem">302</span>
                                 } @else {
-                                    <span class="text-tertiary" style="font-size: 0.8rem">info</span>
+                                    <span class="text-tertiary" style="font-size: 0.8rem">Info</span>
                                 }
                             </td>
                             <td>
@@ -176,7 +176,7 @@
                                 <button
                                     class="btn btn-ghost btn-icon"
                                     (click)="onDeleteSingle(rule)"
-                                    title="Delete rule"
+                                    title="Regel loeschen"
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="3 6 5 6 21 6" />
@@ -191,13 +191,13 @@
 
             <!-- Pagination -->
             <div class="pagination">
-                <span>{{ total() }} rules total. Page {{ currentPage() }} of {{ totalPages() }}.</span>
+                <span>{{ total() }} Regeln gesamt. Seite {{ currentPage() }} von {{ totalPages() }}.</span>
                 <div class="pagination-controls">
                     <button
                         class="pagination-btn"
                         [disabled]="currentPage() <= 1"
                         (click)="onPageChange(1)"
-                        title="First page"
+                        title="Erste Seite"
                     >
                         &#171;
                     </button>
@@ -205,7 +205,7 @@
                         class="pagination-btn"
                         [disabled]="currentPage() <= 1"
                         (click)="onPageChange(currentPage() - 1)"
-                        title="Previous page"
+                        title="Vorherige Seite"
                     >
                         &#8249;
                     </button>
@@ -224,7 +224,7 @@
                         class="pagination-btn"
                         [disabled]="currentPage() >= totalPages()"
                         (click)="onPageChange(currentPage() + 1)"
-                        title="Next page"
+                        title="Naechste Seite"
                     >
                         &#8250;
                     </button>
@@ -232,7 +232,7 @@
                         class="pagination-btn"
                         [disabled]="currentPage() >= totalPages()"
                         (click)="onPageChange(totalPages())"
-                        title="Last page"
+                        title="Letzte Seite"
                     >
                         &#187;
                     </button>
@@ -255,8 +255,8 @@
     [isOpen]="showConfirmDialog()"
     [title]="confirmTitle()"
     [message]="confirmMessage()"
-    confirmText="Delete"
-    cancelText="Cancel"
+    confirmText="Loeschen"
+    cancelText="Abbrechen"
     variant="danger"
     (confirmed)="onConfirmDialogConfirmed()"
     (cancelled)="onConfirmDialogCancelled()"

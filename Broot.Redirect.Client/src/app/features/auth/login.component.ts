@@ -33,15 +33,15 @@ export class LoginComponent {
                 this.isLoading = false;
  
                 if (response.success) {
-                    this.toastService.show('Logged in successfully.', 'success');
+                    this.toastService.show('Erfolgreich angemeldet.', 'success');
                     this.router.navigate(['/rules']);
                 } else {
-                    this.errorMessage = 'Invalid password.';
+                    this.errorMessage = 'Ungueltiges Passwort.';
                 }
             },
             error: () => {
                 this.isLoading = false;
-                this.errorMessage = 'Invalid password. Please try again.';
+                this.errorMessage = 'Ungueltiges Passwort. Bitte versuche es erneut.';
             }
         });
     }

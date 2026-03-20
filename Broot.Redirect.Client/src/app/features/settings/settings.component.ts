@@ -106,12 +106,12 @@ export class SettingsComponent implements OnInit {
             next: (updated) => {
                 this.isSaving.set(false);
                 this.populateForm(updated);
-                this.toastService.show('Settings saved.', 'success');
+                this.toastService.show('Einstellungen gespeichert.', 'success');
             },
             error: (error) => {
                 this.isSaving.set(false);
 
-                const message = error?.error?.error || error?.error?.title || 'Failed to save settings.';
+                const message = error?.error?.error || error?.error?.title || 'Einstellungen konnten nicht gespeichert werden.';
 
                 this.toastService.show(message, 'error');
             }
@@ -134,7 +134,7 @@ export class SettingsComponent implements OnInit {
             },
             error: () => {
                 this.isLoading.set(false);
-                this.toastService.show('Failed to load settings.', 'error');
+                this.toastService.show('Einstellungen konnten nicht geladen werden.', 'error');
             }
         });
     }

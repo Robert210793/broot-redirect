@@ -17,20 +17,20 @@
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
         </div>
-        <h1>Admin Login</h1>
-        <p class="text-secondary">Enter the admin password to continue.</p>
+        <h1>Administrator-Anmeldung</h1>
+        <p class="text-secondary">Bitte gib das Administrator-Passwort ein, um fortzufahren.</p>
       </div>
 
       <form (ngSubmit)="onSubmit()" class="login-form">
         <div class="form-group">
-          <label class="form-label" for="password">Password</label>
+          <label class="form-label" for="password">Passwort</label>
           <input
             id="password"
             type="password"
             class="form-input"
             [(ngModel)]="password"
             name="password"
-            placeholder="Enter password"
+            placeholder="Passwort eingeben"
             autocomplete="current-password"
             [disabled]="isLoading"
             (keydown.enter)="onSubmit()"
@@ -50,9 +50,9 @@
         >
           @if (isLoading) {
             <span class="spinner"></span>
-            Signing in...
+            Anmelden...
           } @else {
-            Sign in
+            Anmelden
           }
         </button>
       </form>

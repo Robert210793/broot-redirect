@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using Broot.Redirect.API.Configuration;
 using Broot.Redirect.Core.Interfaces;
+using Broot.Redirect.Core.Models;
 
 namespace Broot.Redirect.API.Middleware
 {
@@ -33,6 +34,7 @@ namespace Broot.Redirect.API.Middleware
             IUrlTransformService urlTransformService,
             IAppSettingsCacheService settingsCache,
             ISmartSearchService smartSearchService,
+            ITrackingRepository trackingRepository,
             IOptions<BrootRedirectOptions> options)
         {
             var path = context.Request.Path.Value ?? "/";
@@ -70,6 +72,31 @@ namespace Broot.Redirect.API.Middleware
                             path,
                             targetUrl,
                             rule.Id);
+
+                        // Track auto-redirect so it shows up in statistics
+                        try
+                        {
+                            var trackingEntry = new TrackingEntry
+                            {
+                                Id = Guid.NewGuid(),
+                                OldUrl = context.Request.Scheme + "://" + context.Request.Host + fullPath,
+                                NewUrl = targetUrl,
+                                Path = fullPath,
+                                Timestamp = DateTimeOffset.UtcNow,
+                                UserAgent = context.Request.Headers.UserAgent.ToString(),
+                                Referrer = context.Request.Headers.Referer.ToString(),
+                                RuleId = rule.Id,
+                                MatchQuality = matchResult.Quality,
+                                Feedback = "auto-redirect",
+                                RedirectStrategy = "rule"
+                            };
+
+                            await trackingRepository.CreateAsync(trackingEntry);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to track auto-redirect for {Path}", path);
+                        }
 
                         WriteRedirect(context.Response, targetUrl);
 

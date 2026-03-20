@@ -196,7 +196,7 @@ export class ImportComponent {
             error: (error) => {
                 this.isLoadingPreview.set(false);
 
-                const message = error?.error?.error || 'Preview failed.';
+                const message = error?.error?.error || 'Vorschau fehlgeschlagen.';
 
                 this.parseError.set(message);
             }
@@ -220,7 +220,7 @@ export class ImportComponent {
             error: (error) => {
                 this.isLoadingPreview.set(false);
 
-                const message = error?.error?.error || 'Failed to parse file.';
+                const message = error?.error?.error || 'Datei konnte nicht eingelesen werden.';
 
                 this.parseError.set(message);
             }
@@ -232,20 +232,20 @@ export class ImportComponent {
             const parsed = JSON.parse(this.jsonText);
 
             if (!Array.isArray(parsed)) {
-                this.parseError.set('JSON must be an array of rule objects.');
+                this.parseError.set('JSON muss ein Array von Regelobjekten sein.');
 
                 return null;
             }
 
             if (parsed.length === 0) {
-                this.parseError.set('JSON array is empty.');
+                this.parseError.set('JSON-Array ist leer.');
 
                 return null;
             }
 
             return parsed;
         } catch {
-            this.parseError.set('Invalid JSON. Please check the format and try again.');
+            this.parseError.set('Ungueltiges JSON. Bitte ueberpruefen und erneut versuchen.');
 
             return null;
         }
@@ -268,7 +268,7 @@ export class ImportComponent {
             this.previewData.set(null);
 
             this.toastService.show(
-                `Imported ${result.imported} new, updated ${result.updated}.`,
+                `${result.imported} neu importiert, ${result.updated} aktualisiert.`,
                 result.errors.length > 0 ? 'error' : 'success'
             );
         }
@@ -278,7 +278,7 @@ export class ImportComponent {
         this.isImporting.set(false);
         this.importProgress.set(null);
 
-        const message = (error as { message?: string })?.message || 'Import failed.';
+        const message = (error as { message?: string })?.message || 'Import fehlgeschlagen.';
 
         this.toastService.show(message, 'error');
     }

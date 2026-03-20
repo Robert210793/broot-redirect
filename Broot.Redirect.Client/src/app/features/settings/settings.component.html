@@ -1,13 +1,13 @@
 <div class="page-container">
     <div class="page-header">
-        <h1>Settings</h1>
+        <h1>Einstellungen</h1>
         <div class="page-actions">
             <button
                 class="btn btn-secondary"
                 (click)="onReset()"
                 [disabled]="isSaving() || isLoading()"
             >
-                Reset
+                Zuruecksetzen
             </button>
             <button
                 class="btn btn-primary"
@@ -17,7 +17,7 @@
                 @if (isSaving()) {
                     <span class="spinner"></span>
                 }
-                Save Settings
+                Einstellungen speichern
             </button>
         </div>
     </div>
@@ -25,7 +25,7 @@
     @if (isLoading()) {
         <div class="loading-overlay">
             <span class="spinner"></span>
-            Loading settings...
+            Einstellungen werden geladen...
         </div>
     } @else {
         <div class="settings-sections">
@@ -33,11 +33,11 @@
             <!-- Redirect Behavior -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Redirect Behavior</h2>
+                    <h2>Weiterleitungsverhalten</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label" for="defaultNewDomain">Default New Domain</label>
+                        <label class="form-label" for="defaultNewDomain">Standard-Neue-Domain</label>
                         <input
                             id="defaultNewDomain"
                             type="text"
@@ -45,34 +45,34 @@
                             [(ngModel)]="defaultNewDomain"
                             placeholder="https://new.example.com"
                         />
-                        <span class="form-hint">Base URL used when a rule has no explicit target URL.</span>
+                        <span class="form-hint">Basis-URL, die verwendet wird, wenn eine Regel keine explizite Ziel-URL hat.</span>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" for="noMatchBehavior">No Match Behavior</label>
+                            <label class="form-label" for="noMatchBehavior">Verhalten bei keinem Treffer</label>
                             <select
                                 id="noMatchBehavior"
                                 class="form-select"
                                 [(ngModel)]="noMatchBehavior"
                             >
-                                <option value="RedirectToDefault">Redirect to Default Domain</option>
-                                <option value="SmartSearch">Smart Search Fallback</option>
-                                <option value="Return404">Return 404</option>
+                                <option value="RedirectToDefault">Zur Standard-Domain weiterleiten</option>
+                                <option value="SmartSearch">Intelligente Suche (Fallback)</option>
+                                <option value="Return404">404 zurueckgeben</option>
                             </select>
-                            <span class="form-hint">What happens when no rule matches an incoming URL.</span>
+                            <span class="form-hint">Was passiert, wenn keine Regel auf eine eingehende URL zutrifft.</span>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Auto Redirect (Global)</label>
+                            <label class="form-label">Auto-Weiterleitung (Global)</label>
                             <div class="toggle-wrapper" style="margin-top: 4px">
                                 <label class="toggle">
                                     <input type="checkbox" [(ngModel)]="autoRedirect" />
                                     <span class="toggle-track"></span>
                                 </label>
-                                <span class="toggle-label">{{ autoRedirect ? 'HTTP 301 redirect' : 'Show info page' }}</span>
+                                <span class="toggle-label">{{ autoRedirect ? 'HTTP 302 Weiterleitung' : 'Infoseite anzeigen' }}</span>
                             </div>
-                            <span class="form-hint">When off, all matched URLs show the info page regardless of per-rule settings.</span>
+                            <span class="form-hint">Wenn deaktiviert, zeigen alle zugeordneten URLs die Infoseite an, unabhaengig von den Regeleinstellungen.</span>
                         </div>
                     </div>
                 </div>
@@ -81,11 +81,11 @@
             <!-- Info Page: Header -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Info Page: Header</h2>
+                    <h2>Infoseite: Kopfzeile</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label" for="headerTitle">Header Title</label>
+                        <label class="form-label" for="headerTitle">Kopfzeilentitel</label>
                         <input
                             id="headerTitle"
                             type="text"
@@ -100,11 +100,11 @@
             <!-- Info Page: Main Content -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Info Page: Main Content</h2>
+                    <h2>Infoseite: Hauptinhalt</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label" for="infoPageTitle">Page Title</label>
+                        <label class="form-label" for="infoPageTitle">Seitentitel</label>
                         <input
                             id="infoPageTitle"
                             type="text"
@@ -112,11 +112,11 @@
                             [(ngModel)]="infoPageTitle"
                             placeholder="URL veraltet - Aktualisierung erforderlich"
                         />
-                        <span class="form-hint">Title shown in the inline alert banner or popup dialog.</span>
+                        <span class="form-hint">Titel, der im Inline-Hinweisbanner oder Popup-Dialog angezeigt wird.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="infoPageMessage">Page Message</label>
+                        <label class="form-label" for="infoPageMessage">Seitennachricht</label>
                         <textarea
                             id="infoPageMessage"
                             class="form-textarea"
@@ -124,21 +124,21 @@
                             placeholder="Du verwendest einen alten Link..."
                             rows="3"
                         ></textarea>
-                        <span class="form-hint">Description shown below the title in the alert banner or popup.</span>
+                        <span class="form-hint">Beschreibung, die unterhalb des Titels im Hinweisbanner oder Popup angezeigt wird.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="popupMode">Popup Mode</label>
+                        <label class="form-label" for="popupMode">Popup-Modus</label>
                         <select
                             id="popupMode"
                             class="form-select"
                             [(ngModel)]="popupMode"
                             style="max-width: 300px"
                         >
-                            <option value="inline">Inline (alert banner at top)</option>
-                            <option value="active">Active (modal dialog on load)</option>
+                            <option value="inline">Inline (Hinweisbanner oben)</option>
+                            <option value="active">Aktiv (Modaldialog beim Laden)</option>
                         </select>
-                        <span class="form-hint">"Inline" shows the URL comparison immediately. "Active" hides it behind a button click.</span>
+                        <span class="form-hint">"Inline" zeigt den URL-Vergleich sofort an. "Aktiv" versteckt ihn hinter einem Klick.</span>
                     </div>
                 </div>
             </section>
@@ -146,12 +146,12 @@
             <!-- Info Page: URL Labels -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Info Page: URL Labels and Buttons</h2>
+                    <h2>Infoseite: URL-Beschriftungen und Schaltflaechen</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" for="newUrlLabel">New URL Label</label>
+                            <label class="form-label" for="newUrlLabel">Neue-URL-Beschriftung</label>
                             <input
                                 id="newUrlLabel"
                                 type="text"
@@ -162,7 +162,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="oldUrlLabel">Old URL Label</label>
+                            <label class="form-label" for="oldUrlLabel">Alte-URL-Beschriftung</label>
                             <input
                                 id="oldUrlLabel"
                                 type="text"
@@ -175,7 +175,7 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" for="copyButtonText">Copy Button Text</label>
+                            <label class="form-label" for="copyButtonText">Kopieren-Schaltflaechentext</label>
                             <input
                                 id="copyButtonText"
                                 type="text"
@@ -186,7 +186,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="openButtonText">Open Button Text</label>
+                            <label class="form-label" for="openButtonText">Oeffnen-Schaltflaechentext</label>
                             <input
                                 id="openButtonText"
                                 type="text"
@@ -202,11 +202,11 @@
             <!-- Info Page: Special Hints -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Info Page: Special Hints</h2>
+                    <h2>Infoseite: Besondere Hinweise</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label" for="specialHintsTitle">Hints Title</label>
+                        <label class="form-label" for="specialHintsTitle">Hinweistitel</label>
                         <input
                             id="specialHintsTitle"
                             type="text"
@@ -217,7 +217,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="specialHintsDescription">Default Hints Description</label>
+                        <label class="form-label" for="specialHintsDescription">Standard-Hinweisbeschreibung</label>
                         <textarea
                             id="specialHintsDescription"
                             class="form-textarea"
@@ -225,7 +225,7 @@
                             placeholder="Die neue URL wurde automatisch generiert..."
                             rows="3"
                         ></textarea>
-                        <span class="form-hint">Shown when a rule has no rule-specific infoText.</span>
+                        <span class="form-hint">Wird angezeigt, wenn eine Regel keinen regelspezifischen Info-Text hat.</span>
                     </div>
                 </div>
             </section>
@@ -233,11 +233,11 @@
             <!-- Info Page: Footer -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Info Page: Footer</h2>
+                    <h2>Infoseite: Fusszeile</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label" for="footerCopyright">Footer Copyright</label>
+                        <label class="form-label" for="footerCopyright">Fusszeilen-Copyright</label>
                         <input
                             id="footerCopyright"
                             type="text"
@@ -252,11 +252,11 @@
             <!-- Smart Search Fallback -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Smart Search Fallback</h2>
+                    <h2>Intelligente Suche (Fallback)</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label" for="smartSearchUrl">Search URL Template</label>
+                        <label class="form-label" for="smartSearchUrl">Such-URL-Vorlage</label>
                         <input
                             id="smartSearchUrl"
                             type="text"
@@ -264,11 +264,11 @@
                             [(ngModel)]="smartSearchUrl"
                             placeholder="https://new.example.com/search?q="
                         />
-                        <span class="form-hint">The extracted search term is appended to this URL. Leave empty to disable smart search.</span>
+                        <span class="form-hint">Der extrahierte Suchbegriff wird an diese URL angehaengt. Leer lassen, um die intelligente Suche zu deaktivieren.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="smartSearchRegex">Search Term Regex</label>
+                        <label class="form-label" for="smartSearchRegex">Suchbegriff-Regex</label>
                         <input
                             id="smartSearchRegex"
                             type="text"
@@ -276,17 +276,17 @@
                             [(ngModel)]="smartSearchRegex"
                             placeholder="e.g. /content/([^/]+)$"
                         />
-                        <span class="form-hint">Optional regex with a capture group to extract the search term from the path. Leave empty to use the last path segment.</span>
+                        <span class="form-hint">Optionaler Regex mit einer Capture Group zum Extrahieren des Suchbegriffs aus dem Pfad. Leer lassen, um das letzte Pfadsegment zu verwenden.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Skip URL Encoding</label>
+                        <label class="form-label">URL-Kodierung ueberspringen</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="smartSearchSkipEncoding" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ smartSearchSkipEncoding ? 'Raw (no encoding)' : 'URL-encode search term' }}</span>
+                            <span class="toggle-label">{{ smartSearchSkipEncoding ? 'Roh (ohne Kodierung)' : 'Suchbegriff URL-kodieren' }}</span>
                         </div>
                     </div>
                 </div>
@@ -295,13 +295,13 @@
             <!-- Match Quality Explanations -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Match Quality Explanations</h2>
+                    <h2>Erklaerungen zur Trefferqualitaet</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
                         <label class="form-label" for="matchHighExplanation">
                             <span class="quality-dot quality-dot-green"></span>
-                            High Quality (90-100%)
+                            Hohe Qualitaet (90-100%)
                         </label>
                         <textarea
                             id="matchHighExplanation"
@@ -314,7 +314,7 @@
                     <div class="form-group">
                         <label class="form-label" for="matchMediumExplanation">
                             <span class="quality-dot quality-dot-yellow"></span>
-                            Medium Quality (60-89%)
+                            Mittlere Qualitaet (60-89%)
                         </label>
                         <textarea
                             id="matchMediumExplanation"
@@ -327,7 +327,7 @@
                     <div class="form-group">
                         <label class="form-label" for="matchLowExplanation">
                             <span class="quality-dot quality-dot-red"></span>
-                            Low Quality (0-59%)
+                            Niedrige Qualitaet (0-59%)
                         </label>
                         <textarea
                             id="matchLowExplanation"
@@ -339,7 +339,7 @@
 
                     <div class="form-group">
                         <label class="form-label" for="matchNoneExplanation">
-                            No Match
+                            Kein Treffer
                         </label>
                         <textarea
                             id="matchNoneExplanation"
@@ -347,7 +347,7 @@
                             [(ngModel)]="matchNoneExplanation"
                             rows="2"
                         ></textarea>
-                        <span class="form-hint">Shown when no rule matched and there is no smart search fallback.</span>
+                        <span class="form-hint">Wird angezeigt, wenn keine Regel zutraf und es keinen Intelligente-Suche-Fallback gibt.</span>
                     </div>
                 </div>
             </section>
@@ -355,80 +355,80 @@
             <!-- Behavioral Settings -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Behavioral Settings</h2>
+                    <h2>Verhaltenseinstellungen</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label">Case-Sensitive Link Detection</label>
+                        <label class="form-label">Gross-/Kleinschreibung bei Link-Erkennung</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="caseSensitiveLinkDetection" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ caseSensitiveLinkDetection ? 'Case-sensitive' : 'Case-insensitive' }}</span>
+                            <span class="toggle-label">{{ caseSensitiveLinkDetection ? 'Gross-/Kleinschreibung beachten' : 'Gross-/Kleinschreibung ignorieren' }}</span>
                         </div>
-                        <span class="form-hint">Controls whether rule matching treats /Page and /page as different paths.</span>
+                        <span class="form-hint">Steuert, ob die Regelzuordnung /Page und /page als unterschiedliche Pfade behandelt.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Encode Imported URLs</label>
+                        <label class="form-label">Importierte URLs kodieren</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="encodeImportedUrls" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ encodeImportedUrls ? 'Percent-encode on import' : 'Import raw (no encoding)' }}</span>
+                            <span class="toggle-label">{{ encodeImportedUrls ? 'Prozent-Kodierung beim Import' : 'Roh importieren (ohne Kodierung)' }}</span>
                         </div>
-                        <span class="form-hint">When enabled, imported matchers and target URLs are percent-encoded automatically.</span>
+                        <span class="form-hint">Wenn aktiviert, werden importierte Matcher und Ziel-URLs automatisch prozent-kodiert.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Referrer Tracking</label>
+                        <label class="form-label">Referrer-Tracking</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="enableReferrerTracking" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ enableReferrerTracking ? 'Store referrer in tracking' : 'Disabled (privacy)' }}</span>
+                            <span class="toggle-label">{{ enableReferrerTracking ? 'Referrer im Tracking speichern' : 'Deaktiviert (Datenschutz)' }}</span>
                         </div>
-                        <span class="form-hint">Some deployments may need this disabled for data privacy compliance.</span>
+                        <span class="form-hint">Einige Installationen muessen dies aus Datenschutzgruenden deaktivieren.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Show Link Quality Gauge</label>
+                        <label class="form-label">Link-Qualitaetsanzeige</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="showLinkQualityGauge" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ showLinkQualityGauge ? 'Visible' : 'Hidden' }}</span>
+                            <span class="toggle-label">{{ showLinkQualityGauge ? 'Sichtbar' : 'Ausgeblendet' }}</span>
                         </div>
-                        <span class="form-hint">Controls whether the green/yellow/red quality gauge is shown on the info page.</span>
+                        <span class="form-hint">Steuert, ob die gruen/gelb/rot Qualitaetsanzeige auf der Infoseite angezeigt wird.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Feedback Survey</label>
+                        <label class="form-label">Feedback-Umfrage</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="enableFeedbackSurvey" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ enableFeedbackSurvey ? 'Ask OK/NOK after copy or open' : 'Disabled' }}</span>
+                            <span class="toggle-label">{{ enableFeedbackSurvey ? 'OK/NOK nach Kopieren oder Oeffnen fragen' : 'Deaktiviert' }}</span>
                         </div>
-                        <span class="form-hint">When enabled, users see a feedback prompt after copying or opening the new URL.</span>
+                        <span class="form-hint">Wenn aktiviert, sehen Benutzer eine Feedback-Abfrage nach dem Kopieren oder Oeffnen der neuen URL.</span>
                     </div>
 
                     @if (enableFeedbackSurvey) {
                         <div class="form-group" style="margin-left: 24px">
-                            <label class="form-label">Feedback Comment (URL Suggestion)</label>
+                            <label class="form-label">Feedback-Kommentar (URL-Vorschlag)</label>
                             <div class="toggle-wrapper" style="margin-top: 4px">
                                 <label class="toggle">
                                     <input type="checkbox" [(ngModel)]="enableFeedbackComment" />
                                     <span class="toggle-track"></span>
                                 </label>
-                                <span class="toggle-label">{{ enableFeedbackComment ? 'Allow suggesting correct URL' : 'Simple OK/NOK only' }}</span>
+                                <span class="toggle-label">{{ enableFeedbackComment ? 'Vorschlag der korrekten URL erlauben' : 'Nur einfaches OK/NOK' }}</span>
                             </div>
-                            <span class="form-hint">When enabled, the NOK step includes a text field for the user to suggest the correct URL.</span>
+                            <span class="form-hint">Wenn aktiviert, enthaelt der NOK-Schritt ein Textfeld, in dem der Benutzer die korrekte URL vorschlagen kann.</span>
                         </div>
                     }
                 </div>
@@ -443,7 +443,7 @@
                 (click)="onReset()"
                 [disabled]="isSaving()"
             >
-                Reset
+                Zuruecksetzen
             </button>
             <button
                 class="btn btn-primary"
@@ -453,7 +453,7 @@
                 @if (isSaving()) {
                     <span class="spinner"></span>
                 }
-                Save Settings
+                Einstellungen speichern
             </button>
         </div>
     }

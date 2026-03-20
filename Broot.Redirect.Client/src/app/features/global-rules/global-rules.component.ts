@@ -42,7 +42,7 @@ export class GlobalRulesComponent implements OnInit {
     }
 
     get modalTitle(): string {
-        return this.isEditMode ? 'Edit Global Rule' : 'New Global Rule';
+        return this.isEditMode ? 'Globale Regel bearbeiten' : 'Neue globale Regel';
     }
 
     ngOnInit(): void {
@@ -118,13 +118,13 @@ export class GlobalRulesComponent implements OnInit {
                 next: () => {
                     this.isSaving.set(false);
                     this.showModal.set(false);
-                    this.toastService.show('Global rule updated.', 'success');
+                    this.toastService.show('Globale Regel aktualisiert.', 'success');
                     this.loadRules();
                 },
                 error: (error) => {
                     this.isSaving.set(false);
 
-                    const message = error?.error?.error || 'Failed to update global rule.';
+                    const message = error?.error?.error || 'Globale Regel konnte nicht aktualisiert werden.';
 
                     this.toastService.show(message, 'error');
                 }
@@ -141,13 +141,13 @@ export class GlobalRulesComponent implements OnInit {
                 next: () => {
                     this.isSaving.set(false);
                     this.showModal.set(false);
-                    this.toastService.show('Global rule created.', 'success');
+                    this.toastService.show('Globale Regel erstellt.', 'success');
                     this.loadRules();
                 },
                 error: (error) => {
                     this.isSaving.set(false);
 
-                    const message = error?.error?.error || 'Failed to create global rule.';
+                    const message = error?.error?.error || 'Globale Regel konnte nicht erstellt werden.';
 
                     this.toastService.show(message, 'error');
                 }
@@ -158,17 +158,17 @@ export class GlobalRulesComponent implements OnInit {
     // -- Delete --
 
     onDeleteRule(rule: GlobalRule): void {
-        this.confirmTitle.set('Delete Global Rule');
-        this.confirmMessage.set(`Delete global rule "${rule.search}" -> "${rule.replace}"? This cannot be undone.`);
+        this.confirmTitle.set('Globale Regel loeschen');
+        this.confirmMessage.set(`Globale Regel "${rule.search}" -> "${rule.replace}" loeschen? Dies kann nicht rueckgaengig gemacht werden.`);
 
         this.confirmAction.set(() => {
             this.globalRulesService.delete(rule.id).subscribe({
                 next: () => {
-                    this.toastService.show('Global rule deleted.', 'success');
+                    this.toastService.show('Globale Regel geloescht.', 'success');
                     this.loadRules();
                 },
                 error: () => {
-                    this.toastService.show('Failed to delete global rule.', 'error');
+                    this.toastService.show('Globale Regel konnte nicht geloescht werden.', 'error');
                 }
             });
         });
@@ -200,7 +200,7 @@ export class GlobalRulesComponent implements OnInit {
             },
             error: () => {
                 this.isLoading.set(false);
-                this.toastService.show('Failed to load global rules.', 'error');
+                this.toastService.show('Globale Regeln konnten nicht geladen werden.', 'error');
             }
         });
     }
@@ -217,7 +217,7 @@ export class GlobalRulesComponent implements OnInit {
         const errors: Record<string, string> = {};
 
         if (!this.formSearch.trim()) {
-            errors['search'] = 'Search pattern is required.';
+            errors['search'] = 'Suchmuster ist erforderlich.';
         }
 
         if (!this.formReplace.trim() && this.formReplace !== '') {

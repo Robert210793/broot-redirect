@@ -1,9 +1,9 @@
 <div class="page-container">
     <div class="page-header">
-        <h1>Import Rules</h1>
+        <h1>Regeln importieren</h1>
         <div class="page-actions">
             <button class="btn btn-secondary" (click)="router.navigate(['/rules'])">
-                Back to Rules
+                Zurueck zu Regeln
             </button>
         </div>
     </div>
@@ -24,7 +24,7 @@
                         <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                         <polyline points="14 2 14 8 20 8" />
                     </svg>
-                    Upload File
+                    Datei hochladen
                 </button>
                 <button
                     class="import-mode-btn"
@@ -35,20 +35,20 @@
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
-                    Paste JSON
+                    JSON einfuegen
                 </button>
             </div>
 
             @if (importMode === 'file') {
                 <div class="form-group">
-                    <label class="form-label">Select File</label>
+                    <label class="form-label">Datei auswaehlen</label>
                     <input
                         type="file"
                         accept=".json,.csv,.xlsx,.xls"
                         class="form-input"
                         (change)="onFileSelected($event)"
                     />
-                    <span class="form-hint">Supported formats: JSON, CSV, XLSX</span>
+                    <span class="form-hint">Unterstuetzte Formate: JSON, CSV, XLSX</span>
                 </div>
 
                 @if (selectedFileName()) {
@@ -64,7 +64,7 @@
 
             @if (importMode === 'paste') {
                 <div class="form-group">
-                    <label class="form-label">Paste JSON</label>
+                    <label class="form-label">JSON einfuegen</label>
                     <textarea
                         class="form-textarea mono"
                         [(ngModel)]="jsonText"
@@ -83,7 +83,7 @@
                 (click)="onPreview()"
                 [disabled]="!canPreview"
             >
-                Preview Import
+                Import-Vorschau
             </button>
         }
 
@@ -91,8 +91,8 @@
         @if (isLoadingPreview()) {
             <div class="import-progress">
                 <span class="spinner spinner-lg"></span>
-                <h3 class="import-progress-title">Analyzing file...</h3>
-                <p class="import-progress-text">Parsing and comparing against existing rules</p>
+                <h3 class="import-progress-title">Datei wird analysiert...</h3>
+                <p class="import-progress-text">Datei wird eingelesen und mit bestehenden Regeln verglichen</p>
             </div>
         }
 
@@ -100,19 +100,19 @@
         @if (previewData() && !importResult() && !isImporting()) {
             <div class="preview-header">
                 <div>
-                    <strong>{{ previewData()!.total }} rules</strong> found in file
+                    <strong>{{ previewData()!.total }} Regeln</strong> in Datei gefunden
                     @if (previewData()!.isLimited) {
-                        <span class="preview-limit-note">(showing first {{ previewData()!.limit }})</span>
+                        <span class="preview-limit-note">(zeige die ersten {{ previewData()!.limit }})</span>
                     }
                 </div>
                 <div class="page-actions">
-                    <button class="btn btn-secondary" (click)="onReset()">Back</button>
+                    <button class="btn btn-secondary" (click)="onReset()">Zurueck</button>
                     <button
                         class="btn btn-primary"
                         (click)="onConfirmImport()"
                         [disabled]="!canConfirmImport"
                     >
-                        Confirm Import
+                        Import bestaetigen
                     </button>
                 </div>
             </div>
@@ -124,7 +124,7 @@
                     [class.active]="statusFilter === 'all'"
                     (click)="onStatusFilter('all')"
                 >
-                    All
+                    Alle
                     <span class="preview-count">{{ previewData()!.total }}</span>
                 </button>
                 @if (previewData()!.counts.new > 0) {
@@ -133,7 +133,7 @@
                         [class.active]="statusFilter === 'new'"
                         (click)="onStatusFilter('new')"
                     >
-                        New
+                        Neu
                         <span class="preview-count">{{ previewData()!.counts.new }}</span>
                     </button>
                 }
@@ -143,7 +143,7 @@
                         [class.active]="statusFilter === 'update'"
                         (click)="onStatusFilter('update')"
                     >
-                        Update
+                        Aktualisierung
                         <span class="preview-count">{{ previewData()!.counts.update }}</span>
                     </button>
                 }
@@ -153,7 +153,7 @@
                         [class.active]="statusFilter === 'invalid'"
                         (click)="onStatusFilter('invalid')"
                     >
-                        Invalid
+                        Ungueltig
                         <span class="preview-count">{{ previewData()!.counts.invalid }}</span>
                     </button>
                 }
@@ -161,7 +161,7 @@
 
             @if (previewData()!.counts.invalid > 0 && previewData()!.counts.new === 0 && previewData()!.counts.update === 0) {
                 <div class="alert alert-danger">
-                    All entries are invalid. Fix the file and try again.
+                    Alle Eintraege sind ungueltig. Korrigiere die Datei und versuche es erneut.
                 </div>
             }
 
@@ -170,8 +170,8 @@
                     <thead>
                         <tr>
                             <th>Matcher</th>
-                            <th>Target URL</th>
-                            <th>Type</th>
+                            <th>Ziel-URL</th>
+                            <th>Typ</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -179,21 +179,21 @@
                         @for (row of filteredPreview; track $index) {
                             <tr [ngClass]="{ 'row-invalid': row.status === 'invalid' }">
                                 <td>
-                                    <span class="mono cell-truncate" [title]="row.matcher">{{ row.matcher || '(empty)' }}</span>
+                                    <span class="mono cell-truncate" [title]="row.matcher">{{ row.matcher || '(leer)' }}</span>
                                 </td>
                                 <td>
-                                    <span class="mono cell-truncate" [title]="row.targetUrl || ''">{{ row.targetUrl || '(default)' }}</span>
+                                    <span class="mono cell-truncate" [title]="row.targetUrl || ''">{{ row.targetUrl || '(Standard)' }}</span>
                                 </td>
                                 <td>
                                     <span class="badge" [ngClass]="'badge-' + (row.redirectType || 'partial')">{{ row.redirectType || 'partial' }}</span>
                                 </td>
                                 <td>
                                     @if (row.status === 'new') {
-                                        <span class="badge badge-new">new</span>
+                                        <span class="badge badge-new">Neu</span>
                                     } @else if (row.status === 'update') {
-                                        <span class="badge badge-update">update</span>
+                                        <span class="badge badge-update">Aktualisierung</span>
                                     } @else if (row.status === 'invalid') {
-                                        <span class="badge badge-invalid" [title]="row.reason || ''">invalid</span>
+                                        <span class="badge badge-invalid" [title]="row.reason || ''">Ungueltig</span>
                                         @if (row.reason) {
                                             <span class="reason-text">{{ row.reason }}</span>
                                         }
@@ -204,7 +204,7 @@
 
                         @if (filteredPreview.length === 0) {
                             <tr>
-                                <td colspan="4" class="empty-state">No entries match the selected filter.</td>
+                                <td colspan="4" class="empty-state">Keine Eintraege entsprechen dem gewaehlten Filter.</td>
                             </tr>
                         }
                     </tbody>
@@ -216,12 +216,12 @@
         @if (isImporting()) {
             <div class="import-progress">
                 <span class="spinner spinner-lg"></span>
-                <h3 class="import-progress-title">Importing rules...</h3>
+                <h3 class="import-progress-title">Regeln werden importiert...</h3>
                 @if (importProgress(); as progress) {
                     <div class="progress-info">
-                        {{ progress.processed }} / {{ progress.total }} processed
+                        {{ progress.processed }} / {{ progress.total }} verarbeitet
                         @if (progress.imported !== undefined) {
-                            ({{ progress.imported }} new, {{ progress.updated }} updated)
+                            ({{ progress.imported }} neu, {{ progress.updated }} aktualisiert)
                         }
                     </div>
                     <div class="progress-bar-track">
@@ -231,7 +231,7 @@
                         ></div>
                     </div>
                 } @else {
-                    <p class="import-progress-text">Starting import...</p>
+                    <p class="import-progress-text">Import wird gestartet...</p>
                 }
             </div>
         }
@@ -245,11 +245,11 @@
                         <polyline points="22 4 12 14.01 9 11.01" />
                     </svg>
                 </div>
-                <h3 class="import-result-title">Import Complete</h3>
+                <h3 class="import-result-title">Import abgeschlossen</h3>
                 <p class="import-result-text">
-                    {{ importResult()!.imported }} new, {{ importResult()!.updated }} updated.
+                    {{ importResult()!.imported }} neu, {{ importResult()!.updated }} aktualisiert.
                     @if (importResult()!.errors.length > 0) {
-                        {{ importResult()!.errors.length }} error(s).
+                        {{ importResult()!.errors.length }} Fehler.
                     }
                 </p>
             </div>
@@ -263,8 +263,8 @@
             }
 
             <div class="import-result-actions">
-                <button class="btn btn-secondary" (click)="onFullReset()">Import More</button>
-                <button class="btn btn-primary" (click)="router.navigate(['/rules'])">View Rules</button>
+                <button class="btn btn-secondary" (click)="onFullReset()">Weiterer Import</button>
+                <button class="btn btn-primary" (click)="router.navigate(['/rules'])">Regeln anzeigen</button>
             </div>
         }
     </div>

@@ -184,8 +184,8 @@ export class RulesListComponent implements OnInit, OnDestroy {
     onBulkDelete(): void {
         const count = this.selectedIds().size;
 
-        this.confirmTitle.set('Delete Selected Rules');
-        this.confirmMessage.set(`Delete ${count} selected rule(s)? This cannot be undone.`);
+        this.confirmTitle.set('Ausgewaehlte Regeln loeschen');
+        this.confirmMessage.set(`${count} ausgewaehlte Regel(n) loeschen? Dies kann nicht rueckgaengig gemacht werden.`);
 
         this.confirmAction.set(() => {
             const ids = Array.from(this.selectedIds());
@@ -197,14 +197,14 @@ export class RulesListComponent implements OnInit, OnDestroy {
                 next: (result) => {
                     this.isDeleting.set(false);
                     this.deleteProgress.set(null);
-                    this.toastService.show(`Deleted ${result.deleted} rule(s).`, 'success');
+                    this.toastService.show(`${result.deleted} Regel(n) geloescht.`, 'success');
                     this.selectedIds.set(new Set());
                     this.loadRules();
                 },
                 error: () => {
                     this.isDeleting.set(false);
                     this.deleteProgress.set(null);
-                    this.toastService.show('Failed to delete rules.', 'error');
+                    this.toastService.show('Regeln konnten nicht geloescht werden.', 'error');
                 }
             });
         });
@@ -213,17 +213,17 @@ export class RulesListComponent implements OnInit, OnDestroy {
     }
 
     onDeleteSingle(rule: RedirectRule): void {
-        this.confirmTitle.set('Delete Rule');
-        this.confirmMessage.set(`Delete rule "${rule.matcher}"? This cannot be undone.`);
+        this.confirmTitle.set('Regel loeschen');
+        this.confirmMessage.set(`Regel "${rule.matcher}" loeschen? Dies kann nicht rueckgaengig gemacht werden.`);
 
         this.confirmAction.set(() => {
             this.rulesService.deleteRule(rule.id).subscribe({
                 next: () => {
-                    this.toastService.show('Rule deleted.', 'success');
+                    this.toastService.show('Regel geloescht.', 'success');
                     this.loadRules();
                 },
                 error: () => {
-                    this.toastService.show('Failed to delete rule.', 'error');
+                    this.toastService.show('Regel konnte nicht geloescht werden.', 'error');
                 }
             });
         });
@@ -234,8 +234,8 @@ export class RulesListComponent implements OnInit, OnDestroy {
     onDeleteAll(): void {
         const ruleCount = this.total();
 
-        this.confirmTitle.set('Delete All Rules');
-        this.confirmMessage.set(`Delete all ${ruleCount} rule(s)? This cannot be undone.`);
+        this.confirmTitle.set('Alle Regeln loeschen');
+        this.confirmMessage.set(`Alle ${ruleCount} Regel(n) loeschen? Dies kann nicht rueckgaengig gemacht werden.`);
 
         this.confirmAction.set(() => {
             this.isDeleting.set(true);
@@ -250,7 +250,7 @@ export class RulesListComponent implements OnInit, OnDestroy {
 
                     this.isDeleting.set(false);
                     this.deleteProgress.set(null);
-                    this.toastService.show(`Deleted ${finalProgress?.processed ?? ruleCount} rule(s).`, 'success');
+                    this.toastService.show(`${finalProgress?.processed ?? ruleCount} Regel(n) geloescht.`, 'success');
                     this.selectedIds.set(new Set());
                     this.queryParams.page = 1;
                     this.currentPage.set(1);
@@ -259,7 +259,7 @@ export class RulesListComponent implements OnInit, OnDestroy {
                 error: () => {
                     this.isDeleting.set(false);
                     this.deleteProgress.set(null);
-                    this.toastService.show('Failed to delete all rules.', 'error');
+                    this.toastService.show('Alle Regeln konnten nicht geloescht werden.', 'error');
                 }
             });
         });
@@ -306,11 +306,11 @@ export class RulesListComponent implements OnInit, OnDestroy {
                 anchor.click();
                 URL.revokeObjectURL(url);
                 this.isExporting.set(false);
-                this.toastService.show('Export downloaded.', 'success');
+                this.toastService.show('Export heruntergeladen.', 'success');
             },
             error: () => {
                 this.isExporting.set(false);
-                this.toastService.show('Export failed.', 'error');
+                this.toastService.show('Export fehlgeschlagen.', 'error');
             }
         });
     }
@@ -341,7 +341,7 @@ export class RulesListComponent implements OnInit, OnDestroy {
             },
             error: () => {
                 this.isLoading.set(false);
-                this.toastService.show('Failed to load rules.', 'error');
+                this.toastService.show('Regeln konnten nicht geladen werden.', 'error');
             }
         });
     }

@@ -68,7 +68,7 @@ export class RuleModalComponent {
     }
 
     get modalTitle(): string {
-        return this.isEditMode ? 'Edit Rule' : 'New Rule';
+        return this.isEditMode ? 'Regel bearbeiten' : 'Neue Regel';
     }
 
     // -- Actions --
@@ -97,13 +97,13 @@ export class RuleModalComponent {
             this.rulesService.updateRule(this.rule()!.id, updateRequest).subscribe({
                 next: (updatedRule) => {
                     this.isSaving.set(false);
-                    this.toastService.show('Rule updated.', 'success');
+                    this.toastService.show('Regel aktualisiert.', 'success');
                     this.saved.emit(updatedRule);
                 },
                 error: (error) => {
                     this.isSaving.set(false);
 
-                    const message = error?.error?.message || error?.error?.title || 'Failed to update rule.';
+                    const message = error?.error?.message || error?.error?.title || 'Regel konnte nicht aktualisiert werden.';
 
                     this.toastService.show(message, 'error');
                 }
@@ -125,13 +125,13 @@ export class RuleModalComponent {
             this.rulesService.createRule(createRequest).subscribe({
                 next: (createdRule) => {
                     this.isSaving.set(false);
-                    this.toastService.show('Rule created.', 'success');
+                    this.toastService.show('Regel erstellt.', 'success');
                     this.saved.emit(createdRule);
                 },
                 error: (error) => {
                     this.isSaving.set(false);
 
-                    const message = error?.error?.message || error?.error?.title || 'Failed to create rule.';
+                    const message = error?.error?.message || error?.error?.title || 'Regel konnte nicht erstellt werden.';
 
                     this.toastService.show(message, 'error');
                 }
@@ -232,16 +232,16 @@ export class RuleModalComponent {
         const validationErrors: Record<string, string> = {};
 
         if (!this.matcher.trim()) {
-            validationErrors['matcher'] = 'Matcher is required.';
+            validationErrors['matcher'] = 'Matcher ist erforderlich.';
         } else if (this.matcher.length > 500) {
-            validationErrors['matcher'] = 'Matcher must be 500 characters or less.';
+            validationErrors['matcher'] = 'Matcher darf maximal 500 Zeichen lang sein.';
         }
 
         if (this.redirectType === 'regex') {
             try {
                 new RegExp(this.matcher);
             } catch {
-                validationErrors['matcher'] = 'Invalid regular expression syntax.';
+                validationErrors['matcher'] = 'Ungueltige Regex-Syntax.';
             }
         }
 

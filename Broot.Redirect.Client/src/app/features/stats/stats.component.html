@@ -3,7 +3,7 @@
         <h1>Statistiken</h1>
         <div class="page-actions">
             <button class="btn btn-secondary btn-danger-text" (click)="onDeleteAll()">
-                Delete All
+                Alle loeschen
             </button>
             <button class="btn btn-secondary" (click)="onRefresh()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -24,21 +24,21 @@
             [class.active]="timeRange === '24h'"
             (click)="onTimeRangeChange('24h')"
         >
-            Last 24h
+            Letzte 24h
         </button>
         <button
             class="time-range-btn"
             [class.active]="timeRange === '7d'"
             (click)="onTimeRangeChange('7d')"
         >
-            Last 7 days
+            Letzte 7 Tage
         </button>
         <button
             class="time-range-btn"
             [class.active]="timeRange === 'all'"
             (click)="onTimeRangeChange('all')"
         >
-            All time
+            Gesamtzeitraum
         </button>
     </div>
 
@@ -46,15 +46,15 @@
     @if (showDeleteConfirm()) {
         <div class="confirm-overlay">
             <div class="confirm-dialog">
-                <h3>Delete all tracking data?</h3>
-                <p>This will permanently remove all tracking entries and statistics. This cannot be undone.</p>
+                <h3>Alle Tracking-Daten loeschen?</h3>
+                <p>Alle Tracking-Eintraege und Statistiken werden dauerhaft entfernt. Dies kann nicht rueckgaengig gemacht werden.</p>
                 <div class="confirm-actions">
-                    <button class="btn btn-secondary" (click)="onCancelDelete()" [disabled]="isDeleting()">Cancel</button>
+                    <button class="btn btn-secondary" (click)="onCancelDelete()" [disabled]="isDeleting()">Abbrechen</button>
                     <button class="btn btn-danger" (click)="onConfirmDelete()" [disabled]="isDeleting()">
                         @if (isDeleting()) {
                             <span class="spinner"></span>
                         }
-                        Delete All Data
+                        Alle Daten loeschen
                     </button>
                 </div>
             </div>
@@ -216,10 +216,10 @@
                     @if (isExporting()) {
                         <span class="spinner"></span>
                     }
-                    Export CSV
+                    CSV exportieren
                 </button>
                 <button class="btn btn-ghost btn-sm" (click)="onExport('json')" [disabled]="isExporting()">
-                    Export JSON
+                    JSON exportieren
                 </button>
                 <span class="toolbar-count">{{ total() }} Eintraege</span>
             </div>

@@ -15,7 +15,7 @@
                         (click)="onClose()"
                         [disabled]="isSaving()"
                     >
-                        Cancel
+                        Abbrechen
                     </button>
                     <button
                         class="btn btn-primary"
@@ -25,7 +25,7 @@
                         @if (isSaving()) {
                             <span class="spinner"></span>
                         }
-                        {{ isEditMode ? 'Update' : 'Create' }}
+                        {{ isEditMode ? 'Aktualisieren' : 'Erstellen' }}
                     </button>
                 </div>
             </div>
@@ -48,11 +48,11 @@
                         @if (errors()['matcher']) {
                             <span class="form-error">{{ errors()['matcher'] }}</span>
                         }
-                        <span class="form-hint">Path (with leading /) or domain (without /).</span>
+                        <span class="form-hint">Pfad (mit fuehrendem /) oder Domain (ohne /).</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="modal-targetUrl">Target URL</label>
+                        <label class="form-label" for="modal-targetUrl">Ziel-URL</label>
                         <input
                             id="modal-targetUrl"
                             type="text"
@@ -60,88 +60,88 @@
                             [(ngModel)]="targetUrl"
                             placeholder="https://new.example.com/new-path"
                         />
-                        <span class="form-hint">Leave empty to use default domain.</span>
+                        <span class="form-hint">Leer lassen, um die Standard-Domain zu verwenden.</span>
                     </div>
                 </div>
 
                 <div class="form-row-3">
                     <div class="form-group">
-                        <label class="form-label" for="modal-redirectType">Redirect Type</label>
+                        <label class="form-label" for="modal-redirectType">Weiterleitungstyp</label>
                         <select
                             id="modal-redirectType"
                             class="form-select"
                             [(ngModel)]="redirectType"
                         >
-                            <option value="partial">Partial (prefix match)</option>
-                            <option value="wildcard">Wildcard (exact path)</option>
+                            <option value="partial">Teilweise (Praefix-Abgleich)</option>
+                            <option value="wildcard">Wildcard (exakter Pfad)</option>
                             <option value="domain">Domain</option>
                             <option value="regex">Regex</option>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Auto Redirect</label>
+                        <label class="form-label">Auto-Weiterleitung</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="autoRedirect" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ autoRedirect ? 'HTTP 301 redirect' : 'Show info page' }}</span>
+                            <span class="toggle-label">{{ autoRedirect ? 'HTTP 302 Weiterleitung' : 'Infoseite anzeigen' }}</span>
                         </div>
                     </div>
 
                     <div class="form-group" style="display: flex; flex-direction: column; gap: 8px">
-                        <label class="form-label">Query Params</label>
+                        <label class="form-label">Query-Parameter</label>
                         <div class="toggle-wrapper">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="forwardQueryParams" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">Forward</span>
+                            <span class="toggle-label">Weiterleiten</span>
                         </div>
                         <div class="toggle-wrapper">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="discardQueryParams" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">Discard</span>
+                            <span class="toggle-label">Verwerfen</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="modal-infoText">Info Text</label>
+                    <label class="form-label" for="modal-infoText">Info-Text</label>
                     <textarea
                         id="modal-infoText"
                         class="form-textarea"
                         [(ngModel)]="infoText"
-                        placeholder="Optional note shown on the info page"
+                        placeholder="Optionaler Hinweis auf der Infoseite"
                         rows="3"
                     ></textarea>
                 </div>
 
                 @if (redirectType === 'regex') {
                     <div class="alert alert-info">
-                        Regex matcher is tested against the full incoming path. Use capture groups ($1, $2) in the target URL.
+                        Der Regex-Matcher wird gegen den vollstaendigen Pfad getestet. Verwende Capture Groups ($1, $2) in der Ziel-URL.
                     </div>
                 }
 
                 <!-- Kept Query Params -->
                 <div>
                     <div class="sub-array-header">
-                        <label class="form-label" style="margin: 0">Kept Query Params</label>
+                        <label class="form-label" style="margin: 0">Beibehaltene Query-Parameter</label>
                         <button class="btn btn-secondary btn-sm" (click)="addKeptQueryParam()">
-                            + Add
+                            + Hinzufuegen
                         </button>
                     </div>
                     @if (keptQueryParams.length > 0) {
                         <table class="data-table" style="font-size: 0.83rem">
                             <thead>
                                 <tr>
-                                    <th>Key Pattern</th>
-                                    <th>Value Pattern</th>
-                                    <th>Target Key</th>
-                                    <th style="width: 80px">Skip Enc.</th>
+                                    <th>Schluessel-Muster</th>
+                                    <th>Wert-Muster</th>
+                                    <th>Ziel-Schluessel</th>
+                                    <th style="width: 80px">Ohne Kod.</th>
                                     <th style="width: 40px"></th>
                                 </tr>
                             </thead>
@@ -172,7 +172,7 @@
                                                 class="form-input mono"
                                                 style="padding: 4px 8px; font-size: 0.8rem"
                                                 [(ngModel)]="kept.targetKey"
-                                                placeholder="(optional rename)"
+                                                placeholder="(optionale Umbenennung)"
                                             />
                                         </td>
                                         <td>
@@ -186,7 +186,7 @@
                                             <button
                                                 class="btn btn-ghost btn-icon"
                                                 (click)="removeKeptQueryParam(i)"
-                                                title="Remove"
+                                                title="Entfernen"
                                             >
                                                 &times;
                                             </button>
@@ -201,9 +201,9 @@
                 <!-- Static Query Params -->
                 <div>
                     <div class="sub-array-header">
-                        <label class="form-label" style="margin: 0">Static Query Params</label>
+                        <label class="form-label" style="margin: 0">Statische Query-Parameter</label>
                         <button class="btn btn-secondary btn-sm" (click)="addStaticQueryParam()">
-                            + Add
+                            + Hinzufuegen
                         </button>
                     </div>
                     @if (staticQueryParams.length > 0) {
@@ -212,7 +212,7 @@
                                 <tr>
                                     <th>Key</th>
                                     <th>Value</th>
-                                    <th style="width: 80px">Skip Enc.</th>
+                                    <th style="width: 80px">Ohne Kod.</th>
                                     <th style="width: 40px"></th>
                                 </tr>
                             </thead>
@@ -248,7 +248,7 @@
                                             <button
                                                 class="btn btn-ghost btn-icon"
                                                 (click)="removeStaticQueryParam(i)"
-                                                title="Remove"
+                                                title="Entfernen"
                                             >
                                                 &times;
                                             </button>
@@ -263,18 +263,18 @@
                 <!-- Search and Replace -->
                 <div>
                     <div class="sub-array-header">
-                        <label class="form-label" style="margin: 0">Search and Replace</label>
+                        <label class="form-label" style="margin: 0">Suchen und Ersetzen</label>
                         <button class="btn btn-secondary btn-sm" (click)="addSearchAndReplace()">
-                            + Add
+                            + Hinzufuegen
                         </button>
                     </div>
                     @if (searchAndReplace.length > 0) {
                         <table class="data-table" style="font-size: 0.83rem">
                             <thead>
                                 <tr>
-                                    <th>Search</th>
-                                    <th>Replace</th>
-                                    <th style="width: 100px">Case Sens.</th>
+                                    <th>Suchen</th>
+                                    <th>Ersetzen</th>
+                                    <th style="width: 100px">Gross/Klein</th>
                                     <th style="width: 40px"></th>
                                 </tr>
                             </thead>
@@ -310,7 +310,7 @@
                                             <button
                                                 class="btn btn-ghost btn-icon"
                                                 (click)="removeSearchAndReplace(i)"
-                                                title="Remove"
+                                                title="Entfernen"
                                             >
                                                 &times;
                                             </button>
