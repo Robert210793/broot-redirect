@@ -4,7 +4,7 @@
         @if (response()) {
             <div class="page-actions">
                 <button class="btn btn-secondary" (click)="onClear()">
-                    Zuruecksetzen
+                    Zurücksetzen
                 </button>
             </div>
         }
@@ -23,7 +23,7 @@
                     [disabled]="isValidating()"
                     rows="8"
                 ></textarea>
-                <span class="form-hint">Maximal 500 URLs. Relative Pfade (z.B. /seite) oder vollstaendige URLs werden unterstuetzt.</span>
+                <span class="form-hint">Maximal 500 URLs. Relative Pfade (z.B. /seite) oder vollständige URLs werden unterstützt.</span>
             </div>
             <div class="input-actions">
                 <button
@@ -76,7 +76,7 @@
             @if (filteredResults().length === 0) {
                 <div class="card-body">
                     <div class="empty-state">
-                        <p>Keine Ergebnisse fuer den gewaehlten Filter.</p>
+                        <p>Keine Ergebnisse für den gewählten Filter.</p>
                     </div>
                 </div>
             } @else {
@@ -86,10 +86,10 @@
                             <tr>
                                 <th class="col-url">Eingegebene URL</th>
                                 <th class="col-status">Status</th>
-                                <th class="col-quality">Qualitaet</th>
+                                <th class="col-quality">Qualität</th>
                                 <th class="col-matcher">Matcher</th>
                                 <th class="col-type">Typ</th>
-                                <th class="col-resolved">Aufgeloeste URL</th>
+                                <th class="col-resolved">Aufgelöste URL</th>
                             </tr>
                         </thead>
                         <tbody>

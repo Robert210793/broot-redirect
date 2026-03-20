@@ -49,7 +49,7 @@
                         @if (errors()['matcher']) {
                             <span class="form-error">{{ errors()['matcher'] }}</span>
                         }
-                        <span class="form-hint">Pfad (mit fuehrendem /) oder Domain (ohne /).</span>
+                        <span class="form-hint">Pfad (mit führendem /) oder Domain (ohne /).</span>
                     </div>
 
                     <div class="form-group">
@@ -79,7 +79,7 @@
                             [(ngModel)]="redirectType"
                             (ngModelChange)="onRedirectTypeChange()"
                         >
-                            <option value="partial">Teilweise (Praefix-Abgleich)</option>
+                            <option value="partial">Teilweise (Präfix-Abgleich)</option>
                             <option value="wildcard">Wildcard (exakter Pfad)</option>
                             <option value="domain">Domain</option>
                             <option value="regex">Regex</option>
@@ -134,7 +134,7 @@
 
                 @if (redirectType === 'regex') {
                     <div class="alert alert-info">
-                        Der Regex-Matcher wird gegen den vollstaendigen Pfad getestet. Verwende Capture Groups ($1, $2) in der Ziel-URL.
+                        Der Regex-Matcher wird gegen den vollständigen Pfad getestet. Verwende Capture Groups ($1, $2) in der Ziel-URL.
                     </div>
                 }
 
@@ -143,16 +143,16 @@
                     <div class="sub-array-header">
                         <label class="form-label" style="margin: 0">Beibehaltene Query-Parameter</label>
                         <button class="btn btn-secondary btn-sm" (click)="addKeptQueryParam()">
-                            + Hinzufuegen
+                            + Hinzufügen
                         </button>
                     </div>
                     @if (keptQueryParams.length > 0) {
                         <table class="data-table" style="font-size: 0.83rem">
                             <thead>
                                 <tr>
-                                    <th>Schluessel-Muster</th>
+                                    <th>Schlüssel-Muster</th>
                                     <th>Wert-Muster</th>
-                                    <th>Ziel-Schluessel</th>
+                                    <th>Ziel-Schlüssel</th>
                                     <th style="width: 80px">Ohne Kod.</th>
                                     <th style="width: 40px"></th>
                                 </tr>
@@ -217,7 +217,7 @@
                     <div class="sub-array-header">
                         <label class="form-label" style="margin: 0">Statische Query-Parameter</label>
                         <button class="btn btn-secondary btn-sm" (click)="addStaticQueryParam()">
-                            + Hinzufuegen
+                            + Hinzufügen
                         </button>
                     </div>
                     @if (staticQueryParams.length > 0) {
@@ -281,7 +281,7 @@
                     <div class="sub-array-header">
                         <label class="form-label" style="margin: 0">Suchen und Ersetzen</label>
                         <button class="btn btn-secondary btn-sm" (click)="addSearchAndReplace()">
-                            + Hinzufuegen
+                            + Hinzufügen
                         </button>
                     </div>
                     @if (searchAndReplace.length > 0) {
@@ -290,7 +290,7 @@
                                 <tr>
                                     <th>Suchen</th>
                                     <th>Ersetzen</th>
-                                    <th style="width: 100px">Gross/Klein</th>
+                                    <th style="width: 100px">Groß/Klein</th>
                                     <th style="width: 40px"></th>
                                 </tr>
                             </thead>

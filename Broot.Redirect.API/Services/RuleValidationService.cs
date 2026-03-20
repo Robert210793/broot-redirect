@@ -22,7 +22,7 @@ namespace Broot.Redirect.API.Services
 
             if (!TryParseRedirectType(request.RedirectType, out var redirectType))
             {
-                errors.Add(new ValidationError("redirectType", $"Ungueltiger Weiterleitungstyp: '{request.RedirectType}'"));
+                errors.Add(new ValidationError("redirectType", $"Ungültiger Weiterleitungstyp: '{request.RedirectType}'"));
             }
             else
             {
@@ -55,7 +55,7 @@ namespace Broot.Redirect.API.Services
             {
                 if (!TryParseRedirectType(request.RedirectType, out var parsedType))
                 {
-                    errors.Add(new ValidationError("redirectType", $"Ungueltiger Weiterleitungstyp: '{request.RedirectType}'"));
+                    errors.Add(new ValidationError("redirectType", $"Ungültiger Weiterleitungstyp: '{request.RedirectType}'"));
                 }
                 else
                 {
@@ -137,7 +137,7 @@ namespace Broot.Redirect.API.Services
                         {
                             errors.Add(new ValidationError(
                                 "targetUrl",
-                                "Bei Typ 'Wildcard' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein (z.B. https://beispiel.com/neue-seite)."));
+                                "Bei Typ 'Wildcard' muss die Ziel-URL eine vollständige URL mit http:// oder https:// sein (z.B. https://beispiel.com/neue-seite)."));
                         }
 
                         break;
@@ -149,7 +149,7 @@ namespace Broot.Redirect.API.Services
                         {
                             errors.Add(new ValidationError(
                                 "targetUrl",
-                                "Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen (z.B. /neue-sektion/) oder eine vollstaendige URL sein."));
+                                "Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen (z.B. /neue-sektion/) oder eine vollständige URL sein."));
                         }
 
                         break;
@@ -161,7 +161,7 @@ namespace Broot.Redirect.API.Services
                         {
                             errors.Add(new ValidationError(
                                 "targetUrl",
-                                "Bei Typ 'Domain' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein (z.B. https://neue-domain.com)."));
+                                "Bei Typ 'Domain' muss die Ziel-URL eine vollständige URL mit http:// oder https:// sein (z.B. https://neue-domain.com)."));
 
                             break;
                         }
@@ -212,7 +212,7 @@ namespace Broot.Redirect.API.Services
                 {
                     errors.Add(new ValidationError(
                         $"keptQueryParams[{index}].keyPattern",
-                        "Schluessel-Muster ist erforderlich."));
+                        "Schlüssel-Muster ist erforderlich."));
                 }
             }
         }

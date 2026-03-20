@@ -3,7 +3,7 @@
         <h1>Regeln importieren</h1>
         <div class="page-actions">
             <button class="btn btn-secondary" (click)="router.navigate(['/rules'])">
-                Zurueck zu Regeln
+                Zurück zu Regeln
             </button>
         </div>
     </div>
@@ -35,20 +35,20 @@
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
-                    JSON einfuegen
+                    JSON einfügen
                 </button>
             </div>
 
             @if (importMode === 'file') {
                 <div class="form-group">
-                    <label class="form-label">Datei auswaehlen</label>
+                    <label class="form-label">Datei auswählen</label>
                     <input
                         type="file"
                         accept=".json,.csv,.xlsx,.xls"
                         class="form-input"
                         (change)="onFileSelected($event)"
                     />
-                    <span class="form-hint">Unterstuetzte Formate: JSON, CSV, XLSX</span>
+                    <span class="form-hint">Unterstützte Formate: JSON, CSV, XLSX</span>
                 </div>
 
                 @if (selectedFileName()) {
@@ -64,7 +64,7 @@
 
             @if (importMode === 'paste') {
                 <div class="form-group">
-                    <label class="form-label">JSON einfuegen</label>
+                    <label class="form-label">JSON einfügen</label>
                     <textarea
                         class="form-textarea mono"
                         [(ngModel)]="jsonText"
@@ -106,13 +106,13 @@
                     }
                 </div>
                 <div class="page-actions">
-                    <button class="btn btn-secondary" (click)="onReset()">Zurueck</button>
+                    <button class="btn btn-secondary" (click)="onReset()">Zurück</button>
                     <button
                         class="btn btn-primary"
                         (click)="onConfirmImport()"
                         [disabled]="!canConfirmImport"
                     >
-                        Import bestaetigen
+                        Import bestätigen
                     </button>
                 </div>
             </div>
@@ -153,7 +153,7 @@
                         [class.active]="statusFilter === 'invalid'"
                         (click)="onStatusFilter('invalid')"
                     >
-                        Ungueltig
+                        Ungültig
                         <span class="preview-count">{{ previewData()!.counts.invalid }}</span>
                     </button>
                 }
@@ -161,7 +161,7 @@
 
             @if (previewData()!.counts.invalid > 0 && previewData()!.counts.new === 0 && previewData()!.counts.update === 0) {
                 <div class="alert alert-danger">
-                    Alle Eintraege sind ungueltig. Korrigiere die Datei und versuche es erneut.
+                    Alle Einträge sind ungültig. Korrigiere die Datei und versuche es erneut.
                 </div>
             }
 
@@ -193,7 +193,7 @@
                                     } @else if (row.status === 'update') {
                                         <span class="badge badge-update">Aktualisierung</span>
                                     } @else if (row.status === 'invalid') {
-                                        <span class="badge badge-invalid" [title]="row.reason || ''">Ungueltig</span>
+                                        <span class="badge badge-invalid" [title]="row.reason || ''">Ungültig</span>
                                         @if (row.reason) {
                                             <span class="reason-text">{{ row.reason }}</span>
                                         }
@@ -204,7 +204,7 @@
 
                         @if (filteredPreview.length === 0) {
                             <tr>
-                                <td colspan="4" class="empty-state">Keine Eintraege entsprechen dem gewaehlten Filter.</td>
+                                <td colspan="4" class="empty-state">Keine Einträge entsprechen dem gewählten Filter.</td>
                             </tr>
                         }
                     </tbody>

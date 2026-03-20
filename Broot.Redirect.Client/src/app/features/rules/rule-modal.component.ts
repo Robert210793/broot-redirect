@@ -289,7 +289,7 @@ export class RuleModalComponent {
             try {
                 new RegExp(trimmedMatcher);
             } catch {
-                validationErrors['matcher'] = 'Ungueltige Regex-Syntax.';
+                validationErrors['matcher'] = 'Ungültige Regex-Syntax.';
             }
         }
 
@@ -309,7 +309,7 @@ export class RuleModalComponent {
                     }
                 } else if (this.redirectType === 'partial') {
                     if (!targetUrlTrimmed.startsWith('/') && !startsWithHttp) {
-                        validationErrors['targetUrl'] = "Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen oder eine vollstaendige URL sein.";
+                        validationErrors['targetUrl'] = "Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen oder eine vollständige URL sein.";
                     }
                 } else if (this.redirectType === 'domain') {
                     if (!startsWithHttp) {
@@ -322,7 +322,7 @@ export class RuleModalComponent {
                                 validationErrors['targetUrl'] = "Bei Typ 'Domain' darf die Ziel-URL keine Unterordner enthalten (nur https://domain.com).";
                             }
                         } catch {
-                            validationErrors['targetUrl'] = 'Ungueltige URL.';
+                            validationErrors['targetUrl'] = 'Ungültige URL.';
                         }
                     }
                 }
@@ -339,7 +339,7 @@ export class RuleModalComponent {
 
         for (let index = 0; index < this.keptQueryParams.length; index++) {
             if (!this.keptQueryParams[index].keyPattern?.trim()) {
-                validationErrors[`keptQueryParams_${index}_keyPattern`] = 'Schluessel-Muster ist erforderlich.';
+                validationErrors[`keptQueryParams_${index}_keyPattern`] = 'Schlüssel-Muster ist erforderlich.';
             }
         }
 

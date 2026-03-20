@@ -158,17 +158,17 @@ export class GlobalRulesComponent implements OnInit {
     // -- Delete --
 
     onDeleteRule(rule: GlobalRule): void {
-        this.confirmTitle.set('Globale Regel loeschen');
-        this.confirmMessage.set(`Globale Regel "${rule.search}" -> "${rule.replace}" loeschen? Dies kann nicht rueckgaengig gemacht werden.`);
+        this.confirmTitle.set('Globale Regel löschen');
+        this.confirmMessage.set(`Globale Regel "${rule.search}" -> "${rule.replace}" löschen? Dies kann nicht rückgängig gemacht werden.`);
 
         this.confirmAction.set(() => {
             this.globalRulesService.delete(rule.id).subscribe({
                 next: () => {
-                    this.toastService.show('Globale Regel geloescht.', 'success');
+                    this.toastService.show('Globale Regel gelöscht.', 'success');
                     this.loadRules();
                 },
                 error: () => {
-                    this.toastService.show('Globale Regel konnte nicht geloescht werden.', 'error');
+                    this.toastService.show('Globale Regel konnte nicht gelöscht werden.', 'error');
                 }
             });
         });

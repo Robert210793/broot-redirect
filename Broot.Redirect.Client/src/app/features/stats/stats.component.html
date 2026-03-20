@@ -3,7 +3,7 @@
         <h1>Statistiken</h1>
         <div class="page-actions">
             <button class="btn btn-secondary btn-danger-text" (click)="onDeleteAll()">
-                Alle loeschen
+                Alle löschen
             </button>
             <button class="btn btn-secondary" (click)="onRefresh()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -46,15 +46,15 @@
     @if (showDeleteConfirm()) {
         <div class="confirm-overlay">
             <div class="confirm-dialog">
-                <h3>Alle Tracking-Daten loeschen?</h3>
-                <p>Alle Tracking-Eintraege und Statistiken werden dauerhaft entfernt. Dies kann nicht rueckgaengig gemacht werden.</p>
+                <h3>Alle Tracking-Daten löschen?</h3>
+                <p>Alle Tracking-Einträge und Statistiken werden dauerhaft entfernt. Dies kann nicht rückgängig gemacht werden.</p>
                 <div class="confirm-actions">
                     <button class="btn btn-secondary" (click)="onCancelDelete()" [disabled]="isDeleting()">Abbrechen</button>
                     <button class="btn btn-danger" (click)="onConfirmDelete()" [disabled]="isDeleting()">
                         @if (isDeleting()) {
                             <span class="spinner"></span>
                         }
-                        Alle Daten loeschen
+                        Alle Daten löschen
                     </button>
                 </div>
             </div>
@@ -194,7 +194,7 @@
             <input
                 type="text"
                 class="form-input search-input"
-                placeholder="Eintraege durchsuchen..."
+                placeholder="Einträge durchsuchen..."
                 [ngModel]="searchText"
                 (ngModelChange)="onSearchChange($event)"
             />
@@ -221,7 +221,7 @@
                 <button class="btn btn-ghost btn-sm" (click)="onExport('json')" [disabled]="isExporting()">
                     JSON exportieren
                 </button>
-                <span class="toolbar-count">{{ total() }} Eintraege</span>
+                <span class="toolbar-count">{{ total() }} Einträge</span>
             </div>
         </div>
 
@@ -230,7 +230,7 @@
             <div class="filter-panel">
                 <div class="filter-row">
                     <div class="form-group">
-                        <label class="form-label">Qualitaet Min</label>
+                        <label class="form-label">Qualität Min</label>
                         <input
                             type="number"
                             class="form-input"
@@ -241,7 +241,7 @@
                         />
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Qualitaet Max</label>
+                        <label class="form-label">Qualität Max</label>
                         <input
                             type="number"
                             class="form-input"
@@ -274,7 +274,7 @@
                 <div class="filter-actions">
                     <button class="btn btn-primary btn-sm" (click)="onApplyFilters()">Anwenden</button>
                     @if (hasActiveFilters()) {
-                        <button class="btn btn-ghost btn-sm" (click)="onClearFilters()">Zuruecksetzen</button>
+                        <button class="btn btn-ghost btn-sm" (click)="onClearFilters()">Zurücksetzen</button>
                     }
                 </div>
             </div>
@@ -284,7 +284,7 @@
             <div class="card-body">
                 <div class="loading-overlay">
                     <span class="spinner"></span>
-                    Eintraege werden geladen...
+                    Einträge werden geladen...
                 </div>
             </div>
         } @else {
@@ -295,7 +295,7 @@
                             <th>Zeitpunkt</th>
                             <th>Pfad</th>
                             <th>Neue URL</th>
-                            <th>Qualitaet</th>
+                            <th>Qualität</th>
                             <th>Strategie</th>
                             <th>Feedback</th>
                         </tr>
@@ -334,7 +334,7 @@
                         @if (entries().length === 0) {
                             <tr>
                                 <td colspan="6" class="empty-state">
-                                    Keine Tracking-Eintraege vorhanden.
+                                    Keine Tracking-Einträge vorhanden.
                                 </td>
                             </tr>
                         }

@@ -36,12 +36,12 @@ export class LoginComponent {
                     this.toastService.show('Erfolgreich angemeldet.', 'success');
                     this.router.navigate(['/rules']);
                 } else {
-                    this.errorMessage = 'Ungueltiges Passwort.';
+                    this.errorMessage = 'Ungültiges Passwort.';
                 }
             },
             error: () => {
                 this.isLoading = false;
-                this.errorMessage = 'Ungueltiges Passwort. Bitte versuche es erneut.';
+                this.errorMessage = 'Ungültiges Passwort. Bitte versuche es erneut.';
             }
         });
     }

@@ -52,14 +52,14 @@
             @if (selectedIds().size > 0) {
                 <div class="toolbar-right">
                     <span class="text-secondary" style="font-size: 0.83rem">
-                        {{ selectedIds().size }} ausgewaehlt
+                        {{ selectedIds().size }} ausgewählt
                     </span>
                     <button class="btn btn-danger btn-sm" (click)="onBulkDelete()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
-                        Ausgewaehlte loeschen
+                        Ausgewählte löschen
                     </button>
                 </div>
             } @else {
@@ -69,7 +69,7 @@
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
-                        Alle loeschen
+                        Alle löschen
                     </button>
                 </div>
             }
@@ -79,10 +79,10 @@
         @if (isDeleting()) {
             <div class="loading-overlay deleting-overlay">
                 <span class="spinner"></span>
-                <strong>Regeln werden geloescht...</strong>
+                <strong>Regeln werden gelöscht...</strong>
                 @if (deleteProgress(); as progress) {
                     <div class="progress-info">
-                        {{ progress.processed }} / {{ progress.total }} geloescht
+                        {{ progress.processed }} / {{ progress.total }} gelöscht
                     </div>
                     <div class="progress-bar-track">
                         <div
@@ -176,7 +176,7 @@
                                 <button
                                     class="btn btn-ghost btn-icon"
                                     (click)="onDeleteSingle(rule)"
-                                    title="Regel loeschen"
+                                    title="Regel löschen"
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="3 6 5 6 21 6" />
@@ -224,7 +224,7 @@
                         class="pagination-btn"
                         [disabled]="currentPage() >= totalPages()"
                         (click)="onPageChange(currentPage() + 1)"
-                        title="Naechste Seite"
+                        title="Nächste Seite"
                     >
                         &#8250;
                     </button>
@@ -255,7 +255,7 @@
     [isOpen]="showConfirmDialog()"
     [title]="confirmTitle()"
     [message]="confirmMessage()"
-    confirmText="Loeschen"
+    confirmText="Löschen"
     cancelText="Abbrechen"
     variant="danger"
     (confirmed)="onConfirmDialogConfirmed()"

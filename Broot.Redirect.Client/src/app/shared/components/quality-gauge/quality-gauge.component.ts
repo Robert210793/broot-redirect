@@ -27,6 +27,6 @@ export class QualityGaugeComponent {
     }
 
     get ariaLabel(): string {
-        return `Link-Qualitaet: ${this.quality()}%. ${this.explanation()}`;
+        return `Link-Qualität: ${this.quality()}%. ${this.explanation()}`;
     }
 }

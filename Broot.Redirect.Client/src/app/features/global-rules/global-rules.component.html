@@ -21,16 +21,16 @@
         } @else if (rules().length === 0) {
             <div class="empty-state">
                 <p>Keine globalen Regeln definiert.</p>
-                <p>Globale Regeln wenden Such-und-Ersetz-Transformationen auf alle aufgeloesten URLs in Prioritaetsreihenfolge an.</p>
+                <p>Globale Regeln wenden Such-und-Ersetz-Transformationen auf alle aufgelösten URLs in Prioritätsreihenfolge an.</p>
             </div>
         } @else {
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="width: 80px">Prioritaet</th>
+                        <th style="width: 80px">Priorität</th>
                         <th>Suchen</th>
                         <th>Ersetzen</th>
-                        <th style="width: 110px">Gross/Klein</th>
+                        <th style="width: 110px">Groß/Klein</th>
                         <th style="width: 100px"></th>
                     </tr>
                 </thead>
@@ -67,7 +67,7 @@
                                     <button
                                         class="btn btn-ghost btn-icon"
                                         (click)="onDeleteRule(rule)"
-                                        title="Regel loeschen"
+                                        title="Regel löschen"
                                     >
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <polyline points="3 6 5 6 21 6" />
@@ -89,7 +89,7 @@
             <line x1="12" y1="16" x2="12" y2="12" />
             <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
-        <span>Globale Regeln werden nach den regelspezifischen Such-und-Ersetz-Operationen ausgefuehrt. Niedrigere Prioritaetszahlen werden zuerst ausgefuehrt.</span>
+        <span>Globale Regeln werden nach den regelspezifischen Such-und-Ersetz-Operationen ausgeführt. Niedrigere Prioritätszahlen werden zuerst ausgeführt.</span>
     </div>
 </div>
 
@@ -132,7 +132,7 @@
                         @if (formErrors()['search']) {
                             <span class="form-error">{{ formErrors()['search'] }}</span>
                         }
-                        <span class="form-hint">Literaler Text, der in aufgeloesten URLs gesucht wird.</span>
+                        <span class="form-hint">Literaler Text, der in aufgelösten URLs gesucht wird.</span>
                     </div>
 
                     <div class="form-group">
@@ -150,7 +150,7 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label" for="gr-priority">Prioritaet</label>
+                        <label class="form-label" for="gr-priority">Priorität</label>
                         <input
                             id="gr-priority"
                             type="number"
@@ -158,11 +158,11 @@
                             [(ngModel)]="formPriority"
                             style="max-width: 120px"
                         />
-                        <span class="form-hint">Niedrigere Zahlen werden zuerst ausgefuehrt.</span>
+                        <span class="form-hint">Niedrigere Zahlen werden zuerst ausgeführt.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Gross-/Kleinschreibung</label>
+                        <label class="form-label">Groß-/Kleinschreibung</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="formCaseSensitive" />
@@ -182,7 +182,7 @@
     [isOpen]="showConfirmDialog()"
     [title]="confirmTitle()"
     [message]="confirmMessage()"
-    confirmText="Loeschen"
+    confirmText="Löschen"
     cancelText="Abbrechen"
     variant="danger"
     (confirmed)="onConfirmDialogConfirmed()"

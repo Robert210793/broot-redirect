@@ -245,7 +245,7 @@ export class ImportComponent {
 
             return parsed;
         } catch {
-            this.parseError.set('Ungueltiges JSON. Bitte ueberpruefen und erneut versuchen.');
+            this.parseError.set('Ungültiges JSON. Bitte überprüfen und erneut versuchen.');
 
             return null;
         }

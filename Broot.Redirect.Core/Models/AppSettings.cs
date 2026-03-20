@@ -34,7 +34,7 @@ namespace Broot.Redirect.Core.Models
 
         public string InfoPageTitle { get; set; } = "URL veraltet - Aktualisierung erforderlich";
 
-        public string InfoPageMessage { get; set; } = "Du verwendest einen alten Link. Dieser Link ist nicht mehr aktuell und wird bald nicht mehr funktionieren. Bitte verwende die neue URL und aktualisiere deine Verknuepfungen.";
+        public string InfoPageMessage { get; set; } = "Du verwendest einen alten Link. Dieser Link ist nicht mehr aktuell und wird bald nicht mehr funktionieren. Bitte verwende die neue URL und aktualisiere deine Verknüpfungen.";
 
         /// <summary>
         /// "inline" shows the URL comparison immediately.
@@ -49,11 +49,11 @@ namespace Broot.Redirect.Core.Models
 
         public string CopyButtonText { get; set; } = "URL kopieren";
 
-        public string OpenButtonText { get; set; } = "In neuem Tab oeffnen";
+        public string OpenButtonText { get; set; } = "In neuem Tab öffnen";
 
-        public string SpecialHintsTitle { get; set; } = "Bitte beachte folgendes fuer diese URL:";
+        public string SpecialHintsTitle { get; set; } = "Bitte beachte folgendes für diese URL:";
 
-        public string SpecialHintsDescription { get; set; } = "Die neue URL wurde automatisch generiert. Es kann sein, dass sie nicht wie erwartet funktioniert. Falls die URL ungueltig ist, nutze bitte die Suchfunktion in der neuen Applikation, um den gewuenschten Inhalt zu finden.";
+        public string SpecialHintsDescription { get; set; } = "Die neue URL wurde automatisch generiert. Es kann sein, dass sie nicht wie erwartet funktioniert. Falls die URL ungültig ist, nutze bitte die Suchfunktion in der neuen Applikation, um den gewünschten Inhalt zu finden.";
 
         public string FooterCopyright { get; set; } = "";
 
@@ -65,7 +65,7 @@ namespace Broot.Redirect.Core.Models
 
         public string MatchHighExplanation { get; set; } = "Die neue URL wurde gefunden und korrekt zugeordnet.";
 
-        public string MatchMediumExplanation { get; set; } = "Die URL wurde erkannt, weicht aber leicht ab (z.B. zusaetzliche Link-Parameter).";
+        public string MatchMediumExplanation { get; set; } = "Die URL wurde erkannt, weicht aber leicht ab (z.B. zusätzliche Link-Parameter).";
 
         public string MatchLowExplanation { get; set; } = "Es wurde nur ein Teil der URL erkannt und ersetzt (Partial Match).";
 

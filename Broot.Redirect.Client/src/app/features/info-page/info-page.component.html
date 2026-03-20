@@ -44,7 +44,7 @@
                                 </svg>
                             </div>
                             <h2 class="popup-dialog-title">{{ settings()?.infoPageTitle || 'URL veraltet - Aktualisierung erforderlich' }}</h2>
-                            <p class="popup-dialog-description">{{ settings()?.infoPageMessage || 'Du verwendest einen alten Link. Dieser Link ist nicht mehr aktuell und wird bald nicht mehr funktionieren. Bitte verwende die neue URL und aktualisiere deine Verknuepfungen.' }}</p>
+                            <p class="popup-dialog-description">{{ settings()?.infoPageMessage || 'Du verwendest einen alten Link. Dieser Link ist nicht mehr aktuell und wird bald nicht mehr funktionieren. Bitte verwende die neue URL und aktualisiere deine Verknüpfungen.' }}</p>
                             <button class="btn btn-primary" (click)="onDismissPopup()">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -130,7 +130,7 @@
                                             <polyline points="15 3 21 3 21 9" />
                                             <line x1="10" y1="14" x2="21" y2="3" />
                                         </svg>
-                                        {{ settings()?.openButtonText || 'In neuem Tab oeffnen' }}
+                                        {{ settings()?.openButtonText || 'In neuem Tab öffnen' }}
                                     </button>
                                 </div>
                             </div>
@@ -143,7 +143,7 @@
                                         <line x1="12" y1="16" x2="12" y2="12" />
                                         <line x1="12" y1="8" x2="12.01" y2="8" />
                                     </svg>
-                                    <span class="hints-title">{{ settings()?.specialHintsTitle || 'Bitte beachte folgendes fuer diese URL:' }}</span>
+                                    <span class="hints-title">{{ settings()?.specialHintsTitle || 'Bitte beachte folgendes für diese URL:' }}</span>
                                 </div>
                                 <p class="hints-text">{{ infoText() }}</p>
                             </div>
@@ -177,7 +177,7 @@
                                     <line x1="8" y1="11" x2="14" y2="11" />
                                 </svg>
                                 <h2 class="no-match-title">Seite nicht gefunden</h2>
-                                <p class="no-match-text">{{ settings()?.matchNoneExplanation || 'Fuer diese URL wurde keine Weiterleitungsregel gefunden.' }}</p>
+                                <p class="no-match-text">{{ settings()?.matchNoneExplanation || 'Für diese URL wurde keine Weiterleitungsregel gefunden.' }}</p>
                                 @if (originalUrl) {
                                     <div class="url-display no-match-url">{{ originalUrl }}</div>
                                 }
@@ -216,7 +216,7 @@
                     (click)="onGearClick()"
                     [disabled]="isCheckingAuth()"
                     title="Administrator-Bereich"
-                    aria-label="Administrator-Bereich oeffnen"
+                    aria-label="Administrator-Bereich öffnen"
                 >
                     @if (isCheckingAuth()) {
                         <span class="spinner"></span>
@@ -251,12 +251,12 @@
                                 <polyline points="20 6 9 17 4 12" />
                             </svg>
                         </div>
-                        <h3 class="feedback-success-title">Danke fuer Ihr Feedback!</h3>
+                        <h3 class="feedback-success-title">Danke für Ihr Feedback!</h3>
                     </div>
                 } @else if (showCommentStep()) {
                     <!-- Comment step (after NOK) -->
                     <h3 class="feedback-title">Kennen Sie die korrekte URL?</h3>
-                    <p class="feedback-description">Bitte geben Sie die korrekte URL hier ein, damit wir sie korrigieren koennen.</p>
+                    <p class="feedback-description">Bitte geben Sie die korrekte URL hier ein, damit wir sie korrigieren können.</p>
                     <input
                         type="url"
                         class="form-input feedback-url-input"
@@ -266,7 +266,7 @@
                         (keydown.enter)="onCommentSubmit()"
                     />
                     <div class="feedback-comment-actions">
-                        <button class="btn btn-ghost" (click)="onCommentSkip()">Ueberspringen</button>
+                        <button class="btn btn-ghost" (click)="onCommentSkip()">Überspringen</button>
                         <button class="btn btn-primary" (click)="onCommentSubmit()">Absenden</button>
                     </div>
                 } @else {
