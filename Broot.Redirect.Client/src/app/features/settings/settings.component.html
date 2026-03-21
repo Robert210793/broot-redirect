@@ -7,7 +7,7 @@
                 (click)="onReset()"
                 [disabled]="isSaving() || isLoading()"
             >
-                Zurücksetzen
+                Zuruecksetzen
             </button>
             <button
                 class="btn btn-primary"
@@ -58,7 +58,7 @@
                             >
                                 <option value="RedirectToDefault">Zur Standard-Domain weiterleiten</option>
                                 <option value="SmartSearch">Intelligente Suche (Fallback)</option>
-                                <option value="Return404">404 zurückgeben</option>
+                                <option value="Return404">404 zurueckgeben</option>
                             </select>
                             <span class="form-hint">Was passiert, wenn keine Regel auf eine eingehende URL zutrifft.</span>
                         </div>
@@ -72,7 +72,7 @@
                                 </label>
                                 <span class="toggle-label">{{ autoRedirect ? 'HTTP 302 Weiterleitung' : 'Infoseite anzeigen' }}</span>
                             </div>
-                            <span class="form-hint">Wenn deaktiviert, zeigen alle zugeordneten URLs die Infoseite an, unabhängig von den Regeleinstellungen.</span>
+                            <span class="form-hint">Wenn deaktiviert, zeigen alle zugeordneten URLs die Infoseite an, unabhaengig von den Regeleinstellungen.</span>
                         </div>
                     </div>
                 </div>
@@ -146,7 +146,7 @@
             <!-- Info Page: URL Labels -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Infoseite: URL-Beschriftungen und Schaltflächen</h2>
+                    <h2>Infoseite: URL-Beschriftungen und Schaltflaechen</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-row">
@@ -175,7 +175,7 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label" for="copyButtonText">Kopieren-Schaltflächentext</label>
+                            <label class="form-label" for="copyButtonText">Kopieren-Schaltflaechentext</label>
                             <input
                                 id="copyButtonText"
                                 type="text"
@@ -186,13 +186,13 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="openButtonText">Öffnen-Schaltflächentext</label>
+                            <label class="form-label" for="openButtonText">Oeffnen-Schaltflaechentext</label>
                             <input
                                 id="openButtonText"
                                 type="text"
                                 class="form-input"
                                 [(ngModel)]="openButtonText"
-                                placeholder="In neuem Tab öffnen"
+                                placeholder="In neuem Tab oeffnen"
                             />
                         </div>
                     </div>
@@ -212,7 +212,7 @@
                             type="text"
                             class="form-input"
                             [(ngModel)]="specialHintsTitle"
-                            placeholder="Bitte beachte folgendes für diese URL:"
+                            placeholder="Bitte beachte folgendes fuer diese URL:"
                         />
                     </div>
 
@@ -233,11 +233,11 @@
             <!-- Info Page: Footer -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Infoseite: Fußzeile</h2>
+                    <h2>Infoseite: Fusszeile</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label" for="footerCopyright">Fußzeilen-Copyright</label>
+                        <label class="form-label" for="footerCopyright">Fusszeilen-Copyright</label>
                         <input
                             id="footerCopyright"
                             type="text"
@@ -264,7 +264,7 @@
                             [(ngModel)]="smartSearchUrl"
                             placeholder="https://new.example.com/search?q="
                         />
-                        <span class="form-hint">Der extrahierte Suchbegriff wird an diese URL angehängt. Leer lassen, um die intelligente Suche zu deaktivieren.</span>
+                        <span class="form-hint">Der extrahierte Suchbegriff wird an diese URL angehaengt. Leer lassen, um die intelligente Suche zu deaktivieren.</span>
                     </div>
 
                     <div class="form-group">
@@ -280,7 +280,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">URL-Kodierung überspringen</label>
+                        <label class="form-label">URL-Kodierung ueberspringen</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="smartSearchSkipEncoding" />
@@ -295,13 +295,13 @@
             <!-- Match Quality Explanations -->
             <section class="card">
                 <div class="card-header">
-                    <h2>Erklärungen zur Trefferqualität</h2>
+                    <h2>Erklaerungen zur Trefferqualitaet</h2>
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
                         <label class="form-label" for="matchHighExplanation">
                             <span class="quality-dot quality-dot-green"></span>
-                            Hohe Qualität (90-100%)
+                            Hohe Qualitaet (90-100%)
                         </label>
                         <textarea
                             id="matchHighExplanation"
@@ -314,7 +314,7 @@
                     <div class="form-group">
                         <label class="form-label" for="matchMediumExplanation">
                             <span class="quality-dot quality-dot-yellow"></span>
-                            Mittlere Qualität (60-89%)
+                            Mittlere Qualitaet (60-89%)
                         </label>
                         <textarea
                             id="matchMediumExplanation"
@@ -327,7 +327,7 @@
                     <div class="form-group">
                         <label class="form-label" for="matchLowExplanation">
                             <span class="quality-dot quality-dot-red"></span>
-                            Niedrige Qualität (0-59%)
+                            Niedrige Qualitaet (0-59%)
                         </label>
                         <textarea
                             id="matchLowExplanation"
@@ -359,13 +359,13 @@
                 </div>
                 <div class="card-body settings-card-body">
                     <div class="form-group">
-                        <label class="form-label">Groß-/Kleinschreibung bei Link-Erkennung</label>
+                        <label class="form-label">Gross-/Kleinschreibung bei Link-Erkennung</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="caseSensitiveLinkDetection" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ caseSensitiveLinkDetection ? 'Groß-/Kleinschreibung beachten' : 'Groß-/Kleinschreibung ignorieren' }}</span>
+                            <span class="toggle-label">Gross-/Kleinschreibung beachten</span>
                         </div>
                         <span class="form-hint">Steuert, ob die Regelzuordnung /Page und /page als unterschiedliche Pfade behandelt.</span>
                     </div>
@@ -391,11 +391,11 @@
                             </label>
                             <span class="toggle-label">{{ enableReferrerTracking ? 'Referrer im Tracking speichern' : 'Deaktiviert (Datenschutz)' }}</span>
                         </div>
-                        <span class="form-hint">Einige Installationen müssen dies aus Datenschutzgründen deaktivieren.</span>
+                        <span class="form-hint">Einige Installationen muessen dies aus Datenschutzgruenden deaktivieren.</span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Link-Qualitätsanzeige</label>
+                        <label class="form-label">Link-Qualitaetsanzeige</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
                                 <input type="checkbox" [(ngModel)]="showLinkQualityGauge" />
@@ -403,7 +403,7 @@
                             </label>
                             <span class="toggle-label">{{ showLinkQualityGauge ? 'Sichtbar' : 'Ausgeblendet' }}</span>
                         </div>
-                        <span class="form-hint">Steuert, ob die grün/gelb/rot Qualitätsanzeige auf der Infoseite angezeigt wird.</span>
+                        <span class="form-hint">Steuert, ob die gruen/gelb/rot Qualitaetsanzeige auf der Infoseite angezeigt wird.</span>
                     </div>
 
                     <div class="form-group">
@@ -413,9 +413,9 @@
                                 <input type="checkbox" [(ngModel)]="enableFeedbackSurvey" />
                                 <span class="toggle-track"></span>
                             </label>
-                            <span class="toggle-label">{{ enableFeedbackSurvey ? 'OK/NOK nach Kopieren oder Öffnen fragen' : 'Deaktiviert' }}</span>
+                            <span class="toggle-label">{{ enableFeedbackSurvey ? 'OK/NOK nach Kopieren oder Oeffnen fragen' : 'Deaktiviert' }}</span>
                         </div>
-                        <span class="form-hint">Wenn aktiviert, sehen Benutzer eine Feedback-Abfrage nach dem Kopieren oder Öffnen der neuen URL.</span>
+                        <span class="form-hint">Wenn aktiviert, sehen Benutzer eine Feedback-Abfrage nach dem Kopieren oder Oeffnen der neuen URL.</span>
                     </div>
 
                     @if (enableFeedbackSurvey) {
@@ -428,7 +428,7 @@
                                 </label>
                                 <span class="toggle-label">{{ enableFeedbackComment ? 'Vorschlag der korrekten URL erlauben' : 'Nur einfaches OK/NOK' }}</span>
                             </div>
-                            <span class="form-hint">Wenn aktiviert, enthält der NOK-Schritt ein Textfeld, in dem der Benutzer die korrekte URL vorschlagen kann.</span>
+                            <span class="form-hint">Wenn aktiviert, enthaelt der NOK-Schritt ein Textfeld, in dem der Benutzer die korrekte URL vorschlagen kann.</span>
                         </div>
                     }
                 </div>
@@ -443,7 +443,7 @@
                 (click)="onReset()"
                 [disabled]="isSaving()"
             >
-                Zurücksetzen
+                Zuruecksetzen
             </button>
             <button
                 class="btn btn-primary"
