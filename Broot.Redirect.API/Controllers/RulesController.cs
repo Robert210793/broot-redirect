@@ -130,19 +130,9 @@ namespace Broot.Redirect.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateRuleRequest request)
         {
-            var validationErrors = _validationService.ValidateCreate(request);
-
-            if (validationErrors.Count > 0)
+            if (!ModelState.IsValid)
             {
-                return BadRequest(new
-                {
-                    error = "Validation failed",
-                    details = validationErrors.Select(validationError => new
-                    {
-                        field = validationError.Field,
-                        message = validationError.Message
-                    })
-                });
+                return BadRequest(new { error = "Invalid rule data" });
             }
 
             if (!TryParseRedirectType(request.RedirectType, out var redirectType))
@@ -153,6 +143,22 @@ namespace Broot.Redirect.API.Controllers
             if (_cacheService.MatcherExists(request.Matcher))
             {
                 return BadRequest(new { error = $"A rule with matcher '{request.Matcher}' already exists" });
+            }
+
+            var overlapping = _cacheService.FindOverlappingMatcher(request.Matcher);
+
+            if (overlapping != null)
+            {
+                return Conflict(new
+                {
+                    error = "URL matcher conflicts with existing rule",
+                    code = "MATCHER_CONFLICT",
+                    conflictingRule = new
+                    {
+                        id = overlapping.Id,
+                        matcher = overlapping.Matcher
+                    }
+                });
             }
 
             var rule = new RedirectRule
@@ -196,21 +202,22 @@ namespace Broot.Redirect.API.Controllers
                 {
                     return BadRequest(new { error = $"A rule with matcher '{request.Matcher}' already exists" });
                 }
-            }
 
-            var validationErrors = _validationService.ValidateUpdate(request, existingRule.RedirectType);
+                var overlapping = _cacheService.FindOverlappingMatcher(request.Matcher, excludeRuleId: id);
 
-            if (validationErrors.Count > 0)
-            {
-                return BadRequest(new
+                if (overlapping != null)
                 {
-                    error = "Validation failed",
-                    details = validationErrors.Select(validationError => new
+                    return Conflict(new
                     {
-                        field = validationError.Field,
-                        message = validationError.Message
-                    })
-                });
+                        error = "URL matcher conflicts with existing rule",
+                        code = "MATCHER_CONFLICT",
+                        conflictingRule = new
+                        {
+                            id = overlapping.Id,
+                            matcher = overlapping.Matcher
+                        }
+                    });
+                }
             }
 
             var updatedRule = new RedirectRule
@@ -457,6 +464,9 @@ namespace Broot.Redirect.API.Controllers
                 .GroupBy(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
+            var appSettings = _settingsCache.GetSettings();
+            var encodeUrls = appSettings.EncodeImportedUrls;
+
             var previewEntries = new List<ImportPreviewEntry>();
             var counts = new ImportPreviewCounts();
 
@@ -489,6 +499,42 @@ namespace Broot.Redirect.API.Controllers
                 {
                     previewEntry.Status = "invalid";
                     previewEntry.Reason = $"Invalid redirect type: '{redirectType}'";
+                    counts.Invalid++;
+
+                    previewEntries.Add(previewEntry);
+
+                    continue;
+                }
+
+                var validationMatcher = entry.Matcher;
+                var validationTargetUrl = entry.TargetUrl;
+
+                if (encodeUrls)
+                {
+                    validationMatcher = PercentEncodePreservingSlashes(validationMatcher);
+                    validationTargetUrl = validationTargetUrl != null ? PercentEncodePreservingSlashes(validationTargetUrl) : null;
+                }
+
+                var mappedRequest = new CreateRuleRequest
+                {
+                    Matcher = validationMatcher,
+                    TargetUrl = validationTargetUrl,
+                    RedirectType = redirectType,
+                    InfoText = entry.InfoText,
+                    AutoRedirect = entry.AutoRedirect ?? false,
+                    DiscardQueryParams = entry.DiscardQueryParams ?? false,
+                    ForwardQueryParams = entry.ForwardQueryParams ?? false,
+                    KeptQueryParams = entry.KeptQueryParams ?? new List<KeptQueryParam>(),
+                    StaticQueryParams = entry.StaticQueryParams ?? new List<StaticQueryParam>(),
+                    SearchAndReplace = entry.SearchAndReplace ?? new List<SearchAndReplaceEntry>()
+                };
+
+                var validationErrors = _validationService.ValidateCreate(mappedRequest);
+
+                if (validationErrors.Count > 0)
+                {
+                    previewEntry.Status = "invalid";
+                    previewEntry.Reason = validationErrors[0];
                     counts.Invalid++;
 
                     previewEntries.Add(previewEntry);
@@ -604,6 +650,8 @@ namespace Broot.Redirect.API.Controllers
 
             var repository = _repository;
             var cacheService = _cacheService;
+            var validationService = _validationService;
+            var settingsCache = _settingsCache;
             var logger = _logger;
 
             _ = Task.Run(async () =>
@@ -612,6 +660,9 @@ namespace Broot.Redirect.API.Controllers
 
                 try
                 {
+                    var appSettings = settingsCache.GetSettings();
+                    var encodeUrls = appSettings.EncodeImportedUrls;
+
                     var matcherLookup = cacheService.GetAll()
                         .GroupBy(r => r.Matcher, StringComparer.OrdinalIgnoreCase)
                         .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
@@ -633,6 +684,39 @@ namespace Broot.Redirect.API.Controllers
                             if (!TryParseRedirectType(entry.RedirectType ?? "partial", out var redirectType))
                             {
                                 progress.Errors.Add($"Entry {index}: invalid redirect type '{entry.RedirectType}'");
+                                progress.Processed++;
+
+                                continue;
+                            }
+
+                            var importMatcher = entry.Matcher;
+                            var importTargetUrl = entry.TargetUrl;
+
+                            if (encodeUrls)
+                            {
+                                importMatcher = PercentEncodePreservingSlashes(importMatcher);
+                                importTargetUrl = importTargetUrl != null ? PercentEncodePreservingSlashes(importTargetUrl) : null;
+                            }
+
+                            var mappedRequest = new CreateRuleRequest
+                            {
+                                Matcher = importMatcher,
+                                TargetUrl = importTargetUrl,
+                                RedirectType = entry.RedirectType ?? "partial",
+                                InfoText = entry.InfoText,
+                                AutoRedirect = entry.AutoRedirect ?? false,
+                                DiscardQueryParams = entry.DiscardQueryParams ?? false,
+                                ForwardQueryParams = entry.ForwardQueryParams ?? false,
+                                KeptQueryParams = entry.KeptQueryParams ?? new List<KeptQueryParam>(),
+                                StaticQueryParams = entry.StaticQueryParams ?? new List<StaticQueryParam>(),
+                                SearchAndReplace = entry.SearchAndReplace ?? new List<SearchAndReplaceEntry>()
+                            };
+
+                            var validationErrors = validationService.ValidateCreate(mappedRequest);
+
+                            if (validationErrors.Count > 0)
+                            {
+                                progress.Errors.Add($"Entry {index}: {validationErrors[0]}");
                                 progress.Processed++;
 
                                 continue;
@@ -666,8 +750,8 @@ namespace Broot.Redirect.API.Controllers
                             var rule = new RedirectRule
                             {
                                 Id = ruleId,
-                                Matcher = entry.Matcher,
-                                TargetUrl = entry.TargetUrl,
+                                Matcher = importMatcher,
+                                TargetUrl = importTargetUrl ?? string.Empty,
                                 RedirectType = redirectType,
                                 InfoText = entry.InfoText,
                                 AutoRedirect = entry.AutoRedirect ?? false,
@@ -795,10 +879,17 @@ namespace Broot.Redirect.API.Controllers
 
                     if (matchResult != null)
                     {
-                        var resolvedUrl = _urlTransformService.ResolveTargetUrl(
+                        var (resolvedUrl, trace) = _urlTransformService.ResolveTargetUrlWithTrace(
                             trimmedUrl,
                             matchResult.Rule,
                             appSettings.DefaultNewDomain);
+
+                        trace.Insert(1, new UrlTraceStep
+                        {
+                            Type = "rule-match",
+                            Description = $"Matched rule '{matchResult.Rule.Matcher}' ({matchResult.Rule.RedirectType}, score: {matchResult.Score}, quality: {matchResult.Quality}%)",
+                            After = matchResult.Rule.TargetUrl
+                        });
 
                         matchedCount++;
 
@@ -812,7 +903,8 @@ namespace Broot.Redirect.API.Controllers
                             Score = matchResult.Score,
                             Quality = matchResult.Quality,
                             Level = matchResult.Level,
-                            ResolvedUrl = resolvedUrl
+                            ResolvedUrl = resolvedUrl,
+                            Trace = trace
                         });
                     }
                     else
@@ -862,6 +954,18 @@ namespace Broot.Redirect.API.Controllers
             return await JsonSerializer.DeserializeAsync<List<ImportRuleEntry>>(
                 stream,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<ImportRuleEntry>();
+        }
+
+        private static string PercentEncodePreservingSlashes(string value)
+        {
+            var segments = value.Split('/');
+
+            for (var index = 0; index < segments.Length; index++)
+            {
+                segments[index] = Uri.EscapeDataString(segments[index]);
+            }
+
+            return string.Join('/', segments);
         }
 
         private class JobProgress

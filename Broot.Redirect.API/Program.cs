@@ -10,6 +10,25 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var appInsightsConnectionString = builder.Configuration
+    .GetValue<string>("APPLICATIONINSIGHTS__CONNECTIONSTRING")
+    ?? builder.Configuration
+    .GetValue<string>("ApplicationInsights:ConnectionString");
+
+if (!string.IsNullOrEmpty(appInsightsConnectionString))
+{
+    builder.Services.AddApplicationInsightsTelemetry(options =>
+    {
+        options.ConnectionString = appInsightsConnectionString;
+    });
+
+    Console.WriteLine("Application Insights telemetry enabled.");
+}
+else
+{
+    Console.WriteLine("Application Insights not configured. Running without telemetry.");
+}
+
 builder.Services.Configure<BrootRedirectOptions>(
     builder.Configuration.GetSection(BrootRedirectOptions.SectionName));
 
@@ -109,6 +128,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseMiddleware<RateLimitMiddleware>();
+
 app.UseMiddleware<CsrfProtectionMiddleware>();
 
 app.UseSession();

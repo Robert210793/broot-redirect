@@ -132,6 +132,70 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
         }
 
+        public RedirectRule? FindOverlappingMatcher(string matcher, Guid? excludeRuleId = null)
+        {
+            var inputSegments = NormalizeAndSplitSegments(matcher);
+
+            if (inputSegments.Length == 0)
+            {
+                return null;
+            }
+
+            _indexLock.EnterReadLock();
+
+            try
+            {
+                foreach (var rule in _rulesById.Values)
+                {
+                    if (rule.RedirectType == RedirectType.Regex)
+                    {
+                        continue;
+                    }
+
+                    if (excludeRuleId.HasValue && rule.Id == excludeRuleId.Value)
+                    {
+                        continue;
+                    }
+
+                    var existingSegments = NormalizeAndSplitSegments(rule.Matcher);
+
+                    if (existingSegments.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    if (existingSegments.Length == inputSegments.Length)
+                    {
+                        continue;
+                    }
+
+                    var shorterLength = Math.Min(inputSegments.Length, existingSegments.Length);
+                    var allSharedMatch = true;
+
+                    for (var i = 0; i < shorterLength; i++)
+                    {
+                        if (!string.Equals(inputSegments[i], existingSegments[i], StringComparison.OrdinalIgnoreCase))
+                        {
+                            allSharedMatch = false;
+
+                            break;
+                        }
+                    }
+
+                    if (allSharedMatch)
+                    {
+                        return rule;
+                    }
+                }
+
+                return null;
+            }
+            finally
+            {
+                _indexLock.ExitReadLock();
+            }
+        }
+
         public void Initialize(IReadOnlyList<RedirectRule> rules)
         {
             _rulesById.Clear();
@@ -287,7 +351,7 @@ namespace Broot.Redirect.Infrastructure.Cache
             var normalized = matcher;
 
             try { normalized = Uri.UnescapeDataString(normalized); }
-            catch { }
+            catch { /* keep original if decoding fails */ }
 
             if (string.Equals(_options.TrailingSlashPolicy, "ignore", StringComparison.OrdinalIgnoreCase))
             {
@@ -303,6 +367,14 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
 
             return normalized;
+        }
+
+        private static string[] NormalizeAndSplitSegments(string matcher)
+        {
+            var normalized = matcher.Trim().ToLowerInvariant().TrimEnd('/');
+
+            return normalized
+                .Split('/', StringSplitOptions.RemoveEmptyEntries);
         }
     }
 }

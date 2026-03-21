@@ -4,32 +4,47 @@ using System.Text.RegularExpressions;
 
 namespace Broot.Redirect.API.Services
 {
-    public sealed class RuleValidationService
+    public class RuleValidationService
     {
         private static readonly Regex MatcherPattern = new(
-            @"^(/|[a-zA-Z0-9])([a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%]*)$",
+            @"^(\/|[a-zA-Z0-9])([a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%]*)$",
             RegexOptions.Compiled);
 
-        private const int MatcherMaxLength = 500;
-        private const int TargetUrlMaxLength = 2000;
-        private const int InfoTextMaxLength = 5000;
-
-        public List<ValidationError> ValidateCreate(CreateRuleRequest request)
+        public List<string> ValidateCreate(CreateRuleRequest request)
         {
-            var errors = new List<ValidationError>();
+            var errors = new List<string>();
 
-            ValidateMatcher(request.Matcher, errors);
+            if (string.IsNullOrWhiteSpace(request.Matcher))
+            {
+                errors.Add("URL-Muster darf nicht leer sein");
 
-            if (!TryParseRedirectType(request.RedirectType, out var redirectType))
-            {
-                errors.Add(new ValidationError("redirectType", $"Ungültiger Weiterleitungstyp: '{request.RedirectType}'"));
-            }
-            else
-            {
-                ValidateTargetUrl(request.TargetUrl, redirectType, errors);
+                return errors;
             }
 
-            ValidateInfoText(request.InfoText, errors);
+            if (request.Matcher.Length > 500)
+            {
+                errors.Add("URL-Muster ist zu lang");
+            }
+
+            if (!MatcherPattern.IsMatch(request.Matcher))
+            {
+                errors.Add("URL-Muster muss mit '/' beginnen oder eine Domain sein (z.B. example.com)");
+            }
+
+            if (request.TargetUrl != null && request.TargetUrl.Length > 2000)
+            {
+                errors.Add("Ziel-URL ist zu lang");
+            }
+
+            if (request.InfoText != null && request.InfoText.Length > 5000)
+            {
+                errors.Add("Info-Text ist zu lang");
+            }
+
+            if (Enum.TryParse<RedirectType>(request.RedirectType, ignoreCase: true, out var redirectType))
+            {
+                ValidateTargetUrlForType(request.TargetUrl, redirectType, errors);
+            }
 
             ValidateKeptQueryParams(request.KeptQueryParams, errors);
 
@@ -40,92 +55,10 @@ namespace Broot.Redirect.API.Services
             return errors;
         }
 
-        public List<ValidationError> ValidateUpdate(UpdateRuleRequest request, RedirectType existingRedirectType)
-        {
-            var errors = new List<ValidationError>();
-
-            if (request.Matcher != null)
-            {
-                ValidateMatcher(request.Matcher, errors);
-            }
-
-            var effectiveRedirectType = existingRedirectType;
-
-            if (request.RedirectType != null)
-            {
-                if (!TryParseRedirectType(request.RedirectType, out var parsedType))
-                {
-                    errors.Add(new ValidationError("redirectType", $"Ungültiger Weiterleitungstyp: '{request.RedirectType}'"));
-                }
-                else
-                {
-                    effectiveRedirectType = parsedType;
-                }
-            }
-
-            if (request.TargetUrl != null)
-            {
-                ValidateTargetUrl(request.TargetUrl, effectiveRedirectType, errors);
-            }
-
-            if (request.InfoText != null)
-            {
-                ValidateInfoText(request.InfoText, errors);
-            }
-
-            if (request.KeptQueryParams != null)
-            {
-                ValidateKeptQueryParams(request.KeptQueryParams, errors);
-            }
-
-            if (request.StaticQueryParams != null)
-            {
-                ValidateStaticQueryParams(request.StaticQueryParams, errors);
-            }
-
-            if (request.SearchAndReplace != null)
-            {
-                ValidateSearchAndReplace(request.SearchAndReplace, errors);
-            }
-
-            return errors;
-        }
-
-        private static void ValidateMatcher(string matcher, List<ValidationError> errors)
-        {
-            if (string.IsNullOrWhiteSpace(matcher))
-            {
-                errors.Add(new ValidationError("matcher", "URL-Muster darf nicht leer sein."));
-
-                return;
-            }
-
-            var trimmed = matcher.Trim();
-
-            if (trimmed.Length > MatcherMaxLength)
-            {
-                errors.Add(new ValidationError("matcher", $"URL-Muster ist zu lang (maximal {MatcherMaxLength} Zeichen)."));
-
-                return;
-            }
-
-            if (!MatcherPattern.IsMatch(trimmed))
-            {
-                errors.Add(new ValidationError("matcher", "URL-Muster muss mit '/' beginnen oder eine Domain sein (z.B. example.com)."));
-            }
-        }
-
-        private static void ValidateTargetUrl(string? targetUrl, RedirectType redirectType, List<ValidationError> errors)
+        private static void ValidateTargetUrlForType(string? targetUrl, RedirectType redirectType, List<string> errors)
         {
             if (string.IsNullOrEmpty(targetUrl))
             {
-                return;
-            }
-
-            if (targetUrl.Length > TargetUrlMaxLength)
-            {
-                errors.Add(new ValidationError("targetUrl", $"Ziel-URL ist zu lang (maximal {TargetUrlMaxLength} Zeichen)."));
-
                 return;
             }
 
@@ -133,11 +66,10 @@ namespace Broot.Redirect.API.Services
             {
                 case RedirectType.Wildcard:
                     {
-                        if (!StartsWithHttpOrHttps(targetUrl))
+                        if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                            && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                         {
-                            errors.Add(new ValidationError(
-                                "targetUrl",
-                                "Bei Typ 'Wildcard' muss die Ziel-URL eine vollständige URL mit http:// oder https:// sein (z.B. https://beispiel.com/neue-seite)."));
+                            errors.Add("Bei Typ 'Vollstaendig' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein");
                         }
 
                         break;
@@ -145,11 +77,11 @@ namespace Broot.Redirect.API.Services
 
                 case RedirectType.Partial:
                     {
-                        if (!targetUrl.StartsWith('/') && !StartsWithHttpOrHttps(targetUrl))
+                        if (!targetUrl.StartsWith('/')
+                            && !targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                            && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                         {
-                            errors.Add(new ValidationError(
-                                "targetUrl",
-                                "Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen (z.B. /neue-sektion/) oder eine vollständige URL sein."));
+                            errors.Add("Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen oder eine vollstaendige URL sein");
                         }
 
                         break;
@@ -157,124 +89,73 @@ namespace Broot.Redirect.API.Services
 
                 case RedirectType.Domain:
                     {
-                        if (!StartsWithHttpOrHttps(targetUrl))
+                        if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                            && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                         {
-                            errors.Add(new ValidationError(
-                                "targetUrl",
-                                "Bei Typ 'Domain' muss die Ziel-URL eine vollständige URL mit http:// oder https:// sein (z.B. https://neue-domain.com)."));
+                            errors.Add("Bei Typ 'Domain-Ersatz' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein");
 
                             break;
                         }
 
-                        if (Uri.TryCreate(targetUrl, UriKind.Absolute, out var uri))
+                        if (Uri.TryCreate(targetUrl, UriKind.Absolute, out var parsedUri))
                         {
-                            if (uri.AbsolutePath != "/" && uri.AbsolutePath != string.Empty)
+                            if (parsedUri.AbsolutePath != "/" && parsedUri.AbsolutePath != string.Empty)
                             {
-                                errors.Add(new ValidationError(
-                                    "targetUrl",
-                                    "Bei Typ 'Domain' darf die Ziel-URL keine Unterordner enthalten (nur https://domain.com)."));
+                                errors.Add("Bei Typ 'Domain-Ersatz' darf die Ziel-URL keine Unterordner enthalten");
                             }
                         }
 
                         break;
                     }
-
-                case RedirectType.Regex:
-                    {
-                        break;
-                    }
             }
         }
 
-        private static void ValidateInfoText(string? infoText, List<ValidationError> errors)
+        private static void ValidateKeptQueryParams(List<KeptQueryParam>? keptQueryParams, List<string> errors)
         {
-            if (string.IsNullOrEmpty(infoText))
+            if (keptQueryParams == null)
             {
                 return;
             }
 
-            if (infoText.Length > InfoTextMaxLength)
+            for (var index = 0; index < keptQueryParams.Count; index++)
             {
-                errors.Add(new ValidationError("infoText", $"Info-Text ist zu lang (maximal {InfoTextMaxLength} Zeichen)."));
-            }
-        }
-
-        private static void ValidateKeptQueryParams(List<KeptQueryParam>? items, List<ValidationError> errors)
-        {
-            if (items == null || items.Count == 0)
-            {
-                return;
-            }
-
-            for (var index = 0; index < items.Count; index++)
-            {
-                if (string.IsNullOrWhiteSpace(items[index].KeyPattern))
+                if (string.IsNullOrWhiteSpace(keptQueryParams[index].KeyPattern))
                 {
-                    errors.Add(new ValidationError(
-                        $"keptQueryParams[{index}].keyPattern",
-                        "Schlüssel-Muster ist erforderlich."));
+                    errors.Add($"keptQueryParams[{index}]: KeyPattern darf nicht leer sein");
                 }
             }
         }
 
-        private static void ValidateStaticQueryParams(List<StaticQueryParam>? items, List<ValidationError> errors)
+        private static void ValidateStaticQueryParams(List<StaticQueryParam>? staticQueryParams, List<string> errors)
         {
-            if (items == null || items.Count == 0)
+            if (staticQueryParams == null)
             {
                 return;
             }
 
-            for (var index = 0; index < items.Count; index++)
+            for (var index = 0; index < staticQueryParams.Count; index++)
             {
-                if (string.IsNullOrWhiteSpace(items[index].Key))
+                if (string.IsNullOrWhiteSpace(staticQueryParams[index].Key))
                 {
-                    errors.Add(new ValidationError(
-                        $"staticQueryParams[{index}].key",
-                        "Key ist erforderlich."));
+                    errors.Add($"staticQueryParams[{index}]: Key darf nicht leer sein");
                 }
             }
         }
 
-        private static void ValidateSearchAndReplace(List<SearchAndReplaceEntry>? items, List<ValidationError> errors)
+        private static void ValidateSearchAndReplace(List<SearchAndReplaceEntry>? searchAndReplace, List<string> errors)
         {
-            if (items == null || items.Count == 0)
+            if (searchAndReplace == null)
             {
                 return;
             }
 
-            for (var index = 0; index < items.Count; index++)
+            for (var index = 0; index < searchAndReplace.Count; index++)
             {
-                if (string.IsNullOrWhiteSpace(items[index].Search))
+                if (string.IsNullOrWhiteSpace(searchAndReplace[index].Search))
                 {
-                    errors.Add(new ValidationError(
-                        $"searchAndReplace[{index}].search",
-                        "Suchbegriff ist erforderlich."));
+                    errors.Add($"searchAndReplace[{index}]: Suchbegriff darf nicht leer sein");
                 }
             }
-        }
-
-        private static bool StartsWithHttpOrHttps(string url)
-        {
-            return url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool TryParseRedirectType(string value, out RedirectType redirectType)
-        {
-            return Enum.TryParse(value, ignoreCase: true, out redirectType);
-        }
-    }
-
-    public sealed class ValidationError
-    {
-        public string Field { get; }
-
-        public string Message { get; }
-
-        public ValidationError(string field, string message)
-        {
-            Field = field;
-            Message = message;
         }
     }
 }

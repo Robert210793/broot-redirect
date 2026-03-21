@@ -171,34 +171,29 @@ namespace Broot.Redirect.API.Dtos
         /// <summary>
         /// Raw matching score from the scoring engine.
         /// </summary>
-        /// 
         public int MatchQuality { get; set; }
 
         /// <summary>
         /// Match quality as a percentage (0-100).
         /// 100 = exact match, 75 = extra query params, 50 = partial/prefix match.
         /// </summary>
-        /// 
         public int Quality { get; set; }
 
         /// <summary>
         /// Traffic-light level derived from Quality: "green" (>= 90), "yellow" (>= 60), "red" (&lt; 60).
         /// </summary>
-        /// 
         public MatchQualityLevel Level { get; set; }
 
         /// <summary>
         /// True when no rule matched and the ResolvedUrl is a smart search fallback URL.
         /// The frontend should display this differently (search link instead of redirect).
         /// </summary>
-        /// 
         public bool IsSmartSearchFallback { get; set; }
 
         /// <summary>
         /// The generated search URL when IsSmartSearchFallback is true.
         /// Null when a rule matched normally.
         /// </summary>
-        /// 
         public string? FallbackSearchUrl { get; set; }
     }
 
@@ -231,8 +226,6 @@ namespace Broot.Redirect.API.Dtos
         public string? Error { get; set; }
     }
 
-    // -- URL Validation/Trace (Phase 5.1) --
-
     public class ValidateUrlsRequest
     {
         [Required]
@@ -260,6 +253,8 @@ namespace Broot.Redirect.API.Dtos
         public string? ResolvedUrl { get; set; }
 
         public string? Error { get; set; }
+
+        public List<UrlTraceStep>? Trace { get; set; }
     }
 
     public class ValidateUrlsResponse

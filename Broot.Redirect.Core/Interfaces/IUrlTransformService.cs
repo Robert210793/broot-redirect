@@ -19,5 +19,15 @@ namespace Broot.Redirect.Core.Interfaces
         /// <returns>The fully resolved target URL.</returns>
         /// 
         string ResolveTargetUrl(string originalUrl, RedirectRule rule, string defaultNewDomain);
+
+        /// <summary>
+        /// Resolves the final target URL and records a step-by-step trace of every
+        /// transformation applied. Used by the validate endpoint for debugging.
+        /// </summary>
+        /// 
+        (string ResolvedUrl, List<UrlTraceStep> Trace) ResolveTargetUrlWithTrace(
+            string originalUrl,
+            RedirectRule rule,
+            string defaultNewDomain);
     }
 }

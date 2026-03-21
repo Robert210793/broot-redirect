@@ -29,6 +29,8 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - AzureTableStorage__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
       - SmartRedirect__AdminPassword=Password1
+      # Uncomment and set to enable Application Insights telemetry
+      # - APPLICATIONINSIGHTS__CONNECTIONSTRING=InstrumentationKey=your-key;IngestionEndpoint=https://region.in.applicationinsights.azure.com/
     depends_on:
       azurite:
         condition: service_healthy
