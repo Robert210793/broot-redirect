@@ -147,6 +147,13 @@ export interface BlockedIpInfo {
 
 // -- URL Validation/Trace (Phase 5.1) --
 
+export interface UrlTraceStep {
+    type: string;
+    description: string;
+    before: string | null;
+    after: string | null;
+}
+
 export interface ValidateUrlResult {
     url: string;
     matched: boolean;
@@ -158,6 +165,7 @@ export interface ValidateUrlResult {
     level: MatchQualityLevel;
     resolvedUrl: string | null;
     error: string | null;
+    trace: UrlTraceStep[] | null;
 }
 
 export interface ValidateUrlsResponse {

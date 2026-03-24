@@ -68,8 +68,16 @@
     overflow-x: auto;
 }
 
+.col-expand {
+    width: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    padding: 0 4px;
+    text-align: center;
+}
+
 .col-url {
-    width: 22%;
+    width: 20%;
 }
 
 .col-status {
@@ -77,11 +85,11 @@
 }
 
 .col-quality {
-    width: 10%;
+    width: 9%;
 }
 
 .col-matcher {
-    width: 18%;
+    width: 17%;
 }
 
 .col-type {
@@ -89,11 +97,41 @@
 }
 
 .col-resolved {
-    width: 32%;
+    width: 30%;
 }
 
 .row-unmatched {
     opacity: 0.65;
+}
+
+.row-expandable {
+    cursor: pointer;
+}
+
+.row-expandable:hover {
+    background: var(--color-surface-hover);
+}
+
+.row-expanded {
+    background: var(--color-surface-hover);
+}
+
+/* -- Expand icon -- */
+
+.expand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-tertiary);
+    transition: transform var(--transition-fast);
+}
+
+.expand-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.expand-icon svg {
+    display: block;
 }
 
 /* -- Badges -- */
@@ -141,5 +179,179 @@
 @media (max-width: 768px) {
     .results-summary {
         flex-direction: column;
+    }
+}
+
+/* -- Trace row -- */
+
+.trace-row td {
+    padding: 0 !important;
+    background: var(--color-surface);
+}
+
+.trace-container {
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+}
+
+.trace-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-tertiary);
+    margin-bottom: 12px;
+}
+
+/* -- Timeline -- */
+
+.trace-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.trace-step {
+    display: flex;
+    gap: 12px;
+    min-height: 32px;
+}
+
+.trace-step-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 16px;
+}
+
+.trace-step-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-border-strong);
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.trace-step-line {
+    width: 2px;
+    flex: 1;
+    background: var(--color-border);
+    min-height: 12px;
+}
+
+/* -- Step type colors -- */
+
+.step-input .trace-step-dot {
+    background: var(--color-text-tertiary);
+}
+
+.step-match .trace-step-dot {
+    background: var(--color-primary);
+}
+
+.step-transform .trace-step-dot {
+    background: #f59e0b;
+}
+
+.step-global .trace-step-dot {
+    background: #3b82f6;
+}
+
+.step-query .trace-step-dot {
+    background: #8b5cf6;
+}
+
+.step-result .trace-step-dot {
+    background: var(--color-success);
+}
+
+/* -- Step content -- */
+
+.trace-step-content {
+    flex: 1;
+    min-width: 0;
+    padding-bottom: 14px;
+}
+
+.trace-step:last-child .trace-step-content {
+    padding-bottom: 0;
+}
+
+.trace-step-label {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.trace-step-value code {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-primary);
+    background: var(--color-surface-hover);
+    padding: 4px 8px;
+    border-radius: 4px;
+    word-break: break-all;
+}
+
+/* -- Diff (before -> after) -- */
+
+.trace-step-diff {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.trace-diff-before,
+.trace-diff-after {
+    flex: 1;
+    min-width: 120px;
+}
+
+.trace-diff-before code {
+    display: block;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    word-break: break-all;
+    background: var(--color-danger-light, #fef2f2);
+    color: var(--color-danger, #dc2626);
+}
+
+.trace-diff-after code {
+    display: block;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    word-break: break-all;
+    background: var(--color-success-light, #f0fdf4);
+    color: var(--color-success, #16a34a);
+}
+
+.trace-arrow {
+    flex-shrink: 0;
+    color: var(--color-text-tertiary);
+    margin-top: 4px;
+}
+
+/* -- Responsive trace -- */
+
+@media (max-width: 768px) {
+    .trace-step-diff {
+        flex-direction: column;
+    }
+
+    .trace-arrow {
+        transform: rotate(90deg);
+        align-self: center;
+    }
+
+    .trace-diff-before,
+    .trace-diff-after {
+        min-width: 100%;
     }
 }

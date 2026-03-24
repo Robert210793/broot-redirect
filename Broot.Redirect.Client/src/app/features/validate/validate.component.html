@@ -76,7 +76,7 @@
             @if (filteredResults().length === 0) {
                 <div class="card-body">
                     <div class="empty-state">
-                        <p>Keine Ergebnisse für den gewählten Filter.</p>
+                        <p>Keine Ergebnisse fuer den gewaehlten Filter.</p>
                     </div>
                 </div>
             } @else {
@@ -84,17 +84,34 @@
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th class="col-expand"></th>
                                 <th class="col-url">Eingegebene URL</th>
                                 <th class="col-status">Status</th>
-                                <th class="col-quality">Qualität</th>
+                                <th class="col-quality">Qualitaet</th>
                                 <th class="col-matcher">Matcher</th>
                                 <th class="col-type">Typ</th>
-                                <th class="col-resolved">Aufgelöste URL</th>
+                                <th class="col-resolved">Aufgeloeste URL</th>
                             </tr>
                         </thead>
                         <tbody>
                             @for (result of filteredResults(); track result.url) {
-                                <tr [ngClass]="{ 'row-unmatched': !result.matched }">
+                                <tr
+                                    [ngClass]="{
+                                        'row-unmatched': !result.matched,
+                                        'row-expandable': hasTrace(result),
+                                        'row-expanded': isExpanded(result.url)
+                                    }"
+                                    (click)="hasTrace(result) && onToggleRow(result.url)"
+                                >
+                                    <td class="col-expand">
+                                        @if (hasTrace(result)) {
+                                            <span class="expand-icon" [class.expanded]="isExpanded(result.url)">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="9 18 15 12 9 6" />
+                                                </svg>
+                                            </span>
+                                        }
+                                    </td>
                                     <td class="col-url" [title]="result.url">
                                         <code class="cell-truncate">{{ result.url }}</code>
                                     </td>
@@ -132,6 +149,57 @@
                                         } @else {
                                             <span class="text-tertiary">-</span>
                                         }
+                                    </td>
+                                </tr>
+
+                                @if (isExpanded(result.url) && result.trace) {
+                                    <tr class="trace-row">
+                                        <td colspan="7">
+                                            <div class="trace-container">
+                                                <div class="trace-header">Transformation Trace</div>
+                                                <div class="trace-timeline">
+                                                    @for (step of result.trace; track $index; let isLast = $last) {
+                                                        <div class="trace-step" [ngClass]="traceStepIcon(step)">
+                                                            <div class="trace-step-connector">
+                                                                <div class="trace-step-dot"></div>
+                                                                @if (!isLast) {
+                                                                    <div class="trace-step-line"></div>
+                                                                }
+                                                            </div>
+                                                            <div class="trace-step-content">
+                                                                <div class="trace-step-label">{{ step.description }}</div>
+                                                                @if (step.before && step.after && stepChanged(step)) {
+                                                                    <div class="trace-step-diff">
+                                                                        <div class="trace-diff-before">
+                                                                            <code>{{ step.before }}</code>
+                                                                        </div>
+                                                                        <svg class="trace-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                            <line x1="5" y1="12" x2="19" y2="12" />
+                                                                            <polyline points="12 5 19 12 12 19" />
+                                                                        </svg>
+                                                                        <div class="trace-diff-after">
+                                                                            <code>{{ step.after }}</code>
+                                                                        </div>
+                                                                    </div>
+                                                                } @else if (step.after) {
+                                                                    <div class="trace-step-value">
+                                                                        <code>{{ step.after }}</code>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+
+                            @if (filteredResults().length === 0) {
+                                <tr>
+                                    <td colspan="7" class="empty-state">
+                                        Keine Ergebnisse fuer den gewaehlten Filter.
                                     </td>
                                 </tr>
                             }
