@@ -1,0 +1,110 @@
+Summary
+  Generated on: 27.03.2026 - 13:30:39
+  Parser: OpenCover
+  Assemblies: 3
+  Classes: 85
+  Files: 47
+  Line coverage: 78.5%
+  Covered lines: 3523
+  Uncovered lines: 964
+  Coverable lines: 4487
+  Total lines: 7940
+  Branch coverage: 72% (654 of 908)
+  Covered branches: 654
+  Total branches: 908
+  Method coverage: 87.8% (245 of 279)
+  Full method coverage: 65.9% (184 of 279)
+  Covered methods: 245
+  Fully covered methods: 184
+  Total methods: 279
+
+Broot.Redirect.API                                                                72%
+  Broot.Redirect.API.Configuration.BrootRedirectOptions                          100%
+  Broot.Redirect.API.Configuration.RuleMatchingConfigFactory                    81.2%
+  Broot.Redirect.API.Controllers.AuthController                                 95.6%
+  Broot.Redirect.API.Controllers.GlobalRulesController                          97.1%
+  Broot.Redirect.API.Controllers.HealthController                                  0%
+  Broot.Redirect.API.Controllers.RedirectController                              100%
+  Broot.Redirect.API.Controllers.RulesController                                49.3%
+  Broot.Redirect.API.Controllers.SettingsController                              100%
+  Broot.Redirect.API.Controllers.TrackingController                             96.6%
+  Broot.Redirect.API.Dtos.AuthStatusResponse                                         
+  Broot.Redirect.API.Dtos.BlockedIpResponse                                      100%
+  Broot.Redirect.API.Dtos.BlockIpRequest                                         100%
+  Broot.Redirect.API.Dtos.Broot.Redirect.API.Dtos.CreateGlobalRuleRequest        100%
+  Broot.Redirect.API.Dtos.Broot.Redirect.API.Dtos.UpdateGlobalRuleRequest            
+  Broot.Redirect.API.Dtos.BulkDeleteRequest                                      100%
+  Broot.Redirect.API.Dtos.BulkDeleteResponse                                         
+  Broot.Redirect.API.Dtos.CreateRuleRequest                                      100%
+  Broot.Redirect.API.Dtos.FeedbackRequest                                        100%
+  Broot.Redirect.API.Dtos.HealthCheckDetail                                        0%
+  Broot.Redirect.API.Dtos.HealthChecks                                             0%
+  Broot.Redirect.API.Dtos.HealthResponse                                           0%
+  Broot.Redirect.API.Dtos.ImportPreviewCounts                                        
+  Broot.Redirect.API.Dtos.ImportPreviewEntry                                       0%
+  Broot.Redirect.API.Dtos.ImportPreviewResponse                                    0%
+  Broot.Redirect.API.Dtos.ImportResponse                                           0%
+  Broot.Redirect.API.Dtos.ImportRuleEntry                                        100%
+  Broot.Redirect.API.Dtos.LoginRequest                                           100%
+  Broot.Redirect.API.Dtos.LoginResponse                                              
+  Broot.Redirect.API.Dtos.PaginatedRulesResponse                                 100%
+  Broot.Redirect.API.Dtos.PaginatedTrackingResponse                              100%
+  Broot.Redirect.API.Dtos.RedirectResolveResponse                                    
+  Broot.Redirect.API.Dtos.StatsResponse                                          100%
+  Broot.Redirect.API.Dtos.TopRuleStatDto                                         100%
+  Broot.Redirect.API.Dtos.TrackingEntryDto                                       100%
+  Broot.Redirect.API.Dtos.TrackRequest                                           100%
+  Broot.Redirect.API.Dtos.TrackResponse                                          100%
+  Broot.Redirect.API.Dtos.TrendDataPointDto                                      100%
+  Broot.Redirect.API.Dtos.TrendResponse                                          100%
+  Broot.Redirect.API.Dtos.UpdateRuleRequest                                          
+  Broot.Redirect.API.Dtos.UpdateSettingsRequest                                      
+  Broot.Redirect.API.Dtos.ValidateUrlResult                                      100%
+  Broot.Redirect.API.Dtos.ValidateUrlsRequest                                    100%
+  Broot.Redirect.API.Dtos.ValidateUrlsResponse                                   100%
+  Broot.Redirect.API.Middleware.AdminSessionMiddleware                           100%
+  Broot.Redirect.API.Middleware.CsrfProtectionMiddleware                        95.1%
+  Broot.Redirect.API.Middleware.RateLimitMiddleware                             86.2%
+  Broot.Redirect.API.Middleware.RedirectMiddleware                                99%
+  Broot.Redirect.API.Services.BruteForceProtectionService                         84%
+  Broot.Redirect.API.Services.RuleImportExportService                             90%
+  Broot.Redirect.API.Services.RuleValidationService                             94.2%
+  Program                                                                          0%
+
+Broot.Redirect.Core                                                             91.1%
+  Broot.Redirect.Core.Interfaces.TopRuleStat                                     100%
+  Broot.Redirect.Core.Interfaces.TrackingStats                                   100%
+  Broot.Redirect.Core.Interfaces.TrendDataPoint                                  100%
+  Broot.Redirect.Core.Models.AppSettings                                         100%
+  Broot.Redirect.Core.Models.GlobalRule                                          100%
+  Broot.Redirect.Core.Models.KeptQueryParam                                          
+  Broot.Redirect.Core.Models.ProcessedRule                                       100%
+  Broot.Redirect.Core.Models.RedirectRule                                        100%
+  Broot.Redirect.Core.Models.RuleMatchingConfig                                  100%
+  Broot.Redirect.Core.Models.RuleMatchResult                                         
+  Broot.Redirect.Core.Models.SearchAndReplaceEntry                               100%
+  Broot.Redirect.Core.Models.StaticQueryParam                                    100%
+  Broot.Redirect.Core.Models.TrackingEntry                                       100%
+  Broot.Redirect.Core.Models.UrlTraceStep                                            
+  Broot.Redirect.Core.Models.UrlTransformationResult                                 
+  Broot.Redirect.Core.Services.RuleMatchingService                              90.6%
+  Broot.Redirect.Core.Services.SmartSearchService                               88.4%
+  Broot.Redirect.Core.Services.UrlTransformService                              90.9%
+
+Broot.Redirect.Infrastructure                                                   81.2%
+  Broot.Redirect.Infrastructure.Cache.AppSettingsCacheService                    100%
+  Broot.Redirect.Infrastructure.Cache.CacheOptions                               100%
+  Broot.Redirect.Infrastructure.Cache.CacheWarmupService                           0%
+  Broot.Redirect.Infrastructure.Cache.GlobalRuleCacheService                     100%
+  Broot.Redirect.Infrastructure.Cache.RuleCacheService                          90.3%
+  Broot.Redirect.Infrastructure.Cache.TrackingCleanupService                       0%
+  Broot.Redirect.Infrastructure.Extensions.ServiceCollectionExtensions             0%
+  Broot.Redirect.Infrastructure.Persistence.AppSettingsEntity                    100%
+  Broot.Redirect.Infrastructure.Persistence.GlobalRuleEntity                     100%
+  Broot.Redirect.Infrastructure.Persistence.RedirectRuleEntity                   100%
+  Broot.Redirect.Infrastructure.Persistence.TableStorageAppSettingsRepository   86.6%
+  Broot.Redirect.Infrastructure.Persistence.TableStorageGlobalRuleRepository    87.7%
+  Broot.Redirect.Infrastructure.Persistence.TableStorageOptions                  100%
+  Broot.Redirect.Infrastructure.Persistence.TableStorageRuleRepository          77.3%
+  Broot.Redirect.Infrastructure.Persistence.TableStorageTrackingRepository      81.2%
+  Broot.Redirect.Infrastructure.Persistence.TrackingEntity                       100%

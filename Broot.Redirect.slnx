@@ -7,4 +7,5 @@
   <Project Path="Broot.Redirect.API/Broot.Redirect.API.csproj" />
   <Project Path="Broot.Redirect.Core/Broot.Redirect.Core.csproj" />
   <Project Path="Broot.Redirect.Infrastructure/Broot.Redirect.Infrastructure.csproj" />
+  <Project Path="Broot.Redirect.Tests/Broot.Redirect.Tests.csproj" />
 </Solution>

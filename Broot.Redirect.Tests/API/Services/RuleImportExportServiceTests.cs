@@ -1,0 +1,188 @@
+using System.Text;
+using Broot.Redirect.API.Services;
+using Broot.Redirect.Core.Models;
+using ClosedXML.Excel;
+using FluentAssertions;
+using Xunit;
+
+namespace Broot.Redirect.Tests.API.Services
+{
+    public class RuleImportExportServiceTests
+    {
+        private static RedirectRule CreateRule(
+            string matcher = "/path",
+            RedirectType type = RedirectType.Wildcard,
+            string targetUrl = "https://new.com/path")
+        {
+            return new RedirectRule
+            {
+                Id = Guid.NewGuid(),
+                Matcher = matcher,
+                TargetUrl = targetUrl,
+                RedirectType = type,
+                InfoText = "Test rule",
+                AutoRedirect = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+        }
+
+        public class GenerateCsvTests
+        {
+            [Fact]
+            public void GenerateCsv_ValidRules_ProducesUtf8CsvWithBomAndCorrectHeaders()
+            {
+                var rules = new List<RedirectRule> { CreateRule() };
+
+                var bytes = RuleImportExportService.GenerateCsv(rules);
+
+                bytes[0].Should().Be(0xEF);
+                bytes[1].Should().Be(0xBB);
+                bytes[2].Should().Be(0xBF);
+
+                var content = Encoding.UTF8.GetString(bytes);
+
+                content.Should().Contain("ID");
+                content.Should().Contain("Matcher");
+                content.Should().Contain("Target URL");
+                content.Should().Contain("Type");
+            }
+
+            [Fact]
+            public void GenerateCsv_FieldsWithCommasAndQuotes_RoundTripsCorrectly()
+            {
+                var rule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/path",
+                    TargetUrl = "https://new.com/path",
+                    RedirectType = RedirectType.Wildcard,
+                    InfoText = "Contains \"quotes\" and, commas",
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+
+                var bytes = RuleImportExportService.GenerateCsv(new[] { rule });
+
+                using var stream = new MemoryStream(bytes);
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries.Should().HaveCount(1);
+                entries[0].InfoText.Should().Be("Contains \"quotes\" and, commas");
+            }
+        }
+
+        public class GenerateXlsxTests
+        {
+            [Fact]
+            public void GenerateXlsx_ValidRules_ProducesXlsxWithRows()
+            {
+                var rule = CreateRule();
+                var rules = new List<RedirectRule> { rule };
+
+                var bytes = RuleImportExportService.GenerateXlsx(rules);
+
+                using var stream = new MemoryStream(bytes);
+                using var workbook = new XLWorkbook(stream);
+
+                var worksheet = workbook.Worksheets.First();
+
+                worksheet.Cell(1, 1).GetString().Should().Be("ID");
+                worksheet.Cell(1, 2).GetString().Should().Be("Matcher");
+
+                worksheet.Cell(2, 2).GetString().Should().Contain(rule.Matcher);
+            }
+        }
+
+        public class ParseCsvTests
+        {
+            [Fact]
+            public void ParseCsv_ValidCsv_ReturnsRules()
+            {
+                var csvContent = "Matcher,Target URL,Type\r\n/old-page,https://new.com/page,wildcard\r\n";
+
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries.Should().HaveCount(1);
+                entries[0].Matcher.Should().Be("/old-page");
+                entries[0].TargetUrl.Should().Be("https://new.com/page");
+                entries[0].RedirectType.Should().Be("wildcard");
+            }
+
+            [Fact]
+            public void ParseCsv_GermanHeaders_MapsCorrectly()
+            {
+                var csvContent = "Quelle,Ziel,Typ\r\n/old-page,https://new.com/page,wildcard\r\n";
+
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries.Should().HaveCount(1);
+                entries[0].Matcher.Should().Be("/old-page");
+                entries[0].TargetUrl.Should().Be("https://new.com/page");
+                entries[0].RedirectType.Should().Be("wildcard");
+            }
+
+            [Fact]
+            public void ParseCsv_EnglishHeaders_MapsCorrectly()
+            {
+                var csvContent = "Matcher,Target URL,Type,Auto Redirect\r\n/path,https://new.com,partial,true\r\n";
+
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries.Should().HaveCount(1);
+                entries[0].Matcher.Should().Be("/path");
+                entries[0].RedirectType.Should().Be("partial");
+                entries[0].AutoRedirect.Should().BeTrue();
+            }
+
+            [Fact]
+            public void ParseCsv_ComplexJsonFields_DeserializesCorrectly()
+            {
+                var keptJson = "[{\"keyPattern\":\"utm_.*\",\"skipEncoding\":false}]";
+                var staticJson = "[{\"key\":\"source\",\"value\":\"redirect\",\"skipEncoding\":false}]";
+                var replaceJson = "[{\"search\":\"old\",\"replace\":\"new\",\"caseSensitive\":false}]";
+
+                var csvContent =
+                    "Matcher,Target URL,Type,Kept Query Params,Static Query Params,Search Replace\r\n" +
+                    $"/old,https://new.com,wildcard,\"{keptJson.Replace("\"", "\"\"")}\",\"{staticJson.Replace("\"", "\"\"")}\",\"{replaceJson.Replace("\"", "\"\"")}\"\r\n";
+
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries.Should().HaveCount(1);
+                entries[0].KeptQueryParams.Should().NotBeNull();
+                entries[0].KeptQueryParams!.Should().HaveCount(1);
+                entries[0].KeptQueryParams![0].KeyPattern.Should().Be("utm_.*");
+                entries[0].StaticQueryParams.Should().NotBeNull();
+                entries[0].StaticQueryParams!.Should().HaveCount(1);
+                entries[0].StaticQueryParams![0].Key.Should().Be("source");
+                entries[0].SearchAndReplace.Should().NotBeNull();
+                entries[0].SearchAndReplace!.Should().HaveCount(1);
+                entries[0].SearchAndReplace![0].Search.Should().Be("old");
+            }
+        }
+
+        public class ParseXlsxTests
+        {
+            [Fact]
+            public void ParseXlsx_ValidXlsx_ReturnsRules()
+            {
+                var rules = new List<RedirectRule> { CreateRule() };
+                var xlsxBytes = RuleImportExportService.GenerateXlsx(rules);
+
+                using var stream = new MemoryStream(xlsxBytes);
+
+                var entries = RuleImportExportService.ParseXlsx(stream);
+
+                entries.Should().HaveCount(1);
+                entries[0].Matcher.Should().Contain(rules[0].Matcher);
+            }
+        }
+    }
+}

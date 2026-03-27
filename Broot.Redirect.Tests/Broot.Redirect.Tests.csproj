@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <AltCover>true</AltCover>
+    <AltCoverReport>$(MSBuildThisFileDirectory)coverage.xml</AltCoverReport>
+    <AltCoverAssemblyFilter>xunit|AltCover|Broot.Redirect.Tests|FluentAssertions|NSubstitute|Microsoft\.TestPlatform|Microsoft\.VisualStudio\.TestPlatform|testhost|RBush|ClosedXML|CsvHelper|Castle\.|Azure\.|Swashbuckle|Microsoft\.ApplicationInsights</AltCoverAssemblyFilter>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="xunit" Version="2.7.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="NSubstitute" Version="5.1.0" />
+    <PackageReference Include="AltCover" Version="8.8.165" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Broot.Redirect.Core\Broot.Redirect.Core.csproj" />
+    <ProjectReference Include="..\Broot.Redirect.API\Broot.Redirect.API.csproj" />
+    <ProjectReference Include="..\Broot.Redirect.Infrastructure\Broot.Redirect.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
