@@ -305,5 +305,145 @@ namespace Broot.Redirect.Tests.API.Services
 
             errors.Should().ContainSingle();
         }
+
+        [Fact]
+        public void ValidateCreate_EmptyTargetUrl_NoTypeValidationError()
+        {
+            var request = new CreateRuleRequest
+            {
+                Matcher = "/path",
+                TargetUrl = "",
+                RedirectType = "wildcard"
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ValidateCreate_DomainWithTrailingSlash_ReturnsNoError()
+        {
+            var request = new CreateRuleRequest
+            {
+                Matcher = "example.com",
+                TargetUrl = "https://new.com/",
+                RedirectType = "domain"
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ValidateCreate_InvalidRedirectType_SkipsTypeValidation()
+        {
+            var request = new CreateRuleRequest
+            {
+                Matcher = "/path",
+                TargetUrl = "not-a-url",
+                RedirectType = "invalid_type"
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            // No type-specific error because parsing failed
+            errors.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ValidateCreate_NullKeptQueryParams_NoError()
+        {
+            var request = CreateValidRequest();
+            request.KeptQueryParams = null!;
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ValidateCreate_NullStaticQueryParams_NoError()
+        {
+            var request = CreateValidRequest();
+            request.StaticQueryParams = null!;
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ValidateCreate_NullSearchAndReplace_NoError()
+        {
+            var request = CreateValidRequest();
+            request.SearchAndReplace = null!;
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ValidateCreate_MultipleStaticQueryParams_ValidatesEach()
+        {
+            var request = CreateValidRequest();
+            request.StaticQueryParams = new List<StaticQueryParam>
+            {
+                new StaticQueryParam { Key = "valid", Value = "v" },
+                new StaticQueryParam { Key = "", Value = "v" }
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().ContainSingle();
+        }
+
+        [Fact]
+        public void ValidateCreate_MultipleSearchAndReplace_ValidatesEach()
+        {
+            var request = CreateValidRequest();
+            request.SearchAndReplace = new List<SearchAndReplaceEntry>
+            {
+                new SearchAndReplaceEntry { Search = "old", Replace = "new" },
+                new SearchAndReplaceEntry { Search = "", Replace = "new" }
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().ContainSingle();
+        }
+
+        [Fact]
+        public void ValidateCreate_PartialWithHttpsTarget_ReturnsNoError()
+        {
+            var request = new CreateRuleRequest
+            {
+                Matcher = "/old",
+                TargetUrl = "https://new.com/path",
+                RedirectType = "partial"
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ValidateCreate_MultipleErrorsAccumulate()
+        {
+            var request = new CreateRuleRequest
+            {
+                Matcher = "/" + new string('a', 500),
+                TargetUrl = "/" + new string('b', 2000),
+                InfoText = new string('c', 5001),
+                RedirectType = "partial"
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Count.Should().BeGreaterOrEqualTo(3);
+        }
     }
 }

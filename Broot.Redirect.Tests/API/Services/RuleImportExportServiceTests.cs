@@ -183,6 +183,211 @@ namespace Broot.Redirect.Tests.API.Services
                 entries.Should().HaveCount(1);
                 entries[0].Matcher.Should().Contain(rules[0].Matcher);
             }
+
+            [Fact]
+            public void ParseXlsx_EmptyRowsSkipped()
+            {
+                using var workbook = new XLWorkbook();
+                var ws = workbook.Worksheets.Add("Rules");
+
+                ws.Cell(1, 1).Value = "Matcher";
+                ws.Cell(1, 2).Value = "Target URL";
+                ws.Cell(1, 3).Value = "Type";
+                ws.Cell(2, 1).Value = "/path";
+                ws.Cell(2, 2).Value = "https://new.com";
+                ws.Cell(2, 3).Value = "wildcard";
+                // Row 3 is empty
+                ws.Cell(4, 1).Value = "/path2";
+                ws.Cell(4, 2).Value = "https://new2.com";
+                ws.Cell(4, 3).Value = "partial";
+
+                using var ms = new MemoryStream();
+                workbook.SaveAs(ms);
+                ms.Position = 0;
+
+                var entries = RuleImportExportService.ParseXlsx(ms);
+
+                entries.Should().HaveCount(2);
+            }
+        }
+
+        public class NormalizeRedirectTypeTests
+        {
+            [Theory]
+            [InlineData("wildcard", "wildcard")]
+            [InlineData("Wildcard", "wildcard")]
+            [InlineData("complete", "wildcard")]
+            [InlineData("partial", "partial")]
+            [InlineData("Partial Match", "partial")]
+            [InlineData("domain", "domain")]
+            [InlineData("Domain Replace", "domain")]
+            [InlineData("regex", "regex")]
+            [InlineData("Regex Pattern", "regex")]
+            public void ParseCsv_RedirectTypeVariants_NormalizedCorrectly(string input, string expected)
+            {
+                var csvContent = $"Matcher,Target URL,Type\r\n/path,https://new.com,{input}\r\n";
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries[0].RedirectType.Should().Be(expected);
+            }
+        }
+
+        public class ParseBoolTests
+        {
+            [Theory]
+            [InlineData("true", true)]
+            [InlineData("1", true)]
+            [InlineData("yes", true)]
+            [InlineData("ja", true)]
+            [InlineData("on", true)]
+            [InlineData("false", false)]
+            [InlineData("0", false)]
+            [InlineData("no", false)]
+            [InlineData("nein", false)]
+            [InlineData("off", false)]
+            public void ParseCsv_BoolVariants_ParsedCorrectly(string value, bool expected)
+            {
+                var csvContent = $"Matcher,Target URL,Type,Auto Redirect\r\n/path,https://new.com,wildcard,{value}\r\n";
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries[0].AutoRedirect.Should().Be(expected);
+            }
+
+            [Fact]
+            public void ParseCsv_EmptyBoolField_ReturnsNull()
+            {
+                var csvContent = "Matcher,Target URL,Type,Auto Redirect\r\n/path,https://new.com,wildcard,\r\n";
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries[0].AutoRedirect.Should().BeNull();
+            }
+        }
+
+        public class SanitizationTests
+        {
+            [Fact]
+            public void GenerateCsv_FormulaInjectionMatcher_SanitizedWithLeadingQuote()
+            {
+                var rule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "=cmd|'/C calc'!A1",
+                    TargetUrl = "/safe",
+                    RedirectType = RedirectType.Partial,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+
+                var bytes = RuleImportExportService.GenerateCsv(new[] { rule });
+
+                // Round-trip should unsanitize
+                using var stream = new MemoryStream(bytes);
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries[0].Matcher.Should().Be("=cmd|'/C calc'!A1");
+            }
+
+            [Fact]
+            public void GenerateCsv_PlusPrefix_SanitizedAndRoundTrips()
+            {
+                var rule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "+dangerous",
+                    TargetUrl = "/safe",
+                    RedirectType = RedirectType.Partial,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+
+                var bytes = RuleImportExportService.GenerateCsv(new[] { rule });
+                using var stream = new MemoryStream(bytes);
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries[0].Matcher.Should().Be("+dangerous");
+            }
+
+            [Fact]
+            public void GenerateCsv_NormalValue_NotSanitized()
+            {
+                var rule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/normal-path",
+                    TargetUrl = "/target",
+                    RedirectType = RedirectType.Partial,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+
+                var bytes = RuleImportExportService.GenerateCsv(new[] { rule });
+                var content = Encoding.UTF8.GetString(bytes);
+
+                content.Should().Contain("/normal-path");
+                content.Should().NotContain("'/normal-path");
+            }
+        }
+
+        public class JsonCollectionTests
+        {
+            [Fact]
+            public void ParseCsv_InvalidJsonCollection_ReturnsNull()
+            {
+                var csvContent = "Matcher,Target URL,Type,Kept Query Params\r\n/path,https://new.com,wildcard,not-valid-json\r\n";
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries[0].KeptQueryParams.Should().BeNull();
+            }
+
+            [Fact]
+            public void ParseCsv_EmptyJsonCollection_ReturnsNull()
+            {
+                var csvContent = "Matcher,Target URL,Type,Kept Query Params\r\n/path,https://new.com,wildcard,\r\n";
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries[0].KeptQueryParams.Should().BeNull();
+            }
+        }
+
+        public class CsvRoundTripTests
+        {
+            [Fact]
+            public void GenerateAndParseCsv_FullRoundTrip_PreservesAllFields()
+            {
+                var rule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/round-trip",
+                    TargetUrl = "https://new.com/page",
+                    RedirectType = RedirectType.Wildcard,
+                    InfoText = "Test info",
+                    AutoRedirect = true,
+                    DiscardQueryParams = true,
+                    ForwardQueryParams = false,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+
+                var bytes = RuleImportExportService.GenerateCsv(new[] { rule });
+                using var stream = new MemoryStream(bytes);
+                var entries = RuleImportExportService.ParseCsv(stream);
+
+                entries.Should().HaveCount(1);
+                entries[0].Matcher.Should().Be("/round-trip");
+                entries[0].TargetUrl.Should().Be("https://new.com/page");
+                entries[0].RedirectType.Should().Be("wildcard");
+                entries[0].InfoText.Should().Be("Test info");
+                entries[0].AutoRedirect.Should().BeTrue();
+                entries[0].DiscardQueryParams.Should().BeTrue();
+                entries[0].ForwardQueryParams.Should().BeFalse();
+                entries[0].Id.Should().Be(rule.Id.ToString());
+            }
         }
     }
 }

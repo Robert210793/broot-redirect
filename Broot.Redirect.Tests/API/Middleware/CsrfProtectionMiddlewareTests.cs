@@ -151,5 +151,52 @@ namespace Broot.Redirect.Tests.API.Middleware
             nextCalled.Should().BeFalse();
             context.Response.StatusCode.Should().Be(403);
         }
+
+        [Fact]
+        public async Task InvokeAsync_InvalidOriginUri_Returns403()
+        {
+            var (nextCalled, context) = await Invoke(
+                "/api/rules",
+                "POST",
+                origin: "not-a-valid-uri",
+                host: "localhost");
+
+            nextCalled.Should().BeFalse();
+            context.Response.StatusCode.Should().Be(403);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_InvalidRefererUri_Returns403()
+        {
+            var (nextCalled, context) = await Invoke(
+                "/api/rules",
+                "POST",
+                referer: "not-a-valid-uri",
+                host: "localhost");
+
+            nextCalled.Should().BeFalse();
+            context.Response.StatusCode.Should().Be(403);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_DeleteMethod_ChecksCsrf()
+        {
+            var (nextCalled, context) = await Invoke("/api/rules/123", "DELETE");
+
+            nextCalled.Should().BeFalse();
+            context.Response.StatusCode.Should().Be(403);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_PutWithValidOrigin_CallsNext()
+        {
+            var (nextCalled, _) = await Invoke(
+                "/api/settings",
+                "PUT",
+                origin: "http://localhost",
+                host: "localhost");
+
+            nextCalled.Should().BeTrue();
+        }
     }
 }

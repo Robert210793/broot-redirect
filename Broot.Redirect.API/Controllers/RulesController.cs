@@ -22,7 +22,7 @@ namespace Broot.Redirect.API.Controllers
         private readonly BrootRedirectOptions _options;
         private readonly ILogger<RulesController> _logger;
 
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, JobProgress> ActiveJobs = new();
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ImportResponse> ActiveJobs = new();
 
         private static readonly JsonSerializerOptions CamelCaseOptions = new()
         {
@@ -283,7 +283,7 @@ namespace Broot.Redirect.API.Controllers
 
             _logger.LogWarning("DeleteAll requested. Rule count: {RuleCount}, Job: {JobId}", totalCount, jobId);
 
-            ActiveJobs[jobId] = new JobProgress { Total = totalCount };
+            ActiveJobs[jobId] = new ImportResponse { Total = totalCount };
 
             _ = Task.Run(async () =>
             {
@@ -329,16 +329,7 @@ namespace Broot.Redirect.API.Controllers
                 return NotFound(new { error = "Job not found or expired" });
             }
 
-            return Ok(new
-            {
-                processed = progress.Processed,
-                total = progress.Total,
-                isComplete = progress.IsComplete,
-                imported = progress.Imported,
-                updated = progress.Updated,
-                errors = progress.Errors,
-                error = progress.Error
-            });
+            return Ok(progress);
         }
 
         [HttpDelete("bulk")]
@@ -646,7 +637,7 @@ namespace Broot.Redirect.API.Controllers
             var jobId = Guid.NewGuid().ToString("N");
             var totalCount = entries.Count;
 
-            ActiveJobs[jobId] = new JobProgress { Total = totalCount };
+            ActiveJobs[jobId] = new ImportResponse { Total = totalCount };
 
             var repository = _repository;
             var cacheService = _cacheService;
@@ -968,21 +959,5 @@ namespace Broot.Redirect.API.Controllers
             return string.Join('/', segments);
         }
 
-        private class JobProgress
-        {
-            public int Processed { get; set; }
-
-            public int Total { get; set; }
-
-            public int Imported { get; set; }
-
-            public int Updated { get; set; }
-
-            public bool IsComplete { get; set; }
-
-            public string? Error { get; set; }
-
-            public List<string> Errors { get; set; } = new();
-        }
     }
 }

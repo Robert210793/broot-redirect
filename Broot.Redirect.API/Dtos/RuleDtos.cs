@@ -107,9 +107,17 @@ namespace Broot.Redirect.API.Dtos
 
     public class ImportResponse
     {
+        public int Processed { get; set; }
+
+        public int Total { get; set; }
+
+        public bool IsComplete { get; set; }
+
         public int Imported { get; set; }
 
         public int Updated { get; set; }
+
+        public string? Error { get; set; }
 
         public List<string> Errors { get; set; } = new();
     }

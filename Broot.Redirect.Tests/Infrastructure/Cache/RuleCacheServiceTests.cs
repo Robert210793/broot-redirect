@@ -319,5 +319,176 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.RuleCount.Should().Be(2);
             }
         }
+
+        public class TrailingSlashTests
+        {
+            [Fact]
+            public void LookupWildcard_TrailingSlashIgnore_TrimsTrailingSlash()
+            {
+                var sut = CreateService(new CacheOptions { TrailingSlashPolicy = "ignore" });
+                var rule = CreateRule("/path/", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { rule });
+
+                // The normalizer should trim the trailing slash, so lookup without slash should work
+                sut.LookupWildcard("/path").Should().Be(rule);
+            }
+
+            [Fact]
+            public void LookupWildcard_TrailingSlashStrict_PreservesTrailingSlash()
+            {
+                var sut = CreateService(new CacheOptions { TrailingSlashPolicy = "strict" });
+                var rule = CreateRule("/path/", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { rule });
+
+                sut.LookupWildcard("/path/").Should().Be(rule);
+                sut.LookupWildcard("/path").Should().BeNull();
+            }
+
+            [Fact]
+            public void LookupWildcard_RootSlash_NotTrimmed()
+            {
+                var sut = CreateService(new CacheOptions { TrailingSlashPolicy = "ignore" });
+                var rule = CreateRule("/", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { rule });
+
+                sut.LookupWildcard("/").Should().Be(rule);
+            }
+        }
+
+        public class CaseSensitivityTests
+        {
+            [Fact]
+            public void LookupWildcard_CaseSensitive_DoesNotMatchDifferentCase()
+            {
+                var sut = CreateService(new CacheOptions { CaseSensitiveMatching = true });
+                var rule = CreateRule("/Path", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { rule });
+
+                sut.LookupWildcard("/Path").Should().Be(rule);
+                sut.LookupWildcard("/path").Should().BeNull();
+            }
+        }
+
+        public class RegexEdgeCaseTests
+        {
+            [Fact]
+            public void Initialize_AllInvalidRegex_ResultsInEmptyRegexList()
+            {
+                var sut = CreateService();
+
+                var invalid1 = CreateRule("[bad", RedirectType.Regex);
+                var invalid2 = CreateRule("(unclosed", RedirectType.Regex);
+
+                sut.Initialize(new[] { invalid1, invalid2 });
+
+                sut.GetRegexRules().Should().BeEmpty();
+                sut.RuleCount.Should().Be(2);
+            }
+
+            [Fact]
+            public void Initialize_RegexTimeout_UsesConfiguredValue()
+            {
+                var sut = CreateService(new CacheOptions { RegexMatchTimeout = TimeSpan.FromSeconds(5) });
+
+                var rule = CreateRule(@"^\d+$", RedirectType.Regex);
+
+                sut.Initialize(new[] { rule });
+
+                var regexRules = sut.GetRegexRules();
+
+                regexRules.Should().HaveCount(1);
+                regexRules[0].CompiledRegex.MatchTimeout.Should().Be(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        public class FindOverlappingMatcherEdgeCaseTests
+        {
+            [Fact]
+            public void FindOverlappingMatcher_EmptyMatcher_ReturnsNull()
+            {
+                var sut = CreateService();
+                var rule = CreateRule("/a/b", RedirectType.Partial);
+
+                sut.Initialize(new[] { rule });
+
+                var result = sut.FindOverlappingMatcher("");
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_ExcludedRuleId_SkipsRule()
+            {
+                var sut = CreateService();
+                var rule = CreateRule("/a/b", RedirectType.Partial);
+
+                sut.Initialize(new[] { rule });
+
+                var result = sut.FindOverlappingMatcher("/a/b/c", excludeRuleId: rule.Id);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_DifferentPrefixes_NoOverlap()
+            {
+                var sut = CreateService();
+                var rule = CreateRule("/x/y", RedirectType.Partial);
+
+                sut.Initialize(new[] { rule });
+
+                var result = sut.FindOverlappingMatcher("/a/b/c");
+
+                result.Should().BeNull();
+            }
+        }
+
+        public class GetByIdTests
+        {
+            [Fact]
+            public void GetById_Exists_ReturnsRule()
+            {
+                var sut = CreateService();
+                var rule = CreateRule("/path", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { rule });
+
+                sut.GetById(rule.Id).Should().Be(rule);
+            }
+
+            [Fact]
+            public void GetById_NotExists_ReturnsNull()
+            {
+                var sut = CreateService();
+
+                sut.Initialize(Array.Empty<RedirectRule>());
+
+                sut.GetById(Guid.NewGuid()).Should().BeNull();
+            }
+        }
+
+        public class GetAllTests
+        {
+            [Fact]
+            public void GetAll_ReturnsAllRules()
+            {
+                var sut = CreateService();
+
+                var rule1 = CreateRule("/a", RedirectType.Wildcard);
+                var rule2 = CreateRule("/b", RedirectType.Partial);
+
+                sut.Initialize(new[] { rule1, rule2 });
+
+                var all = sut.GetAll();
+
+                all.Should().HaveCount(2);
+                all.Should().Contain(rule1);
+                all.Should().Contain(rule2);
+            }
+        }
     }
 }

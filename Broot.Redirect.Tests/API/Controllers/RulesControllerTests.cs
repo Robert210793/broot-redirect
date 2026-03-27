@@ -599,5 +599,601 @@ namespace Broot.Redirect.Tests.API.Controllers
                 result.Should().BeOfType<NotFoundObjectResult>();
             }
         }
+
+        public class AdditionalGetPaginatedTests : RulesControllerTests
+        {
+            [Fact]
+            public void GetPaginated_SearchByTargetUrl_FiltersCorrectly()
+            {
+                var rules = new List<RedirectRule>
+                {
+                    CreateRule("/a"),
+                    CreateRule("/b")
+                };
+
+                rules[0].TargetUrl = "https://example.com/found";
+                rules[1].TargetUrl = "https://other.com/page";
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(search: "found") as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.Total.Should().Be(1);
+                response.Rules[0].TargetUrl.Should().Contain("found");
+            }
+
+            [Fact]
+            public void GetPaginated_SearchByInfoText_FiltersCorrectly()
+            {
+                var rules = new List<RedirectRule>
+                {
+                    CreateRule("/a"),
+                    CreateRule("/b")
+                };
+
+                rules[0].InfoText = "This is a legacy page";
+                rules[1].InfoText = "Something else";
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(search: "legacy") as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.Total.Should().Be(1);
+            }
+
+            [Fact]
+            public void GetPaginated_SortByCreatedAtAsc_SortsCorrectly()
+            {
+                var rules = new List<RedirectRule>
+                {
+                    CreateRule("/newer"),
+                    CreateRule("/older")
+                };
+
+                rules[0].CreatedAt = DateTimeOffset.UtcNow;
+                rules[1].CreatedAt = DateTimeOffset.UtcNow.AddDays(-1);
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(sortBy: "createdAt", sortOrder: "asc") as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.Rules[0].Matcher.Should().Be("/older");
+            }
+
+            [Fact]
+            public void GetPaginated_SortByMatcherDesc_SortsCorrectly()
+            {
+                var rules = new List<RedirectRule>
+                {
+                    CreateRule("/alpha"),
+                    CreateRule("/zeta")
+                };
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(sortBy: "matcher", sortOrder: "desc") as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.Rules[0].Matcher.Should().Be("/zeta");
+            }
+
+            [Fact]
+            public void GetPaginated_SortByTargetUrlDesc_Works()
+            {
+                var rules = new List<RedirectRule>
+                {
+                    CreateRule("/a"),
+                    CreateRule("/b")
+                };
+
+                rules[0].TargetUrl = "/alpha";
+                rules[1].TargetUrl = "/zulu";
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(sortBy: "targeturl", sortOrder: "desc") as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.Rules[0].TargetUrl.Should().Be("/zulu");
+            }
+
+            [Fact]
+            public void GetPaginated_SortByRedirectTypeDesc_Works()
+            {
+                _cacheService.GetAll().Returns(new List<RedirectRule>
+                {
+                    CreateRule("/a", RedirectType.Partial),
+                    CreateRule("/b", RedirectType.Wildcard)
+                });
+
+                var result = _sut.GetPaginated(sortBy: "redirecttype", sortOrder: "desc") as OkObjectResult;
+
+                result.Should().NotBeNull();
+            }
+
+            [Fact]
+            public void GetPaginated_UnknownSortField_DefaultsToCreatedAt()
+            {
+                var rules = new List<RedirectRule>
+                {
+                    CreateRule("/a"),
+                    CreateRule("/b")
+                };
+
+                rules[0].CreatedAt = DateTimeOffset.UtcNow;
+                rules[1].CreatedAt = DateTimeOffset.UtcNow.AddDays(-1);
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(sortBy: "unknownfield", sortOrder: "asc") as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.Rules[0].Matcher.Should().Be("/b");
+            }
+
+            [Fact]
+            public void GetPaginated_LimitTooHigh_DefaultsTo50()
+            {
+                var rules = Enumerable.Range(0, 100).Select(i => CreateRule($"/rule-{i}")).ToList();
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(limit: 999) as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.Rules.Should().HaveCount(50);
+            }
+
+            [Fact]
+            public void GetPaginated_LimitZero_DefaultsTo50()
+            {
+                var rules = Enumerable.Range(0, 100).Select(i => CreateRule($"/rule-{i}")).ToList();
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(limit: 0) as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.Rules.Should().HaveCount(50);
+            }
+
+            [Fact]
+            public void GetPaginated_Page2_SkipsFirstPage()
+            {
+                var rules = Enumerable.Range(0, 10).Select(i => CreateRule($"/rule-{i:D2}")).ToList();
+
+                _cacheService.GetAll().Returns(rules);
+
+                var result = _sut.GetPaginated(page: 2, limit: 3, sortBy: "matcher", sortOrder: "asc") as OkObjectResult;
+
+                var response = result!.Value as PaginatedRulesResponse;
+
+                response!.CurrentPage.Should().Be(2);
+                response.Rules.Should().HaveCount(3);
+                response.Rules[0].Matcher.Should().Be("/rule-03");
+            }
+        }
+
+        public class AdditionalBulkDeleteTests : RulesControllerTests
+        {
+            [Fact]
+            public async Task BulkDelete_MixedExistingAndNotFound_ReturnsCorrectCounts()
+            {
+                var existingRule = CreateRule();
+                var missingId = Guid.NewGuid();
+
+                _cacheService.GetById(existingRule.Id).Returns(existingRule);
+                _cacheService.GetById(missingId).Returns((RedirectRule?)null);
+
+                var request = new BulkDeleteRequest
+                {
+                    Ids = new List<string> { existingRule.Id.ToString(), missingId.ToString() }
+                };
+
+                var result = await _sut.BulkDelete(request) as OkObjectResult;
+
+                var response = result!.Value as BulkDeleteResponse;
+
+                response!.Deleted.Should().Be(1);
+                response.NotFound.Should().Be(1);
+            }
+
+            [Fact]
+            public async Task BulkDelete_DeleteThrows_CountsAsNotFound()
+            {
+                var rule = CreateRule();
+
+                _cacheService.GetById(rule.Id).Returns(rule);
+                _repository.DeleteAsync(rule.Id, Arg.Any<CancellationToken>())
+                    .Returns<bool>(_ => throw new Exception("storage error"));
+
+                var request = new BulkDeleteRequest
+                {
+                    Ids = new List<string> { rule.Id.ToString() }
+                };
+
+                var result = await _sut.BulkDelete(request) as OkObjectResult;
+
+                var response = result!.Value as BulkDeleteResponse;
+
+                response!.Deleted.Should().Be(0);
+                response.NotFound.Should().Be(1);
+            }
+
+            [Fact]
+            public async Task BulkDelete_NullIds_ReturnsBadRequest()
+            {
+                var request = new BulkDeleteRequest { Ids = null! };
+
+                var result = await _sut.BulkDelete(request);
+
+                result.Should().BeOfType<BadRequestObjectResult>();
+            }
+        }
+
+        public class ImportPreviewTests : RulesControllerTests
+        {
+            [Fact]
+            public async Task ImportPreview_JsonBody_ParsesAndReturnsPreview()
+            {
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry { Matcher = "/new-path", TargetUrl = "/target", RedirectType = "partial" }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                result.Should().NotBeNull();
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Total.Should().Be(1);
+                response.Counts.New.Should().Be(1);
+                response.Preview[0].Status.Should().Be("new");
+            }
+
+            [Fact]
+            public async Task ImportPreview_EmptyMatcher_MarkedAsInvalid()
+            {
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry { Matcher = "", TargetUrl = "/target" }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
+                response.Preview[0].Status.Should().Be("invalid");
+                response.Preview[0].Reason.Should().Contain("Matcher");
+            }
+
+            [Fact]
+            public async Task ImportPreview_InvalidRedirectType_MarkedAsInvalid()
+            {
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry { Matcher = "/path", TargetUrl = "/target", RedirectType = "invalid_type" }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
+                response.Preview[0].Reason.Should().Contain("Invalid redirect type");
+            }
+
+            [Fact]
+            public async Task ImportPreview_ExistingMatcher_MarkedAsUpdate()
+            {
+                var existingRule = CreateRule("/existing");
+
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existingRule });
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry { Matcher = "/existing", TargetUrl = "/new-target", RedirectType = "partial" }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Counts.Update.Should().Be(1);
+                response.Preview[0].Status.Should().Be("update");
+                response.Preview[0].ExistingRuleId.Should().Be(existingRule.Id.ToString());
+            }
+
+            [Fact]
+            public async Task ImportPreview_ExistingById_MarkedAsUpdate()
+            {
+                var existingRule = CreateRule("/existing");
+
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existingRule });
+                _cacheService.GetById(existingRule.Id).Returns(existingRule);
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Id = existingRule.Id.ToString(),
+                        Matcher = "/different-matcher",
+                        TargetUrl = "/target",
+                        RedirectType = "partial"
+                    }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Counts.Update.Should().Be(1);
+            }
+
+            [Fact]
+            public async Task ImportPreview_EmptyEntries_ReturnsBadRequest()
+            {
+                var json = "[]";
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview();
+
+                result.Should().BeOfType<BadRequestObjectResult>();
+            }
+
+            [Fact]
+            public async Task ImportPreview_InvalidJson_ReturnsBadRequest()
+            {
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("not-json"));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview();
+
+                result.Should().BeOfType<BadRequestObjectResult>();
+            }
+
+            [Fact]
+            public async Task ImportPreview_MixedEntries_CorrectCountBreakdown()
+            {
+                var existingRule = CreateRule("/existing");
+
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existingRule });
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry { Matcher = "/brand-new", TargetUrl = "/target", RedirectType = "partial" },
+                    new ImportRuleEntry { Matcher = "/existing", TargetUrl = "/updated", RedirectType = "partial" },
+                    new ImportRuleEntry { Matcher = "", TargetUrl = "/target" }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Total.Should().Be(3);
+                response.Counts.New.Should().Be(1);
+                response.Counts.Update.Should().Be(1);
+                response.Counts.Invalid.Should().Be(1);
+            }
+        }
+
+        public class ImportTests : RulesControllerTests
+        {
+            [Fact]
+            public async Task Import_JsonBody_ReturnsJobId()
+            {
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry { Matcher = "/import-me", TargetUrl = "/target", RedirectType = "partial" }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule>());
+
+                var result = await _sut.Import() as OkObjectResult;
+
+                result.Should().NotBeNull();
+            }
+
+            [Fact]
+            public async Task Import_EmptyEntries_ReturnsBadRequest()
+            {
+                var json = "[]";
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.Import();
+
+                result.Should().BeOfType<BadRequestObjectResult>();
+            }
+
+            [Fact]
+            public async Task Import_InvalidJson_ReturnsBadRequest()
+            {
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("{invalid}"));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.Import();
+
+                result.Should().BeOfType<BadRequestObjectResult>();
+            }
+        }
+
+        public class ExportAdditionalTests : RulesControllerTests
+        {
+            [Fact]
+            public void Export_UnknownFormat_DefaultsToJson()
+            {
+                _cacheService.GetAll().Returns(new List<RedirectRule> { CreateRule() });
+
+                var result = _sut.Export("unknown") as FileContentResult;
+
+                result.Should().NotBeNull();
+                result!.ContentType.Should().Be("application/json");
+                result.FileDownloadName.Should().Be("rules.json");
+            }
+
+            [Fact]
+            public void Export_EmptyRules_StillReturnsFile()
+            {
+                _cacheService.GetAll().Returns(new List<RedirectRule>());
+
+                var result = _sut.Export("json") as FileContentResult;
+
+                result.Should().NotBeNull();
+                result!.ContentType.Should().Be("application/json");
+            }
+        }
+
+        public class UpdateAdditionalTests : RulesControllerTests
+        {
+            [Fact]
+            public async Task Update_AllFieldsProvided_UpdatesAllFields()
+            {
+                var rule = CreateRule("/original");
+                rule.InfoText = "old info";
+                rule.AutoRedirect = false;
+
+                _cacheService.GetById(rule.Id).Returns(rule);
+                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<Guid?>()).Returns((RedirectRule?)null);
+
+                var request = new UpdateRuleRequest
+                {
+                    Matcher = "/updated",
+                    TargetUrl = "/new-target",
+                    InfoText = "new info",
+                    AutoRedirect = true,
+                    RedirectType = "wildcard"
+                };
+
+                var result = await _sut.Update(rule.Id, request) as OkObjectResult;
+
+                result.Should().NotBeNull();
+
+                var updated = result!.Value as RedirectRule;
+
+                updated!.Matcher.Should().Be("/updated");
+                updated.TargetUrl.Should().Be("/new-target");
+                updated.InfoText.Should().Be("new info");
+                updated.AutoRedirect.Should().BeTrue();
+                updated.RedirectType.Should().Be(RedirectType.Wildcard);
+            }
+
+            [Fact]
+            public async Task Update_PartialUpdate_PreservesUnchangedFields()
+            {
+                var rule = CreateRule("/original");
+                rule.TargetUrl = "/original-target";
+                rule.InfoText = "original info";
+
+                _cacheService.GetById(rule.Id).Returns(rule);
+
+                var request = new UpdateRuleRequest { InfoText = "updated info" };
+
+                var result = await _sut.Update(rule.Id, request) as OkObjectResult;
+
+                var updated = result!.Value as RedirectRule;
+
+                updated!.Matcher.Should().Be("/original");
+                updated.TargetUrl.Should().Be("/original-target");
+                updated.InfoText.Should().Be("updated info");
+            }
+        }
     }
 }

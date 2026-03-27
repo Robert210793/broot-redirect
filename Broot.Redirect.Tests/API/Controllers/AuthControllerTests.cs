@@ -187,5 +187,72 @@ namespace Broot.Redirect.Tests.API.Controllers
             result.Should().NotBeNull();
             _bruteForce.GetBlockedIps().Should().BeEmpty();
         }
+
+        [Fact]
+        public void Status_InvalidLoginTime_ReturnsNullLoginTime()
+        {
+            _httpContext.Session.SetString(SessionKeys.IsAdminAuthenticated, "true");
+            _httpContext.Session.SetString(SessionKeys.AdminLoginTime, "not-a-number");
+
+            var result = _sut.Status() as OkObjectResult;
+
+            var response = result!.Value as AuthStatusResponse;
+
+            response!.IsAuthenticated.Should().BeTrue();
+            response.LoginTime.Should().BeNull();
+        }
+
+        [Fact]
+        public void Status_NoLoginTimeSet_ReturnsNullLoginTime()
+        {
+            var result = _sut.Status() as OkObjectResult;
+
+            var response = result!.Value as AuthStatusResponse;
+
+            response!.LoginTime.Should().BeNull();
+        }
+
+        [Fact]
+        public void UnblockIp_EmptyIp_ReturnsBadRequest()
+        {
+            var result = _sut.UnblockIp(" ");
+
+            result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public void UnblockIp_UrlEncodedIp_DecodesCorrectly()
+        {
+            var encodedIp = Uri.EscapeDataString("192.168.1.1");
+            _bruteForce.BlockIp("192.168.1.1");
+
+            var result = _sut.UnblockIp(encodedIp) as OkObjectResult;
+
+            result.Should().NotBeNull();
+            _bruteForce.IsBlocked("192.168.1.1").Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Login_CorrectPassword_SetsSessionState()
+        {
+            var request = new LoginRequest { Password = "test123" };
+
+            await _sut.Login(request);
+
+            _httpContext.Session.GetString(SessionKeys.IsAdminAuthenticated).Should().Be("true");
+            _httpContext.Session.GetString(SessionKeys.AdminLoginTime).Should().NotBeNullOrEmpty();
+        }
+
+        [Fact]
+        public async Task Login_WrongPassword_RecordsFailure()
+        {
+            var request = new LoginRequest { Password = "wrong" };
+
+            await _sut.Login(request);
+            await _sut.Login(request);
+            await _sut.Login(request);
+
+            _bruteForce.IsBlocked("127.0.0.1").Should().BeTrue();
+        }
     }
 }

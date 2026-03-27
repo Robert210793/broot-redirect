@@ -490,6 +490,200 @@ namespace Broot.Redirect.Tests.Core.Services
 
                 result.Should().StartWith("https://default.com/");
             }
+
+            [Fact]
+            public void ResolveTargetUrl_WildcardDomainMatcher_ResolvesDomain()
+            {
+                var rule = CreateRule("old.example.com", RedirectType.Wildcard, "https://new.example.com");
+
+                var result = _sut.ResolveTargetUrl("http://old.example.com/some/path", rule, "https://default.com");
+
+                result.Should().Be("https://new.example.com/some/path");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_PartialMiddleMatch_ReplacesCorrectly()
+            {
+                var rule = CreateRule("/middle", RedirectType.Partial, "/replaced");
+
+                var result = _sut.ResolveTargetUrl("/before/middle/after", rule, "https://default.com");
+
+                result.Should().Contain("/replaced");
+                result.Should().Contain("/after");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_PartialNoMatch_FallsBackToTarget()
+            {
+                var rule = CreateRule("/nonexistent", RedirectType.Partial, "/target");
+
+                var result = _sut.ResolveTargetUrl("/completely-different", rule, "https://default.com");
+
+                result.Should().Be("https://default.com/target");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_PartialWithDiscardQueryParams_StripsQuery()
+            {
+                var rule = CreateRule("/old", RedirectType.Partial, "/new");
+                rule.DiscardQueryParams = true;
+
+                var result = _sut.ResolveTargetUrl("/old/page?q=1", rule, "https://default.com");
+
+                result.Should().NotContain("q=1");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_WildcardWithDiscardQueryParams_StripsQuery()
+            {
+                var rule = CreateRule("/old", RedirectType.Wildcard, "https://new.com/page");
+                rule.DiscardQueryParams = true;
+
+                var result = _sut.ResolveTargetUrl("/old?q=1", rule, "https://default.com");
+
+                result.Should().Be("https://new.com/page");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_WildcardMatcherWithTrailingSlash_HandlesSlashCorrectly()
+            {
+                var rule = CreateRule("/old/", RedirectType.Wildcard, "https://new.com/target/");
+
+                var result = _sut.ResolveTargetUrl("/old/subpath", rule, "https://default.com");
+
+                result.Should().Be("https://new.com/target/subpath");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_PartialDomainMatcherRelativeTarget_UsesCleanDomain()
+            {
+                var rule = CreateRule("example.com", RedirectType.Partial, "/relative");
+
+                var result = _sut.ResolveTargetUrl("http://example.com/some/path", rule, "https://default.com");
+
+                result.Should().Contain("default.com");
+                result.Should().Contain("/relative");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_KeptQueryParamsInvalidKeyRegex_Skipped()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.DiscardQueryParams = true;
+                rule.KeptQueryParams = new List<KeptQueryParam>
+                {
+                    new KeptQueryParam { KeyPattern = "[invalid" },
+                    new KeptQueryParam { KeyPattern = "^valid$" }
+                };
+
+                var result = _sut.ResolveTargetUrl(
+                    "http://old.com/page?valid=yes&other=no",
+                    rule,
+                    "https://default.com");
+
+                result.Should().Contain("valid=yes");
+                result.Should().NotContain("other=no");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_KeptQueryParamsInvalidValueRegex_Skipped()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.DiscardQueryParams = true;
+                rule.KeptQueryParams = new List<KeptQueryParam>
+                {
+                    new KeptQueryParam { KeyPattern = "^key$", ValuePattern = "[invalid" }
+                };
+
+                var result = _sut.ResolveTargetUrl(
+                    "http://old.com/page?key=value",
+                    rule,
+                    "https://default.com");
+
+                // Invalid value regex causes the rule to be skipped
+                result.Should().Be("https://new.com/page");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_KeptQueryParamsEmptyKeyPattern_Skipped()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.DiscardQueryParams = true;
+                rule.KeptQueryParams = new List<KeptQueryParam>
+                {
+                    new KeptQueryParam { KeyPattern = "" }
+                };
+
+                var result = _sut.ResolveTargetUrl(
+                    "http://old.com/page?key=value",
+                    rule,
+                    "https://default.com");
+
+                result.Should().Be("https://new.com/page");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_DefaultRedirectType_UsesGenerateNewUrl()
+            {
+                var rule = CreateRule("/old", (RedirectType)99, "https://new.com");
+
+                var result = _sut.ResolveTargetUrl("http://old.com/old", rule, "https://default.com");
+
+                result.Should().Contain("default.com");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_DomainWithNoTarget_UsesDefaultDomain()
+            {
+                var rule = CreateRule("old.com", RedirectType.Domain, "");
+
+                var result = _sut.ResolveTargetUrl("http://old.com/path", rule, "https://default.com");
+
+                result.Should().Contain("default.com");
+                result.Should().Contain("/path");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_ForwardQueryParamsNoQuery_NoChange()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.ForwardQueryParams = true;
+
+                var result = _sut.ResolveTargetUrl("/page", rule, "https://default.com");
+
+                result.Should().Be("https://new.com/page");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_KeptQueryParamsValuePatternMismatch_NotKept()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.DiscardQueryParams = true;
+                rule.KeptQueryParams = new List<KeptQueryParam>
+                {
+                    new KeptQueryParam { KeyPattern = "^id$", ValuePattern = @"^\d+$" }
+                };
+
+                var result = _sut.ResolveTargetUrl(
+                    "http://old.com/page?id=abc",
+                    rule,
+                    "https://default.com");
+
+                // Value "abc" doesn't match pattern ^\d+$
+                result.Should().Be("https://new.com/page");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_FragmentInQuery_PreservedWithStripQueryParams()
+            {
+                var rule = CreateRule("/old", RedirectType.Partial, "/new");
+                rule.DiscardQueryParams = true;
+
+                var result = _sut.ResolveTargetUrl("/old?q=1#section", rule, "https://default.com");
+
+                result.Should().Contain("#section");
+                result.Should().NotContain("q=1");
+            }
         }
 
         public class ResolveTargetUrlWithTraceTests
@@ -799,6 +993,220 @@ namespace Broot.Redirect.Tests.Core.Services
                 var result = UrlTransformService.AppendQueryString("https://example.com/path?a=1#frag", "?b=2");
 
                 result.Should().Be("https://example.com/path?a=1&b=2#frag");
+            }
+
+            [Fact]
+            public void AppendQueryString_NullQueryString_ReturnsOriginal()
+            {
+                var result = UrlTransformService.AppendQueryString("https://example.com/path", "");
+
+                result.Should().Be("https://example.com/path");
+            }
+
+            [Fact]
+            public void AppendQueryString_FragmentOnly_PreservesFragment()
+            {
+                var result = UrlTransformService.AppendQueryString("https://example.com/path#section", "?a=1");
+
+                result.Should().Be("https://example.com/path?a=1#section");
+            }
+
+            [Fact]
+            public void ApplySearchAndReplace_NullSearch_ReturnsUnchanged()
+            {
+                var entry = new SearchAndReplaceEntry { Search = null!, Replace = "new" };
+
+                var result = UrlTransformService.ApplySearchAndReplace("https://example.com", entry);
+
+                result.Should().Be("https://example.com");
+            }
+
+            [Fact]
+            public void ApplySearchAndReplace_CaseSensitive_OnlyMatchesExactCase()
+            {
+                var entry = new SearchAndReplaceEntry { Search = "Old", Replace = "New", CaseSensitive = true };
+
+                var result = UrlTransformService.ApplySearchAndReplace("https://Old.com/old-path", entry);
+
+                result.Should().Be("https://New.com/old-path");
+            }
+
+            [Fact]
+            public void ApplyGlobalRule_CaseSensitive_OnlyMatchesExactCase()
+            {
+                var globalRule = new GlobalRule { Search = "Test", Replace = "New", CaseSensitive = true };
+
+                var result = UrlTransformService.ApplyGlobalRule("https://Test.com/test-path", globalRule);
+
+                result.Should().Be("https://New.com/test-path");
+            }
+
+            [Fact]
+            public void ApplyGlobalRule_CaseInsensitive_MatchesBothCases()
+            {
+                var globalRule = new GlobalRule { Search = "old", Replace = "new", CaseSensitive = false };
+
+                var result = UrlTransformService.ApplyGlobalRule("https://OLD.com/Old-path", globalRule);
+
+                result.Should().Be("https://new.com/new-path");
+            }
+
+            [Fact]
+            public void ExtractPath_FullHttpsUrl_ReturnsPathAndQuery()
+            {
+                var result = UrlTransformService.ExtractPath("https://example.com/path?q=1");
+
+                result.Should().Be("/path?q=1");
+            }
+
+            [Fact]
+            public void ExtractPath_RelativePathWithoutSlash_PrependsSlash()
+            {
+                var result = UrlTransformService.ExtractPath("relative-path");
+
+                result.Should().StartWith("/");
+            }
+
+            [Fact]
+            public void GenerateNewUrl_HttpUrl_ConvertedToHttps()
+            {
+                var result = UrlTransformService.GenerateNewUrl("http://old.com/path", "https://new.com");
+
+                result.Should().Be("https://new.com/path");
+            }
+
+            [Fact]
+            public void ApplyGlobalRule_NullReplace_UsesEmptyString()
+            {
+                var globalRule = new GlobalRule { Search = "remove-me", Replace = null, CaseSensitive = false };
+
+                var result = UrlTransformService.ApplyGlobalRule("https://example.com/remove-me/path", globalRule);
+
+                result.Should().Be("https://example.com//path");
+            }
+
+            [Fact]
+            public void ApplySearchAndReplace_NullReplace_UsesEmptyString()
+            {
+                var entry = new SearchAndReplaceEntry { Search = "remove", Replace = null, CaseSensitive = false };
+
+                var result = UrlTransformService.ApplySearchAndReplace("https://example.com/remove-this", entry);
+
+                result.Should().Be("https://example.com/-this");
+            }
+
+            [Fact]
+            public void AppendQueryString_QueryWithoutQuestionMark_HandledCorrectly()
+            {
+                var result = UrlTransformService.AppendQueryString("https://example.com/path", "a=1");
+
+                result.Should().Be("https://example.com/path?a=1");
+            }
+        }
+
+        public class ResolveTargetUrlWithTraceEdgeCases
+        {
+            private readonly IGlobalRuleCacheService _globalRuleCache;
+            private readonly UrlTransformService _sut;
+
+            public ResolveTargetUrlWithTraceEdgeCases()
+            {
+                _globalRuleCache = Substitute.For<IGlobalRuleCacheService>();
+                _globalRuleCache.GetAll().Returns(new List<GlobalRule>());
+                _sut = new UrlTransformService(_globalRuleCache);
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_DiscardQueryParamsNoKept_ShowsDiscardStep()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.DiscardQueryParams = true;
+                rule.ForwardQueryParams = false;
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace("/page?q=1", rule, "https://default.com");
+
+                trace.Should().Contain(step => step.Type == "query-discard");
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_SearchAndReplaceNoChange_NoTraceStep()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.SearchAndReplace = new List<SearchAndReplaceEntry>
+                {
+                    new SearchAndReplaceEntry { Search = "nonexistent", Replace = "new" }
+                };
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace("/page", rule, "https://default.com");
+
+                trace.Should().NotContain(step => step.Type == "search-replace");
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_GlobalRuleNoChange_NoTraceStep()
+            {
+                _globalRuleCache.GetAll().Returns(new List<GlobalRule>
+                {
+                    new GlobalRule { Search = "nonexistent", Replace = "new", CaseSensitive = false }
+                });
+
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace("/page", rule, "https://default.com");
+
+                trace.Should().NotContain(step => step.Type == "global-rule");
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_ForwardQueryNoQuery_NoTraceStep()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.ForwardQueryParams = true;
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace("/page", rule, "https://default.com");
+
+                trace.Should().NotContain(step => step.Type == "query-forward");
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_KeptQueryNoMatch_NoTraceStep()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.DiscardQueryParams = true;
+                rule.KeptQueryParams = new List<KeptQueryParam>
+                {
+                    new KeptQueryParam { KeyPattern = "^nonexistent$" }
+                };
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace(
+                    "http://old.com/page?other=1", rule, "https://default.com");
+
+                trace.Should().NotContain(step => step.Type == "query-kept");
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_StaticQueryNoChange_NoTraceStep()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.StaticQueryParams = new List<StaticQueryParam>
+                {
+                    new StaticQueryParam { Key = "", Value = "ignored" }
+                };
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace("/page", rule, "https://default.com");
+
+                trace.Should().NotContain(step => step.Type == "query-static");
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_AlwaysHasInputAndResultSteps()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace("/page", rule, "https://default.com");
+
+                trace.First().Type.Should().Be("input");
+                trace.Last().Type.Should().Be("result");
             }
         }
     }

@@ -291,12 +291,12 @@ var assemblies = [
     "name": "Broot.Redirect.API",
     "classes": [
       { "name": "Broot.Redirect.API.Configuration.BrootRedirectOptions", "rp": "Broot.Redirect.API_BrootRedirectOptions.html", "cl": 17, "ucl": 0, "cal": 17, "tl": 41, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Configuration.RuleMatchingConfigFactory", "rp": "Broot.Redirect.API_RuleMatchingConfigFactory.html", "cl": 13, "ucl": 3, "cal": 16, "tl": 26, "cb": 1, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Controllers.AuthController", "rp": "Broot.Redirect.API_AuthController.html", "cl": 89, "ucl": 4, "cal": 93, "tl": 173, "cb": 12, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Configuration.RuleMatchingConfigFactory", "rp": "Broot.Redirect.API_RuleMatchingConfigFactory.html", "cl": 16, "ucl": 0, "cal": 16, "tl": 26, "cb": 2, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Controllers.AuthController", "rp": "Broot.Redirect.API_AuthController.html", "cl": 91, "ucl": 2, "cal": 93, "tl": 173, "cb": 13, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Controllers.GlobalRulesController", "rp": "Broot.Redirect.API_GlobalRulesController.html", "cl": 69, "ucl": 2, "cal": 71, "tl": 127, "cb": 7, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Controllers.HealthController", "rp": "Broot.Redirect.API_HealthController.html", "cl": 0, "ucl": 81, "cal": 81, "tl": 130, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Controllers.HealthController", "rp": "Broot.Redirect.API_HealthController.html", "cl": 71, "ucl": 10, "cal": 81, "tl": 130, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Controllers.RedirectController", "rp": "Broot.Redirect.API_RedirectController.html", "cl": 68, "ucl": 0, "cal": 68, "tl": 106, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Controllers.RulesController", "rp": "Broot.Redirect.API_RulesController.html", "cl": 358, "ucl": 367, "cal": 725, "tl": 988, "cb": 65, "tb": 150, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Controllers.RulesController", "rp": "Broot.Redirect.API_RulesController.html", "cl": 657, "ucl": 58, "cal": 715, "tl": 963, "cb": 103, "tb": 150, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Controllers.SettingsController", "rp": "Broot.Redirect.API_SettingsController.html", "cl": 55, "ucl": 0, "cal": 55, "tl": 101, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Controllers.TrackingController", "rp": "Broot.Redirect.API_TrackingController.html", "cl": 204, "ucl": 7, "cal": 211, "tl": 346, "cb": 23, "tb": 26, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.AuthStatusResponse", "rp": "Broot.Redirect.API_AuthStatusResponse.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -304,21 +304,21 @@ var assemblies = [
       { "name": "Broot.Redirect.API.Dtos.BlockIpRequest", "rp": "Broot.Redirect.API_BlockIpRequest.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 39, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.Broot.Redirect.API.Dtos.CreateGlobalRuleRequest", "rp": "Broot.Redirect.API_CreateGlobalRuleRequest.html", "cl": 4, "ucl": 0, "cal": 4, "tl": 31, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.Broot.Redirect.API.Dtos.UpdateGlobalRuleRequest", "rp": "Broot.Redirect.API_UpdateGlobalRuleRequest.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.BulkDeleteRequest", "rp": "Broot.Redirect.API_BulkDeleteRequest.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.BulkDeleteRequest", "rp": "Broot.Redirect.API_BulkDeleteRequest.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.BulkDeleteResponse", "rp": "Broot.Redirect.API_BulkDeleteResponse.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.CreateRuleRequest", "rp": "Broot.Redirect.API_CreateRuleRequest.html", "cl": 8, "ucl": 0, "cal": 8, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.CreateRuleRequest", "rp": "Broot.Redirect.API_CreateRuleRequest.html", "cl": 8, "ucl": 0, "cal": 8, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.FeedbackRequest", "rp": "Broot.Redirect.API_FeedbackRequest.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 146, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.HealthCheckDetail", "rp": "Broot.Redirect.API_HealthCheckDetail.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.HealthChecks", "rp": "Broot.Redirect.API_HealthChecks.html", "cl": 0, "ucl": 2, "cal": 2, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.HealthResponse", "rp": "Broot.Redirect.API_HealthResponse.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.HealthCheckDetail", "rp": "Broot.Redirect.API_HealthCheckDetail.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.HealthChecks", "rp": "Broot.Redirect.API_HealthChecks.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.HealthResponse", "rp": "Broot.Redirect.API_HealthResponse.html", "cl": 3, "ucl": 0, "cal": 3, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.ImportPreviewCounts", "rp": "Broot.Redirect.API_ImportPreviewCounts.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.ImportPreviewEntry", "rp": "Broot.Redirect.API_ImportPreviewEntry.html", "cl": 0, "ucl": 2, "cal": 2, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.ImportPreviewResponse", "rp": "Broot.Redirect.API_ImportPreviewResponse.html", "cl": 0, "ucl": 2, "cal": 2, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.ImportResponse", "rp": "Broot.Redirect.API_ImportResponse.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.ImportRuleEntry", "rp": "Broot.Redirect.API_ImportRuleEntry.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.ImportPreviewEntry", "rp": "Broot.Redirect.API_ImportPreviewEntry.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.ImportPreviewResponse", "rp": "Broot.Redirect.API_ImportPreviewResponse.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.ImportResponse", "rp": "Broot.Redirect.API_ImportResponse.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.ImportRuleEntry", "rp": "Broot.Redirect.API_ImportRuleEntry.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.LoginRequest", "rp": "Broot.Redirect.API_LoginRequest.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 39, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.LoginResponse", "rp": "Broot.Redirect.API_LoginResponse.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.PaginatedRulesResponse", "rp": "Broot.Redirect.API_PaginatedRulesResponse.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.PaginatedRulesResponse", "rp": "Broot.Redirect.API_PaginatedRulesResponse.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.PaginatedTrackingResponse", "rp": "Broot.Redirect.API_PaginatedTrackingResponse.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 146, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.RedirectResolveResponse", "rp": "Broot.Redirect.API_RedirectResolveResponse.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.StatsResponse", "rp": "Broot.Redirect.API_StatsResponse.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 146, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -330,16 +330,16 @@ var assemblies = [
       { "name": "Broot.Redirect.API.Dtos.TrendResponse", "rp": "Broot.Redirect.API_TrendResponse.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 146, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.UpdateRuleRequest", "rp": "Broot.Redirect.API_UpdateRuleRequest.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Dtos.UpdateSettingsRequest", "rp": "Broot.Redirect.API_UpdateSettingsRequest.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.ValidateUrlResult", "rp": "Broot.Redirect.API_ValidateUrlResult.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.ValidateUrlsRequest", "rp": "Broot.Redirect.API_ValidateUrlsRequest.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Dtos.ValidateUrlsResponse", "rp": "Broot.Redirect.API_ValidateUrlsResponse.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 270, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.ValidateUrlResult", "rp": "Broot.Redirect.API_ValidateUrlResult.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.ValidateUrlsRequest", "rp": "Broot.Redirect.API_ValidateUrlsRequest.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Dtos.ValidateUrlsResponse", "rp": "Broot.Redirect.API_ValidateUrlsResponse.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 278, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Middleware.AdminSessionMiddleware", "rp": "Broot.Redirect.API_AdminSessionMiddleware.html", "cl": 47, "ucl": 0, "cal": 47, "tl": 87, "cb": 18, "tb": 18, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Middleware.CsrfProtectionMiddleware", "rp": "Broot.Redirect.API_CsrfProtectionMiddleware.html", "cl": 78, "ucl": 4, "cal": 82, "tl": 126, "cb": 16, "tb": 18, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Middleware.RateLimitMiddleware", "rp": "Broot.Redirect.API_RateLimitMiddleware.html", "cl": 94, "ucl": 15, "cal": 109, "tl": 178, "cb": 21, "tb": 30, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Middleware.CsrfProtectionMiddleware", "rp": "Broot.Redirect.API_CsrfProtectionMiddleware.html", "cl": 82, "ucl": 0, "cal": 82, "tl": 126, "cb": 18, "tb": 18, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Middleware.RateLimitMiddleware", "rp": "Broot.Redirect.API_RateLimitMiddleware.html", "cl": 105, "ucl": 4, "cal": 109, "tl": 178, "cb": 26, "tb": 30, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.API.Middleware.RedirectMiddleware", "rp": "Broot.Redirect.API_RedirectMiddleware.html", "cl": 110, "ucl": 1, "cal": 111, "tl": 175, "cb": 20, "tb": 22, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Services.BruteForceProtectionService", "rp": "Broot.Redirect.API_BruteForceProtectionService.html", "cl": 84, "ucl": 16, "cal": 100, "tl": 168, "cb": 11, "tb": 16, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Services.RuleImportExportService", "rp": "Broot.Redirect.API_RuleImportExportService.html", "cl": 236, "ucl": 26, "cal": 262, "tl": 386, "cb": 42, "tb": 58, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.API.Services.RuleValidationService", "rp": "Broot.Redirect.API_RuleValidationService.html", "cl": 99, "ucl": 6, "cal": 105, "tl": 161, "cb": 40, "tb": 46, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Services.BruteForceProtectionService", "rp": "Broot.Redirect.API_BruteForceProtectionService.html", "cl": 100, "ucl": 0, "cal": 100, "tl": 168, "cb": 15, "tb": 16, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Services.RuleImportExportService", "rp": "Broot.Redirect.API_RuleImportExportService.html", "cl": 253, "ucl": 9, "cal": 262, "tl": 386, "cb": 52, "tb": 58, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.API.Services.RuleValidationService", "rp": "Broot.Redirect.API_RuleValidationService.html", "cl": 105, "ucl": 0, "cal": 105, "tl": 161, "cb": 44, "tb": 46, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Program", "rp": "Broot.Redirect.API_Program.html", "cl": 0, "ucl": 102, "cal": 102, "tl": 142, "cb": 0, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
@@ -362,26 +362,26 @@ var assemblies = [
       { "name": "Broot.Redirect.Core.Models.UrlTransformationResult", "rp": "Broot.Redirect.Core_UrlTransformationResult.html", "cl": 0, "ucl": 0, "cal": 0, "tl": 0, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Core.Services.RuleMatchingService", "rp": "Broot.Redirect.Core_RuleMatchingService.html", "cl": 339, "ucl": 35, "cal": 374, "tl": 586, "cb": 112, "tb": 134, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Core.Services.SmartSearchService", "rp": "Broot.Redirect.Core_SmartSearchService.html", "cl": 69, "ucl": 9, "cal": 78, "tl": 138, "cb": 20, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.Core.Services.UrlTransformService", "rp": "Broot.Redirect.Core_UrlTransformService.html", "cl": 371, "ucl": 37, "cal": 408, "tl": 619, "cb": 106, "tb": 128, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.Core.Services.UrlTransformService", "rp": "Broot.Redirect.Core_UrlTransformService.html", "cl": 382, "ucl": 26, "cal": 408, "tl": 619, "cb": 113, "tb": 128, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
     "name": "Broot.Redirect.Infrastructure",
     "classes": [
       { "name": "Broot.Redirect.Infrastructure.Cache.AppSettingsCacheService", "rp": "Broot.Redirect.Infrastructure_AppSettingsCacheService.html", "cl": 23, "ucl": 0, "cal": 23, "tl": 54, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Cache.CacheOptions", "rp": "Broot.Redirect.Infrastructure_CacheOptions.html", "cl": 3, "ucl": 0, "cal": 3, "tl": 380, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.Infrastructure.Cache.CacheWarmupService", "rp": "Broot.Redirect.Infrastructure_CacheWarmupService.html", "cl": 0, "ucl": 48, "cal": 48, "tl": 94, "cb": 0, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.Infrastructure.Cache.CacheWarmupService", "rp": "Broot.Redirect.Infrastructure_CacheWarmupService.html", "cl": 43, "ucl": 5, "cal": 48, "tl": 94, "cb": 1, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Cache.GlobalRuleCacheService", "rp": "Broot.Redirect.Infrastructure_GlobalRuleCacheService.html", "cl": 100, "ucl": 0, "cal": 100, "tl": 181, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.Infrastructure.Cache.RuleCacheService", "rp": "Broot.Redirect.Infrastructure_RuleCacheService.html", "cl": 196, "ucl": 21, "cal": 217, "tl": 380, "cb": 31, "tb": 40, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.Infrastructure.Cache.TrackingCleanupService", "rp": "Broot.Redirect.Infrastructure_TrackingCleanupService.html", "cl": 0, "ucl": 28, "cal": 28, "tl": 53, "cb": 0, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.Infrastructure.Cache.RuleCacheService", "rp": "Broot.Redirect.Infrastructure_RuleCacheService.html", "cl": 214, "ucl": 3, "cal": 217, "tl": 380, "cb": 38, "tb": 40, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.Infrastructure.Cache.TrackingCleanupService", "rp": "Broot.Redirect.Infrastructure_TrackingCleanupService.html", "cl": 23, "ucl": 5, "cal": 28, "tl": 53, "cb": 2, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Extensions.ServiceCollectionExtensions", "rp": "Broot.Redirect.Infrastructure_ServiceCollectionExtensions.html", "cl": 0, "ucl": 33, "cal": 33, "tl": 66, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Persistence.AppSettingsEntity", "rp": "Broot.Redirect.Infrastructure_AppSettingsEntity.html", "cl": 90, "ucl": 0, "cal": 90, "tl": 163, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Persistence.GlobalRuleEntity", "rp": "Broot.Redirect.Infrastructure_GlobalRuleEntity.html", "cl": 27, "ucl": 0, "cal": 27, "tl": 61, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Persistence.RedirectRuleEntity", "rp": "Broot.Redirect.Infrastructure_RedirectRuleEntity.html", "cl": 86, "ucl": 0, "cal": 86, "tl": 145, "cb": 25, "tb": 30, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.Infrastructure.Persistence.TableStorageAppSettingsRepository", "rp": "Broot.Redirect.Infrastructure_TableStorageAppSettingsRepository.html", "cl": 26, "ucl": 4, "cal": 30, "tl": 68, "cb": 1, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.Infrastructure.Persistence.TableStorageGlobalRuleRepository", "rp": "Broot.Redirect.Infrastructure_TableStorageGlobalRuleRepository.html", "cl": 50, "ucl": 7, "cal": 57, "tl": 109, "cb": 3, "tb": 6, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.Infrastructure.Persistence.TableStorageAppSettingsRepository", "rp": "Broot.Redirect.Infrastructure_TableStorageAppSettingsRepository.html", "cl": 30, "ucl": 0, "cal": 30, "tl": 68, "cb": 1, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.Infrastructure.Persistence.TableStorageGlobalRuleRepository", "rp": "Broot.Redirect.Infrastructure_TableStorageGlobalRuleRepository.html", "cl": 54, "ucl": 3, "cal": 57, "tl": 109, "cb": 3, "tb": 6, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Persistence.TableStorageOptions", "rp": "Broot.Redirect.Infrastructure_TableStorageOptions.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 275, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Persistence.TableStorageRuleRepository", "rp": "Broot.Redirect.Infrastructure_TableStorageRuleRepository.html", "cl": 130, "ucl": 38, "cal": 168, "tl": 275, "cb": 21, "tb": 36, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Broot.Redirect.Infrastructure.Persistence.TableStorageTrackingRepository", "rp": "Broot.Redirect.Infrastructure_TableStorageTrackingRepository.html", "cl": 256, "ucl": 59, "cal": 315, "tl": 473, "cb": 43, "tb": 72, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Broot.Redirect.Infrastructure.Persistence.TableStorageTrackingRepository", "rp": "Broot.Redirect.Infrastructure_TableStorageTrackingRepository.html", "cl": 305, "ucl": 10, "cal": 315, "tl": 473, "cb": 57, "tb": 72, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Broot.Redirect.Infrastructure.Persistence.TrackingEntity", "rp": "Broot.Redirect.Infrastructure_TrackingEntity.html", "cl": 43, "ucl": 0, "cal": 43, "tl": 84, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
 ];
@@ -398,11 +398,11 @@ var riskHotspotMetrics = [
 
 var riskHotspots = [
   {
-    "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Controllers.RulesController", "reportPath": "Broot.Redirect.API_RulesController.html", "methodName": "ImportPreview()", "methodShortName": "ImportPreview()", "fileIndex": 0, "line": 406,
+    "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Controllers.RulesController", "reportPath": "Broot.Redirect.API_RulesController.html", "methodName": "ImportPreview()", "methodShortName": "ImportPreview()", "fileIndex": 0, "line": 397,
     "metrics": [
       { "value": 40, "exceeded": true },
       { "value": 65536, "exceeded": true },
-      { "value": 1640, "exceeded": true },
+      { "value": 81.16, "exceeded": true },
     ]},
   {
     "assembly": "Broot.Redirect.Core", "class": "Broot.Redirect.Core.Services.RuleMatchingService", "reportPath": "Broot.Redirect.Core_RuleMatchingService.html", "methodName": "Broot.Redirect.Core.Models.RuleMatchResult Broot.Redirect.Core.Services.RuleMatchingService::FindMatchingRule(System.String,System.Collections.Generic.IReadOnlyList`1<Broot.Redirect.Core.Models.ProcessedRule>,Broot.Redirect.Core.Models.RuleMatchingConfig)", "methodShortName": "FindMatchingRule(...)", "fileIndex": 0, "line": 145,
@@ -430,21 +430,14 @@ var riskHotspots = [
     "metrics": [
       { "value": 24, "exceeded": true },
       { "value": 12288, "exceeded": true },
-      { "value": 26.95, "exceeded": false },
-    ]},
-  {
-    "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Controllers.RulesController", "reportPath": "Broot.Redirect.API_RulesController.html", "methodName": ">c__DisplayClass20_0/<<Import()", "methodShortName": ">c__DisplayClass20_0/<<Import()", "fileIndex": 0, "line": 658,
-    "metrics": [
-      { "value": 37, "exceeded": true },
-      { "value": 256, "exceeded": true },
-      { "value": 1406, "exceeded": true },
+      { "value": 24.19, "exceeded": false },
     ]},
   {
     "assembly": "Broot.Redirect.Core", "class": "Broot.Redirect.Core.Services.UrlTransformService", "reportPath": "Broot.Redirect.Core_UrlTransformService.html", "methodName": "System.String Broot.Redirect.Core.Services.UrlTransformService::ApplyKeptQueryParams(System.String,System.String,System.Collections.Generic.IReadOnlyList`1<Broot.Redirect.Core.Models.KeptQueryParam>)", "methodShortName": "ApplyKeptQueryParams(...)", "fileIndex": 0, "line": 392,
     "metrics": [
       { "value": 17, "exceeded": true },
       { "value": 1024, "exceeded": true },
-      { "value": 21.97, "exceeded": false },
+      { "value": 17.26, "exceeded": false },
     ]},
   {
     "assembly": "Broot.Redirect.Core", "class": "Broot.Redirect.Core.Services.UrlTransformService", "reportPath": "Broot.Redirect.Core_UrlTransformService.html", "methodName": "System.String Broot.Redirect.Core.Services.UrlTransformService::ResolveTargetUrl(System.String,Broot.Redirect.Core.Models.RedirectRule,System.String)", "methodShortName": "ResolveTargetUrl(...)", "fileIndex": 0, "line": 23,
@@ -458,21 +451,14 @@ var riskHotspots = [
     "metrics": [
       { "value": 12, "exceeded": false },
       { "value": 512, "exceeded": true },
-      { "value": 13.58, "exceeded": false },
+      { "value": 12.01, "exceeded": false },
     ]},
   {
-    "assembly": "Broot.Redirect.Infrastructure", "class": "Broot.Redirect.Infrastructure.Cache.CacheWarmupService", "reportPath": "Broot.Redirect.Infrastructure_CacheWarmupService.html", "methodName": "StartAsync()", "methodShortName": "StartAsync()", "fileIndex": 0, "line": 46,
+    "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Controllers.RulesController", "reportPath": "Broot.Redirect.API_RulesController.html", "methodName": ">c__DisplayClass20_0/<<Import()", "methodShortName": ">c__DisplayClass20_0/<<Import()", "fileIndex": 0, "line": 649,
     "metrics": [
-      { "value": 19, "exceeded": true },
-      { "value": 2, "exceeded": false },
-      { "value": 380, "exceeded": true },
-    ]},
-  {
-    "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Controllers.RulesController", "reportPath": "Broot.Redirect.API_RulesController.html", "methodName": "Import()", "methodShortName": "Import()", "fileIndex": 0, "line": 588,
-    "metrics": [
-      { "value": 17, "exceeded": true },
-      { "value": 192, "exceeded": false },
-      { "value": 306, "exceeded": true },
+      { "value": 37, "exceeded": true },
+      { "value": 256, "exceeded": true },
+      { "value": 123.05, "exceeded": true },
     ]},
   {
     "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Services.RuleValidationService", "reportPath": "Broot.Redirect.API_RuleValidationService.html", "methodName": "System.Void Broot.Redirect.API.Services.RuleValidationService::ValidateTargetUrlForType(System.String,Broot.Redirect.Core.Models.RedirectType,System.Collections.Generic.List`1<System.String>)", "methodShortName": "ValidateTargetUrlForType(...)", "fileIndex": 0, "line": 59,
@@ -480,13 +466,6 @@ var riskHotspots = [
       { "value": 16, "exceeded": true },
       { "value": 256, "exceeded": true },
       { "value": 16, "exceeded": false },
-    ]},
-  {
-    "assembly": "Broot.Redirect.Infrastructure", "class": "Broot.Redirect.Infrastructure.Persistence.TableStorageTrackingRepository", "reportPath": "Broot.Redirect.Infrastructure_TableStorageTrackingRepository.html", "methodName": "DeleteOlderThanAsync()", "methodShortName": "DeleteOlderThanAsync()", "fileIndex": 0, "line": 269,
-    "metrics": [
-      { "value": 15, "exceeded": false },
-      { "value": 4, "exceeded": false },
-      { "value": 240, "exceeded": true },
     ]},
   {
     "assembly": "Broot.Redirect.API", "class": "Program", "reportPath": "Broot.Redirect.API_Program.html", "methodName": ">c__DisplayClass0_0/<<<Main>$()", "methodShortName": ">c__DisplayClass0_0/<<<Main>$()", "fileIndex": 0, "line": 102,
@@ -503,25 +482,11 @@ var riskHotspots = [
       { "value": 90, "exceeded": true },
     ]},
   {
-    "assembly": "Broot.Redirect.Infrastructure", "class": "Broot.Redirect.Infrastructure.Cache.TrackingCleanupService", "reportPath": "Broot.Redirect.Infrastructure_TrackingCleanupService.html", "methodName": "ExecuteAsync()", "methodShortName": "ExecuteAsync()", "fileIndex": 0, "line": 27,
+    "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Controllers.RulesController", "reportPath": "Broot.Redirect.API_RulesController.html", "methodName": "Import()", "methodShortName": "Import()", "fileIndex": 0, "line": 579,
     "metrics": [
-      { "value": 9, "exceeded": false },
-      { "value": 4, "exceeded": false },
-      { "value": 90, "exceeded": true },
-    ]},
-  {
-    "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Controllers.HealthController", "reportPath": "Broot.Redirect.API_HealthController.html", "methodName": "GetHealth()", "methodShortName": "GetHealth()", "fileIndex": 0, "line": 34,
-    "metrics": [
-      { "value": 8, "exceeded": false },
-      { "value": 0, "exceeded": false },
-      { "value": 72, "exceeded": true },
-    ]},
-  {
-    "assembly": "Broot.Redirect.API", "class": "Broot.Redirect.API.Services.BruteForceProtectionService", "reportPath": "Broot.Redirect.API_BruteForceProtectionService.html", "methodName": "System.Void Broot.Redirect.API.Services.BruteForceProtectionService::CleanupExpiredEntries(System.Object)", "methodShortName": "CleanupExpiredEntries(...)", "fileIndex": 0, "line": 137,
-    "metrics": [
-      { "value": 8, "exceeded": false },
-      { "value": 4, "exceeded": false },
-      { "value": 72, "exceeded": true },
+      { "value": 17, "exceeded": true },
+      { "value": 192, "exceeded": false },
+      { "value": 50.96, "exceeded": true },
     ]},
   {
     "assembly": "Broot.Redirect.Infrastructure", "class": "Broot.Redirect.Infrastructure.Extensions.ServiceCollectionExtensions", "reportPath": "Broot.Redirect.Infrastructure_ServiceCollectionExtensions.html", "methodName": "Microsoft.Extensions.DependencyInjection.IServiceCollection Broot.Redirect.Infrastructure.Extensions.ServiceCollectionExtensions::AddSmartRedirectInfrastructure(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration)", "methodShortName": "AddSmartRedirectInfrastructure(...)", "fileIndex": 0, "line": 19,
@@ -570,7 +535,14 @@ var riskHotspots = [
     "metrics": [
       { "value": 19, "exceeded": true },
       { "value": 64, "exceeded": false },
-      { "value": 19.02, "exceeded": false },
+      { "value": 19, "exceeded": false },
+    ]},
+  {
+    "assembly": "Broot.Redirect.Infrastructure", "class": "Broot.Redirect.Infrastructure.Cache.CacheWarmupService", "reportPath": "Broot.Redirect.Infrastructure_CacheWarmupService.html", "methodName": "StartAsync()", "methodShortName": "StartAsync()", "fileIndex": 0, "line": 46,
+    "metrics": [
+      { "value": 19, "exceeded": true },
+      { "value": 2, "exceeded": false },
+      { "value": 23.24, "exceeded": false },
     ]},
   {
     "assembly": "Broot.Redirect.Infrastructure", "class": "Broot.Redirect.Infrastructure.Persistence.TableStorageTrackingRepository", "reportPath": "Broot.Redirect.Infrastructure_TableStorageTrackingRepository.html", "methodName": "GetTrendAsync()", "methodShortName": "GetTrendAsync()", "fileIndex": 0, "line": 163,
@@ -584,7 +556,7 @@ var riskHotspots = [
     "metrics": [
       { "value": 17, "exceeded": true },
       { "value": 128, "exceeded": false },
-      { "value": 18.05, "exceeded": false },
+      { "value": 17, "exceeded": false },
     ]},
   {
     "assembly": "Broot.Redirect.Infrastructure", "class": "Broot.Redirect.Infrastructure.Persistence.TableStorageRuleRepository", "reportPath": "Broot.Redirect.Infrastructure_TableStorageRuleRepository.html", "methodName": "BulkDeleteAsync()", "methodShortName": "BulkDeleteAsync()", "fileIndex": 0, "line": 139,

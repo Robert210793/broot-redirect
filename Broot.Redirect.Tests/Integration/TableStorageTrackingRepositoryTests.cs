@@ -270,5 +270,129 @@ namespace Broot.Redirect.Tests.Integration
 
             stats.TotalVisits.Should().BeGreaterOrEqualTo(1);
         }
+
+        [Fact]
+        public async Task GetStatsAsync_TimeRange7d_Filters()
+        {
+            await _sut.CreateAsync(CreateEntry());
+
+            var stats = await _sut.GetStatsAsync(retentionDays: 30, timeRange: "7d");
+
+            stats.TotalVisits.Should().BeGreaterOrEqualTo(1);
+        }
+
+        [Fact]
+        public async Task GetPagedAsync_WithQualityMax_FiltersResults()
+        {
+            await _sut.CreateAsync(CreateEntry(matchQuality: 100));
+            await _sut.CreateAsync(CreateEntry(matchQuality: 50));
+
+            var (entries, _) = await _sut.GetPagedAsync(
+                page: 1, limit: 50, retentionDays: 1, qualityMax: 75);
+
+            entries.Should().ContainSingle();
+            entries[0].MatchQuality.Should().Be(50);
+        }
+
+        [Fact]
+        public async Task GetPagedAsync_FeedbackNone_FiltersEmptyFeedback()
+        {
+            await _sut.CreateAsync(CreateEntry(feedback: "OK"));
+
+            var entryNoFeedback = CreateEntry();
+            entryNoFeedback.Feedback = null;
+            await _sut.CreateAsync(entryNoFeedback);
+
+            var (entries, _) = await _sut.GetPagedAsync(
+                page: 1, limit: 50, retentionDays: 1, feedbackType: "none");
+
+            entries.Should().ContainSingle();
+            entries[0].Feedback.Should().BeNullOrEmpty();
+        }
+
+        [Fact]
+        public async Task GetTrendAsync_WeekAggregation_ReturnsBuckets()
+        {
+            await _sut.CreateAsync(CreateEntry(feedback: "OK"));
+
+            var trend = await _sut.GetTrendAsync(days: 7, aggregation: "week");
+
+            trend.Should().NotBeEmpty();
+        }
+
+        [Fact]
+        public async Task GetTrendAsync_MonthAggregation_ReturnsBuckets()
+        {
+            await _sut.CreateAsync(CreateEntry(feedback: "OK"));
+
+            var trend = await _sut.GetTrendAsync(days: 30, aggregation: "month");
+
+            trend.Should().NotBeEmpty();
+        }
+
+        [Fact]
+        public async Task GetStatsAsync_NoFeedback_CountsAsNone()
+        {
+            var entry = CreateEntry();
+            entry.Feedback = null;
+
+            await _sut.CreateAsync(entry);
+
+            var stats = await _sut.GetStatsAsync(retentionDays: 1);
+
+            stats.FeedbackNone.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task GetStatsAsync_MatchRate_CalculatedCorrectly()
+        {
+            await _sut.CreateAsync(CreateEntry(matchQuality: 100, ruleId: "r1"));
+
+            var unmatchedEntry = CreateEntry(matchQuality: 0);
+            unmatchedEntry.RuleId = null;
+            unmatchedEntry.NewUrl = null;
+            await _sut.CreateAsync(unmatchedEntry);
+
+            var stats = await _sut.GetStatsAsync(retentionDays: 1);
+
+            stats.TotalVisits.Should().Be(2);
+            stats.MatchedVisits.Should().BeGreaterOrEqualTo(1);
+            stats.MatchRate.Should().BeGreaterThan(0);
+        }
+
+        [Fact]
+        public async Task DeleteOlderThanAsync_DeletesOldEntries()
+        {
+            await _sut.CreateAsync(CreateEntry());
+
+            // Delete entries older than now + 1 day (should delete everything)
+            var deleted = await _sut.DeleteOlderThanAsync(DateTimeOffset.UtcNow.AddDays(1));
+
+            deleted.Should().BeGreaterOrEqualTo(1);
+        }
+
+        [Fact]
+        public async Task GetAllFilteredAsync_WithSearch_Filters()
+        {
+            await _sut.CreateAsync(CreateEntry("/findable-path"));
+            await _sut.CreateAsync(CreateEntry("/other"));
+
+            var results = await _sut.GetAllFilteredAsync(
+                retentionDays: 1, search: "findable");
+
+            results.Should().ContainSingle();
+        }
+
+        [Fact]
+        public async Task GetAllFilteredAsync_WithQualityFilter_Filters()
+        {
+            await _sut.CreateAsync(CreateEntry(matchQuality: 100));
+            await _sut.CreateAsync(CreateEntry(matchQuality: 30));
+
+            var results = await _sut.GetAllFilteredAsync(
+                retentionDays: 1, qualityMin: 50);
+
+            results.Should().ContainSingle();
+        }
     }
 }
