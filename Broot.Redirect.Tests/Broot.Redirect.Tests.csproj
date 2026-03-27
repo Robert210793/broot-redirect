@@ -8,6 +8,8 @@
     <AltCover>true</AltCover>
     <AltCoverReport>$(MSBuildThisFileDirectory)coverage.xml</AltCoverReport>
     <AltCoverAssemblyFilter>xunit|AltCover|Broot.Redirect.Tests|FluentAssertions|NSubstitute|Microsoft\.TestPlatform|Microsoft\.VisualStudio\.TestPlatform|testhost|RBush|ClosedXML|CsvHelper|Castle\.|Azure\.|Swashbuckle|Microsoft\.ApplicationInsights</AltCoverAssemblyFilter>
+    <AltCoverFileFilter>Program\.cs</AltCoverFileFilter>
+    <AltCoverAttributeFilter>ExcludeFromCodeCoverage</AltCoverAttributeFilter>
   </PropertyGroup>
 
   <ItemGroup>

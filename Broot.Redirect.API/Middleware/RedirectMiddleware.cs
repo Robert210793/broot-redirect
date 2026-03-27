@@ -56,71 +56,106 @@ namespace Broot.Redirect.API.Middleware
 
             if (matchResult != null)
             {
-                var rule = matchResult.Rule;
-
-                if (appSettings.AutoRedirect && rule.AutoRedirect)
+                if (await TryAutoRedirect(context, matchResult, urlTransformService, appSettings, trackingRepository, fullPath))
                 {
-                    var targetUrl = urlTransformService.ResolveTargetUrl(
-                        fullPath,
-                        rule,
-                        appSettings.DefaultNewDomain);
-
-                    if (!string.IsNullOrEmpty(targetUrl))
-                    {
-                        _logger.LogInformation(
-                            "Auto-redirect: {SourcePath} -> {TargetUrl} (Rule: {RuleId})",
-                            path,
-                            targetUrl,
-                            rule.Id);
-
-                        try
-                        {
-                            var trackingEntry = new TrackingEntry
-                            {
-                                Id = Guid.NewGuid(),
-                                OldUrl = context.Request.Scheme + "://" + context.Request.Host + fullPath,
-                                NewUrl = targetUrl,
-                                Path = fullPath,
-                                Timestamp = DateTimeOffset.UtcNow,
-                                UserAgent = context.Request.Headers.UserAgent.ToString(),
-                                Referrer = context.Request.Headers.Referer.ToString(),
-                                RuleId = rule.Id.ToString(),
-                                MatchQuality = matchResult.Quality,
-                                Feedback = "auto-redirect",
-                                RedirectStrategy = "rule"
-                            };
-
-                            await trackingRepository.CreateAsync(trackingEntry);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "Failed to track auto-redirect for {Path}", path);
-                        }
-
-                        WriteRedirect(context.Response, targetUrl);
-
-                        return;
-                    }
+                    return;
                 }
 
                 _logger.LogDebug(
                     "Info page fallthrough: {SourcePath} matched rule {RuleId}, AutoRedirect=false",
                     path,
-                    rule.Id);
+                    matchResult.Rule.Id);
 
                 await _next(context);
 
                 return;
             }
 
+            var noMatchUrl = ResolveNoMatchRedirect(appSettings, smartSearchService, fullPath);
+
+            if (noMatchUrl != null)
+            {
+                _logger.LogInformation("No match for {Path}, redirecting to {Url}", path, noMatchUrl);
+
+                WriteRedirect(context.Response, noMatchUrl);
+
+                return;
+            }
+
+            await _next(context);
+        }
+
+        private async Task<bool> TryAutoRedirect(
+            HttpContext context,
+            RuleMatchResult matchResult,
+            IUrlTransformService urlTransformService,
+            AppSettings appSettings,
+            ITrackingRepository trackingRepository,
+            string fullPath)
+        {
+            var rule = matchResult.Rule;
+
+            if (!appSettings.AutoRedirect || !rule.AutoRedirect)
+            {
+                return false;
+            }
+
+            var targetUrl = urlTransformService.ResolveTargetUrl(
+                fullPath,
+                rule,
+                appSettings.DefaultNewDomain);
+
+            if (string.IsNullOrEmpty(targetUrl))
+            {
+                return false;
+            }
+
+            var path = context.Request.Path.Value ?? "/";
+
+            _logger.LogInformation(
+                "Auto-redirect: {SourcePath} -> {TargetUrl} (Rule: {RuleId})",
+                path,
+                targetUrl,
+                rule.Id);
+
+            try
+            {
+                var trackingEntry = new TrackingEntry
+                {
+                    Id = Guid.NewGuid(),
+                    OldUrl = context.Request.Scheme + "://" + context.Request.Host + fullPath,
+                    NewUrl = targetUrl,
+                    Path = fullPath,
+                    Timestamp = DateTimeOffset.UtcNow,
+                    UserAgent = context.Request.Headers.UserAgent.ToString(),
+                    Referrer = context.Request.Headers.Referer.ToString(),
+                    RuleId = rule.Id.ToString(),
+                    MatchQuality = matchResult.Quality,
+                    Feedback = "auto-redirect",
+                    RedirectStrategy = "rule"
+                };
+
+                await trackingRepository.CreateAsync(trackingEntry);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to track auto-redirect for {Path}", path);
+            }
+
+            WriteRedirect(context.Response, targetUrl);
+
+            return true;
+        }
+
+        private static string? ResolveNoMatchRedirect(
+            AppSettings appSettings,
+            ISmartSearchService smartSearchService,
+            string fullPath)
+        {
             if (appSettings.NoMatchBehavior.Equals("RedirectToDefault", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrEmpty(appSettings.DefaultNewDomain))
             {
-                _logger.LogInformation("No match for {Path}, redirecting to default domain", path);
-
-                WriteRedirect(context.Response, appSettings.DefaultNewDomain);
-
-                return;
+                return appSettings.DefaultNewDomain;
             }
 
             if (appSettings.NoMatchBehavior.Equals("SmartSearch", StringComparison.OrdinalIgnoreCase))
@@ -129,17 +164,11 @@ namespace Broot.Redirect.API.Middleware
 
                 if (!string.IsNullOrEmpty(searchUrl))
                 {
-                    _logger.LogInformation("No match for {Path}, smart search redirect to {SearchUrl}", path, searchUrl);
-
-                    WriteRedirect(context.Response, searchUrl);
-
-                    return;
+                    return searchUrl;
                 }
-
-                _logger.LogDebug("No match for {Path}, smart search could not build URL, falling through to SPA", path);
             }
 
-            await _next(context);
+            return null;
         }
 
         private static void WriteRedirect(HttpResponse response, string targetUrl)

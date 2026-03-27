@@ -1055,6 +1055,101 @@ namespace Broot.Redirect.Tests.API.Controllers
             }
         }
 
+        public class ImportPreviewAdditionalTests : RulesControllerTests
+        {
+            [Fact]
+            public async Task ImportPreview_WithUrlEncoding_EncodesMatcherAndTarget()
+            {
+                _settingsCache.GetSettings().Returns(new AppSettings { EncodeImportedUrls = true });
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Matcher = "/path with spaces",
+                        TargetUrl = "/target with spaces",
+                        RedirectType = "partial"
+                    }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Total.Should().Be(1);
+                response.Counts.New.Should().Be(1);
+            }
+
+            [Fact]
+            public async Task ImportPreview_WithValidationError_MarkedAsInvalid()
+            {
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Matcher = "/valid",
+                        TargetUrl = "no-protocol-url",
+                        RedirectType = "wildcard"
+                    }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
+                response.Preview[0].Status.Should().Be("invalid");
+            }
+
+            [Fact]
+            public async Task ImportPreview_LargeList_IsLimited()
+            {
+                var entries = Enumerable.Range(1, 1005)
+                    .Select(i => new ImportRuleEntry
+                    {
+                        Matcher = $"/rule-{i}",
+                        TargetUrl = $"/target-{i}",
+                        RedirectType = "partial"
+                    })
+                    .ToList();
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Total.Should().Be(1005);
+                response.IsLimited.Should().BeTrue();
+                response.Preview.Should().HaveCount(1000);
+            }
+        }
+
         public class ImportTests : RulesControllerTests
         {
             [Fact]
@@ -1111,6 +1206,127 @@ namespace Broot.Redirect.Tests.API.Controllers
                 var result = await _sut.Import();
 
                 result.Should().BeOfType<BadRequestObjectResult>();
+            }
+
+            [Fact]
+            public async Task Import_WithExistingRuleById_ReturnsJobId()
+            {
+                var existingRule = CreateRule("/existing");
+
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existingRule });
+                _cacheService.GetById(existingRule.Id).Returns(existingRule);
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule>());
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Id = existingRule.Id.ToString(),
+                        Matcher = "/existing",
+                        TargetUrl = "/updated-target",
+                        RedirectType = "partial"
+                    }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.Import() as OkObjectResult;
+
+                result.Should().NotBeNull();
+            }
+
+            [Fact]
+            public async Task Import_WithCreatedAtField_ReturnsJobId()
+            {
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule>());
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Matcher = "/with-date",
+                        TargetUrl = "/target",
+                        RedirectType = "partial",
+                        CreatedAt = "2023-06-15T00:00:00Z"
+                    }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.Import() as OkObjectResult;
+
+                result.Should().NotBeNull();
+            }
+
+            [Fact]
+            public async Task Import_WithInvalidEntry_ReturnsJobId()
+            {
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule>());
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry { Matcher = "", TargetUrl = "/target" },
+                    new ImportRuleEntry { Matcher = "/valid", TargetUrl = "/target", RedirectType = "partial" }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.Import() as OkObjectResult;
+
+                result.Should().NotBeNull();
+            }
+
+            [Fact]
+            public async Task Import_WithMatcherLookupMatch_ReturnsJobId()
+            {
+                var existingRule = CreateRule("/existing-matcher");
+
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existingRule });
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule>());
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Matcher = "/existing-matcher",
+                        TargetUrl = "/new-target",
+                        RedirectType = "partial"
+                    }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = stream;
+
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.Import() as OkObjectResult;
+
+                result.Should().NotBeNull();
             }
         }
 

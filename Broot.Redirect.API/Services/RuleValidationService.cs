@@ -65,48 +65,52 @@ namespace Broot.Redirect.API.Services
             switch (redirectType)
             {
                 case RedirectType.Wildcard:
-                    {
-                        if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                            && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                        {
-                            errors.Add("Bei Typ 'Vollstaendig' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein");
-                        }
-
-                        break;
-                    }
-
+                    ValidateWildcardTargetUrl(targetUrl, errors);
+                    break;
                 case RedirectType.Partial:
-                    {
-                        if (!targetUrl.StartsWith('/')
-                            && !targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                            && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                        {
-                            errors.Add("Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen oder eine vollstaendige URL sein");
-                        }
-
-                        break;
-                    }
-
+                    ValidatePartialTargetUrl(targetUrl, errors);
+                    break;
                 case RedirectType.Domain:
-                    {
-                        if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                            && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                        {
-                            errors.Add("Bei Typ 'Domain-Ersatz' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein");
+                    ValidateDomainTargetUrl(targetUrl, errors);
+                    break;
+            }
+        }
 
-                            break;
-                        }
+        private static void ValidateWildcardTargetUrl(string targetUrl, List<string> errors)
+        {
+            if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add("Bei Typ 'Vollstaendig' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein");
+            }
+        }
 
-                        if (Uri.TryCreate(targetUrl, UriKind.Absolute, out var parsedUri))
-                        {
-                            if (parsedUri.AbsolutePath != "/" && parsedUri.AbsolutePath != string.Empty)
-                            {
-                                errors.Add("Bei Typ 'Domain-Ersatz' darf die Ziel-URL keine Unterordner enthalten");
-                            }
-                        }
+        private static void ValidatePartialTargetUrl(string targetUrl, List<string> errors)
+        {
+            if (!targetUrl.StartsWith('/')
+                && !targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add("Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen oder eine vollstaendige URL sein");
+            }
+        }
 
-                        break;
-                    }
+        private static void ValidateDomainTargetUrl(string targetUrl, List<string> errors)
+        {
+            if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add("Bei Typ 'Domain-Ersatz' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein");
+
+                return;
+            }
+
+            if (Uri.TryCreate(targetUrl, UriKind.Absolute, out var parsedUri))
+            {
+                if (parsedUri.AbsolutePath != "/" && parsedUri.AbsolutePath != string.Empty)
+                {
+                    errors.Add("Bei Typ 'Domain-Ersatz' darf die Ziel-URL keine Unterordner enthalten");
+                }
             }
         }
 

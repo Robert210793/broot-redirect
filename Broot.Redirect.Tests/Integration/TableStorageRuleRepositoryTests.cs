@@ -168,6 +168,48 @@ namespace Broot.Redirect.Tests.Integration
         }
 
         [Fact]
+        public async Task BulkUpsertAsync_EmptyList_NoError()
+        {
+            await _sut.BulkUpsertAsync(Array.Empty<RedirectRule>());
+
+            var all = await _sut.GetAllAsync();
+
+            all.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task BulkUpsertAsync_MultipleRules_InsertsAll()
+        {
+            var rules = Enumerable.Range(1, 5)
+                .Select(i => CreateRule($"/bulk-{i}"))
+                .ToList();
+
+            await _sut.BulkUpsertAsync(rules);
+
+            var all = await _sut.GetAllAsync();
+
+            all.Should().HaveCount(5);
+        }
+
+        [Fact]
+        public async Task BulkUpsertAsync_UpdatesExistingRule()
+        {
+            var rule = CreateRule("/bulk-update");
+            rule.TargetUrl = "/original";
+
+            await _sut.CreateAsync(rule);
+
+            rule.TargetUrl = "/updated";
+
+            await _sut.BulkUpsertAsync(new[] { rule });
+
+            var all = await _sut.GetAllAsync();
+
+            all.Should().ContainSingle();
+            all[0].TargetUrl.Should().Be("/updated");
+        }
+
+        [Fact]
         public async Task DeleteAllAsync_ClearsTable()
         {
             await _sut.CreateAsync(CreateRule("/del1"));

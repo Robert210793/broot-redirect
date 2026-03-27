@@ -154,125 +154,14 @@ namespace Broot.Redirect.Core.Services
             for (var ruleIndex = 0; ruleIndex < rules.Count; ruleIndex++)
             {
                 var processed = rules[ruleIndex];
-                var rule = processed.Rule;
-                var rulePath = processed.NormalizedPath;
-                var ruleQuery = processed.NormalizedQuery;
 
                 if (processed.IsDomainMatcher)
                 {
-                    var matcherDomain = rule.Matcher.Split('?', 2)[0].ToLowerInvariant();
-
-                    if (requestHostname != matcherDomain)
-                    {
-                        continue;
-                    }
-
-                    if (!QueryMatches(ruleQuery, requestQuery, out var domainQueryPairs))
-                    {
-                        continue;
-                    }
-
-                    var domainScore = 1000 + (domainQueryPairs * config.WeightQueryPair);
-
-                    if (IsBetterCandidate(best, domainScore, 0, domainQueryPairs, 0, false, rule))
-                    {
-                        best = new BestCandidate
-                        {
-                            Rule = rule,
-                            Score = domainScore,
-                            StaticSegments = 0,
-                            QueryPairs = domainQueryPairs,
-                            Wildcards = 0,
-                            Start = 0,
-                            RuleQuery = ruleQuery,
-                            HasPartialSegmentMatch = false
-                        };
-                    }
-
-                    continue;
+                    best = EvaluateDomainCandidate(processed, requestHostname, requestQuery, config, best);
                 }
-
-                if (rulePath.Length > requestPath.Length)
+                else
                 {
-                    continue;
-                }
-
-                for (var start = 0; start <= requestPath.Length - rulePath.Length; start++)
-                {
-                    var staticMatches = 0;
-                    var wildcards = 0;
-                    var pathMismatch = false;
-                    var hasPartialSegmentMatch = false;
-
-                    for (var segmentIndex = 0; segmentIndex < rulePath.Length; segmentIndex++)
-                    {
-                        var segment = rulePath[segmentIndex];
-                        var requestSegment = requestPath[start + segmentIndex];
-
-                        if (segment == "*" || segment.StartsWith(':'))
-                        {
-                            wildcards++;
-                            continue;
-                        }
-
-                        if (segment.EndsWith('*') && segment.Length > 1)
-                        {
-                            var prefix = segment[..^1];
-
-                            if (requestSegment.StartsWith(prefix, StringComparison.Ordinal))
-                            {
-                                staticMatches++;
-                                hasPartialSegmentMatch = true;
-                                continue;
-                            }
-                        }
-
-                        if (segment == requestSegment)
-                        {
-                            staticMatches++;
-                        }
-                        else
-                        {
-                            pathMismatch = true;
-                            break;
-                        }
-                    }
-
-                    if (pathMismatch)
-                    {
-                        continue;
-                    }
-
-                    if (!QueryMatches(ruleQuery, requestQuery, out var queryPairs))
-                    {
-                        continue;
-                    }
-
-                    var isExact = start == 0
-                        && rulePath.Length == requestPath.Length
-                        && !hasPartialSegmentMatch
-                        && ruleQuery.Count == requestQuery.Count;
-
-                    var score =
-                        staticMatches * config.WeightPathSegment
-                        + queryPairs * config.WeightQueryPair
-                        + wildcards * config.PenaltyWildcard
-                        + (isExact ? config.BonusExactMatch : 0);
-
-                    if (IsBetterCandidate(best, score, staticMatches, queryPairs, wildcards, isExact, rule))
-                    {
-                        best = new BestCandidate
-                        {
-                            Rule = rule,
-                            Score = score,
-                            StaticSegments = staticMatches,
-                            QueryPairs = queryPairs,
-                            Wildcards = wildcards,
-                            Start = start,
-                            RuleQuery = ruleQuery,
-                            HasPartialSegmentMatch = hasPartialSegmentMatch
-                        };
-                    }
+                    best = EvaluatePathCandidate(processed, requestPath, requestQuery, config, best);
                 }
             }
 
@@ -291,6 +180,153 @@ namespace Broot.Redirect.Core.Services
                 Quality = quality,
                 Level = level
             };
+        }
+
+        private static BestCandidate? EvaluateDomainCandidate(
+            ProcessedRule processed,
+            string requestHostname,
+            Dictionary<string, List<string>> requestQuery,
+            RuleMatchingConfig config,
+            BestCandidate? best)
+        {
+            var rule = processed.Rule;
+            var ruleQuery = processed.NormalizedQuery;
+            var matcherDomain = rule.Matcher.Split('?', 2)[0].ToLowerInvariant();
+
+            if (requestHostname != matcherDomain)
+            {
+                return best;
+            }
+
+            if (!QueryMatches(ruleQuery, requestQuery, out var domainQueryPairs))
+            {
+                return best;
+            }
+
+            var domainScore = 1000 + (domainQueryPairs * config.WeightQueryPair);
+
+            if (IsBetterCandidate(best, domainScore, 0, domainQueryPairs, 0, false, rule))
+            {
+                return new BestCandidate
+                {
+                    Rule = rule,
+                    Score = domainScore,
+                    StaticSegments = 0,
+                    QueryPairs = domainQueryPairs,
+                    Wildcards = 0,
+                    Start = 0,
+                    RuleQuery = ruleQuery,
+                    HasPartialSegmentMatch = false
+                };
+            }
+
+            return best;
+        }
+
+        private static BestCandidate? EvaluatePathCandidate(
+            ProcessedRule processed,
+            string[] requestPath,
+            Dictionary<string, List<string>> requestQuery,
+            RuleMatchingConfig config,
+            BestCandidate? best)
+        {
+            var rule = processed.Rule;
+            var rulePath = processed.NormalizedPath;
+            var ruleQuery = processed.NormalizedQuery;
+
+            if (rulePath.Length > requestPath.Length)
+            {
+                return best;
+            }
+
+            for (var start = 0; start <= requestPath.Length - rulePath.Length; start++)
+            {
+                if (!TryMatchSegments(rulePath, requestPath, start, out var staticMatches, out var wildcards, out var hasPartialSegmentMatch))
+                {
+                    continue;
+                }
+
+                if (!QueryMatches(ruleQuery, requestQuery, out var queryPairs))
+                {
+                    continue;
+                }
+
+                var isExact = start == 0
+                    && rulePath.Length == requestPath.Length
+                    && !hasPartialSegmentMatch
+                    && ruleQuery.Count == requestQuery.Count;
+
+                var score =
+                    staticMatches * config.WeightPathSegment
+                    + queryPairs * config.WeightQueryPair
+                    + wildcards * config.PenaltyWildcard
+                    + (isExact ? config.BonusExactMatch : 0);
+
+                if (IsBetterCandidate(best, score, staticMatches, queryPairs, wildcards, isExact, rule))
+                {
+                    best = new BestCandidate
+                    {
+                        Rule = rule,
+                        Score = score,
+                        StaticSegments = staticMatches,
+                        QueryPairs = queryPairs,
+                        Wildcards = wildcards,
+                        Start = start,
+                        RuleQuery = ruleQuery,
+                        HasPartialSegmentMatch = hasPartialSegmentMatch
+                    };
+                }
+            }
+
+            return best;
+        }
+
+        private static bool TryMatchSegments(
+            string[] rulePath,
+            string[] requestPath,
+            int start,
+            out int staticMatches,
+            out int wildcards,
+            out bool hasPartialSegmentMatch)
+        {
+            staticMatches = 0;
+            wildcards = 0;
+            hasPartialSegmentMatch = false;
+
+            for (var segmentIndex = 0; segmentIndex < rulePath.Length; segmentIndex++)
+            {
+                var segment = rulePath[segmentIndex];
+                var requestSegment = requestPath[start + segmentIndex];
+
+                if (segment == "*" || segment.StartsWith(':'))
+                {
+                    wildcards++;
+                    continue;
+                }
+
+                if (segment.EndsWith('*') && segment.Length > 1)
+                {
+                    var prefix = segment[..^1];
+
+                    if (requestSegment.StartsWith(prefix, StringComparison.Ordinal))
+                    {
+                        staticMatches++;
+                        hasPartialSegmentMatch = true;
+                        continue;
+                    }
+                }
+
+                if (segment == requestSegment)
+                {
+                    staticMatches++;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         internal static string[] NormalizePath(string path, RuleMatchingConfig config)
@@ -423,76 +459,64 @@ namespace Broot.Redirect.Core.Services
                 return true;
             }
 
-            if (score > current.Score)
+            return CompareToCandidate(current, score, staticSegments, queryPairs, wildcards, isExact, rule) < 0;
+        }
+
+        private static int CompareToCandidate(
+            BestCandidate current,
+            int score,
+            int staticSegments,
+            int queryPairs,
+            int wildcards,
+            bool isExact,
+            RedirectRule rule)
+        {
+            var cmp = current.Score.CompareTo(score);
+            if (cmp != 0) return cmp;
+
+            cmp = current.StaticSegments.CompareTo(staticSegments);
+            if (cmp != 0) return cmp;
+
+            cmp = current.QueryPairs.CompareTo(queryPairs);
+            if (cmp != 0) return cmp;
+
+            cmp = wildcards.CompareTo(current.Wildcards);
+            if (cmp != 0) return cmp;
+
+            return CompareMatcherLength(rule, current.Rule, isExact);
+        }
+
+        private static int CompareMatcherLength(RedirectRule candidate, RedirectRule current, bool isExact)
+        {
+            var candidateLen = candidate.Matcher.Length;
+            var currentLen = current.Matcher.Length;
+
+            if (!isExact && candidateLen > currentLen)
             {
-                return true;
+                return -1;
             }
 
-            if (score < current.Score)
+            if (candidateLen < currentLen)
             {
-                return false;
+                return 1;
             }
 
-            if (staticSegments > current.StaticSegments)
+            if (candidateLen == currentLen)
             {
-                return true;
+                return CompareCreatedAtThenId(candidate, current);
             }
 
-            if (staticSegments < current.StaticSegments)
-            {
-                return false;
-            }
+            return 1;
+        }
 
-            if (queryPairs > current.QueryPairs)
-            {
-                return true;
-            }
+        private static int CompareCreatedAtThenId(RedirectRule candidate, RedirectRule current)
+        {
+            var cmp = candidate.CreatedAt.CompareTo(current.CreatedAt);
+            if (cmp != 0) return cmp;
 
-            if (queryPairs < current.QueryPairs)
-            {
-                return false;
-            }
-
-            if (wildcards < current.Wildcards)
-            {
-                return true;
-            }
-
-            if (wildcards > current.Wildcards)
-            {
-                return false;
-            }
-
-            if (!isExact && rule.Matcher.Length > current.Rule.Matcher.Length)
-            {
-                return true;
-            }
-
-            if (rule.Matcher.Length < current.Rule.Matcher.Length)
-            {
-                return false;
-            }
-
-            if (rule.Matcher.Length == current.Rule.Matcher.Length)
-            {
-                var comparison = rule.CreatedAt.CompareTo(current.Rule.CreatedAt);
-
-                if (comparison < 0)
-                {
-                    return true;
-                }
-
-                if (comparison > 0)
-                {
-                    return false;
-                }
-
-                return string.CompareOrdinal(
-                    rule.Id.ToString("N"),
-                    current.Rule.Id.ToString("N")) < 0;
-            }
-
-            return false;
+            return string.CompareOrdinal(
+                candidate.Id.ToString("N"),
+                current.Id.ToString("N"));
         }
 
         private static int CalculateQuality(

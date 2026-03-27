@@ -278,6 +278,71 @@ namespace Broot.Redirect.Tests.Core.Services
 
                 result.Should().BeNull();
             }
+
+            [Fact]
+            public void ResolveMatch_DomainRuleMatches_ReturnsResult()
+            {
+                var rule = CreateRule("example.com", RedirectType.Domain, "https://new.com");
+
+                _cacheService.GetPartialAndDomainRules().Returns(new List<RedirectRule> { rule });
+
+                var result = _sut.ResolveMatch("http://example.com/page", _config);
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().Be(rule);
+                result.Quality.Should().Be(100);
+            }
+
+            [Fact]
+            public void ResolveMatch_DomainRuleWithQuery_MatchesWithExtraQueryParams()
+            {
+                var rule = CreateRule("example.com?key=val", RedirectType.Domain, "https://new.com");
+
+                _cacheService.GetPartialAndDomainRules().Returns(new List<RedirectRule> { rule });
+
+                var result = _sut.ResolveMatch("http://example.com/page?key=val&extra=1", _config);
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().Be(rule);
+            }
+
+            [Fact]
+            public void ResolveMatch_DomainRuleMismatch_ReturnsNull()
+            {
+                var rule = CreateRule("other.com", RedirectType.Domain, "https://new.com");
+
+                _cacheService.GetPartialAndDomainRules().Returns(new List<RedirectRule> { rule });
+
+                var result = _sut.ResolveMatch("http://example.com/page", _config);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void ResolveMatch_DomainRuleQueryMismatch_ReturnsNull()
+            {
+                var rule = CreateRule("example.com?required=yes", RedirectType.Domain, "https://new.com");
+
+                _cacheService.GetPartialAndDomainRules().Returns(new List<RedirectRule> { rule });
+
+                var result = _sut.ResolveMatch("http://example.com/page", _config);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void ResolveMatch_RegexNoMatch_ReturnsNull()
+            {
+                var regex = new Regex("^/special-.*$", RegexOptions.None, TimeSpan.FromSeconds(1));
+                var rule = CreateRule("^/special-.*$", RedirectType.Regex);
+
+                _cacheService.GetRegexRules()
+                    .Returns(new List<(Regex, RedirectRule)> { (regex, rule) });
+
+                var result = _sut.ResolveMatch("/other-path", _config);
+
+                result.Should().BeNull();
+            }
         }
 
         public class FindMatchingRuleTests
@@ -447,6 +512,201 @@ namespace Broot.Redirect.Tests.Core.Services
 
                 result.Should().NotBeNull();
                 result!.Rule.Should().Be(olderRule);
+            }
+
+            [Fact]
+            public void FindMatchingRule_Tiebreaker_MoreQueryPairsWins()
+            {
+                var tieConfig = new RuleMatchingConfig
+                {
+                    WeightPathSegment = 1,
+                    WeightQueryPair = 0,
+                    PenaltyWildcard = 0,
+                    BonusExactMatch = 0,
+                    TrailingSlashPolicy = TrailingSlashPolicy.Ignore,
+                    CaseSensitivePath = false,
+                    CaseSensitiveQuery = false
+                };
+
+                var ruleMoreQuery = CreateRule("/a?x=1&y=2", RedirectType.Partial);
+                var ruleLessQuery = CreateRule("/a?x=1", RedirectType.Partial);
+
+                var processed = new[]
+                {
+                    _sut.PreprocessRule(ruleLessQuery, tieConfig),
+                    _sut.PreprocessRule(ruleMoreQuery, tieConfig)
+                };
+
+                var result = _sut.FindMatchingRule("/a?x=1&y=2&z=3", processed, tieConfig);
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().Be(ruleMoreQuery);
+            }
+
+            [Fact]
+            public void FindMatchingRule_Tiebreaker_SameCreatedAt_SmallerIdWins()
+            {
+                var fixedDate = new DateTimeOffset(2023, 6, 15, 0, 0, 0, TimeSpan.Zero);
+
+                var ruleA = new RedirectRule
+                {
+                    Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                    Matcher = "/path",
+                    RedirectType = RedirectType.Partial,
+                    CreatedAt = fixedDate
+                };
+
+                var ruleB = new RedirectRule
+                {
+                    Id = new Guid("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+                    Matcher = "/path",
+                    RedirectType = RedirectType.Partial,
+                    CreatedAt = fixedDate
+                };
+
+                var tieConfig = new RuleMatchingConfig
+                {
+                    WeightPathSegment = 1,
+                    WeightQueryPair = 0,
+                    PenaltyWildcard = 0,
+                    BonusExactMatch = 0,
+                    TrailingSlashPolicy = TrailingSlashPolicy.Ignore,
+                    CaseSensitivePath = false,
+                    CaseSensitiveQuery = false
+                };
+
+                var processed = new[]
+                {
+                    _sut.PreprocessRule(ruleB, tieConfig),
+                    _sut.PreprocessRule(ruleA, tieConfig)
+                };
+
+                var result = _sut.FindMatchingRule("/path", processed, tieConfig);
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().Be(ruleA);
+            }
+
+            [Fact]
+            public void FindMatchingRule_ExactMatch_DoesNotPreferLongerMatcher()
+            {
+                var tieConfig = new RuleMatchingConfig
+                {
+                    WeightPathSegment = 1,
+                    WeightQueryPair = 0,
+                    PenaltyWildcard = 0,
+                    BonusExactMatch = 100,
+                    TrailingSlashPolicy = TrailingSlashPolicy.Ignore,
+                    CaseSensitivePath = false,
+                    CaseSensitiveQuery = false
+                };
+
+                var shorterRule = CreateRule("/a", RedirectType.Partial,
+                    createdAt: new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
+                var longerRule = CreateRule("/a/b", RedirectType.Partial,
+                    createdAt: new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+                var processed = new[]
+                {
+                    _sut.PreprocessRule(longerRule, tieConfig),
+                    _sut.PreprocessRule(shorterRule, tieConfig)
+                };
+
+                // /a is an exact match for shorterRule (1 segment, bonus 100 → score 101)
+                // /a also matches longerRule at offset but only 0 of 2 segments → doesn't match
+                // So shorterRule wins via exact match bonus
+                var result = _sut.FindMatchingRule("/a", processed, tieConfig);
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().Be(shorterRule);
+            }
+
+            [Fact]
+            public void FindMatchingRule_Tiebreaker_ShorterMatcherWinsWhenBothNotExact()
+            {
+                var tieConfig = new RuleMatchingConfig
+                {
+                    WeightPathSegment = 1,
+                    WeightQueryPair = 0,
+                    PenaltyWildcard = 0,
+                    BonusExactMatch = 0,
+                    TrailingSlashPolicy = TrailingSlashPolicy.Ignore,
+                    CaseSensitivePath = false,
+                    CaseSensitiveQuery = false
+                };
+
+                // Both rules match /a/b/c at different offsets, neither is exact
+                // With equal score and segments, shorter matcher means current wins
+                var ruleShort = CreateRule("/a", RedirectType.Partial,
+                    createdAt: new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
+                var ruleLong = CreateRule("/a/b", RedirectType.Partial,
+                    createdAt: new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+                var processed = new[]
+                {
+                    _sut.PreprocessRule(ruleShort, tieConfig),
+                    _sut.PreprocessRule(ruleLong, tieConfig)
+                };
+
+                var result = _sut.FindMatchingRule("/a/b/c", processed, tieConfig);
+
+                result.Should().NotBeNull();
+                // ruleLong has more static segments (2 vs 1), so it wins
+                result!.Rule.Should().Be(ruleLong);
+            }
+
+            [Fact]
+            public void FindMatchingRule_DomainRule_MatchesHostname()
+            {
+                var rule = CreateRule("example.com", RedirectType.Domain);
+
+                var processed = new[]
+                {
+                    _sut.PreprocessRule(rule, _config)
+                };
+
+                var result = _sut.FindMatchingRule("http://example.com/page", processed, _config);
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().Be(rule);
+            }
+
+            [Fact]
+            public void FindMatchingRule_DomainRule_NoMatchDifferentHost()
+            {
+                var rule = CreateRule("other.com", RedirectType.Domain);
+
+                var processed = new[]
+                {
+                    _sut.PreprocessRule(rule, _config)
+                };
+
+                var result = _sut.FindMatchingRule("http://example.com/page", processed, _config);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindMatchingRule_EmptyRuleList_ReturnsNull()
+            {
+                var result = _sut.FindMatchingRule("/test", Array.Empty<ProcessedRule>(), _config);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindMatchingRule_RuleLongerThanRequest_Skipped()
+            {
+                var rule = CreateRule("/a/b/c/d", RedirectType.Partial);
+
+                var processed = new[]
+                {
+                    _sut.PreprocessRule(rule, _config)
+                };
+
+                var result = _sut.FindMatchingRule("/a/b", processed, _config);
+
+                result.Should().BeNull();
             }
         }
 

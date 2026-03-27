@@ -4,8 +4,10 @@ using System.Text.Json;
 using CsvHelper;
 using CsvHelper.Configuration;
 using ClosedXML.Excel;
+using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Models;
 using Broot.Redirect.API.Dtos;
+using Microsoft.AspNetCore.Http;
 
 namespace Broot.Redirect.API.Services
 {
@@ -381,6 +383,219 @@ namespace Broot.Redirect.API.Services
             }
 
             return value;
+        }
+
+        // --- Shared import helpers ---
+
+        public static async Task<(List<ImportRuleEntry>? Entries, string? Error)> ParseImportEntries(
+            string contentType,
+            IFormFileCollection? files,
+            Stream body,
+            bool supportJson = true)
+        {
+            if (contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+            {
+                return await ParseFromFile(files, supportJson);
+            }
+
+            try
+            {
+                var entries = await ParseJsonFromStreamAsync(body);
+                return (entries, null);
+            }
+            catch (JsonException exception)
+            {
+                return (null, $"Invalid JSON: {exception.Message}");
+            }
+        }
+
+        private static async Task<(List<ImportRuleEntry>? Entries, string? Error)> ParseFromFile(
+            IFormFileCollection? files,
+            bool supportJson)
+        {
+            var file = files?.FirstOrDefault();
+
+            if (file == null || file.Length == 0)
+            {
+                return (null, "No file uploaded");
+            }
+
+            try
+            {
+                using var stream = file.OpenReadStream();
+
+                var entries = await ParseStreamByExtension(stream, file.FileName, supportJson);
+
+                return (entries, null);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return (null, exception.Message);
+            }
+            catch (Exception exception)
+            {
+                return (null, $"Failed to parse file: {exception.Message}");
+            }
+        }
+
+        public static async Task<List<ImportRuleEntry>> ParseStreamByExtension(
+            Stream stream,
+            string fileName,
+            bool supportJson)
+        {
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+
+            return extension switch
+            {
+                ".csv" => ParseCsv(stream),
+                ".xlsx" => ParseXlsx(stream),
+                ".xls" => ParseXlsx(stream),
+                ".json" when supportJson => await ParseJsonFromStreamAsync(stream),
+                _ => throw new InvalidOperationException(supportJson
+                    ? $"Unsupported file format: {extension}. Use .json, .csv, .xlsx, or .xls."
+                    : $"Unsupported file format: {extension}. Use .csv, .xlsx, or .xls.")
+            };
+        }
+
+        public static async Task<List<ImportRuleEntry>> ParseJsonFromStreamAsync(Stream stream)
+        {
+            return await JsonSerializer.DeserializeAsync<List<ImportRuleEntry>>(
+                stream,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<ImportRuleEntry>();
+        }
+
+        public static (CreateRuleRequest? Request, string? Error) ValidateImportEntry(
+            ImportRuleEntry entry,
+            bool encodeUrls,
+            RuleValidationService validationService)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Matcher))
+            {
+                return (null, "Matcher is required");
+            }
+
+            var redirectType = entry.RedirectType ?? "partial";
+
+            if (!TryParseRedirectType(redirectType, out _))
+            {
+                return (null, $"Invalid redirect type: '{redirectType}'");
+            }
+
+            var matcher = entry.Matcher;
+            var targetUrl = entry.TargetUrl;
+
+            if (encodeUrls)
+            {
+                matcher = PercentEncodePreservingSlashes(matcher);
+                targetUrl = targetUrl != null ? PercentEncodePreservingSlashes(targetUrl) : null;
+            }
+
+            var request = new CreateRuleRequest
+            {
+                Matcher = matcher,
+                TargetUrl = targetUrl,
+                RedirectType = redirectType,
+                InfoText = entry.InfoText,
+                AutoRedirect = entry.AutoRedirect ?? false,
+                DiscardQueryParams = entry.DiscardQueryParams ?? false,
+                ForwardQueryParams = entry.ForwardQueryParams ?? false,
+                KeptQueryParams = entry.KeptQueryParams ?? new List<KeptQueryParam>(),
+                StaticQueryParams = entry.StaticQueryParams ?? new List<StaticQueryParam>(),
+                SearchAndReplace = entry.SearchAndReplace ?? new List<SearchAndReplaceEntry>()
+            };
+
+            var validationErrors = validationService.ValidateCreate(request);
+
+            if (validationErrors.Count > 0)
+            {
+                return (null, validationErrors[0]);
+            }
+
+            return (request, null);
+        }
+
+        public static RedirectRule? ResolveExistingRule(
+            ImportRuleEntry entry,
+            IRuleCacheService cacheService,
+            Dictionary<string, RedirectRule> matcherLookup)
+        {
+            if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
+            {
+                var byId = cacheService.GetById(parsedId);
+
+                if (byId != null)
+                {
+                    return byId;
+                }
+            }
+
+            matcherLookup.TryGetValue(entry.Matcher, out var byMatcher);
+
+            return byMatcher;
+        }
+
+        public static Dictionary<string, RedirectRule> BuildMatcherLookup(IReadOnlyList<RedirectRule> rules)
+        {
+            return rules
+                .GroupBy(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        }
+
+        public static bool TryParseRedirectType(string value, out RedirectType redirectType)
+        {
+            return Enum.TryParse(value, ignoreCase: true, out redirectType);
+        }
+
+        public static string PercentEncodePreservingSlashes(string value)
+        {
+            var segments = value.Split('/');
+
+            for (var index = 0; index < segments.Length; index++)
+            {
+                segments[index] = Uri.EscapeDataString(segments[index]);
+            }
+
+            return string.Join('/', segments);
+        }
+
+        public static IEnumerable<RedirectRule> ApplySearch(IEnumerable<RedirectRule> rules, string? search)
+        {
+            var cleanSearch = search?.Trim();
+
+            if (string.IsNullOrEmpty(cleanSearch))
+            {
+                return rules;
+            }
+
+            return rules.Where(rule =>
+                (rule.Matcher?.Contains(cleanSearch, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (rule.TargetUrl?.Contains(cleanSearch, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (rule.InfoText?.Contains(cleanSearch, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        public static IEnumerable<RedirectRule> ApplySorting(
+            IEnumerable<RedirectRule> rules,
+            string sortBy,
+            string sortOrder)
+        {
+            return sortBy.ToLowerInvariant() switch
+            {
+                "matcher" => sortOrder == "asc"
+                    ? rules.OrderBy(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase)
+                    : rules.OrderByDescending(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase),
+
+                "targeturl" => sortOrder == "asc"
+                    ? rules.OrderBy(rule => rule.TargetUrl, StringComparer.OrdinalIgnoreCase)
+                    : rules.OrderByDescending(rule => rule.TargetUrl, StringComparer.OrdinalIgnoreCase),
+
+                "redirecttype" => sortOrder == "asc"
+                    ? rules.OrderBy(rule => rule.RedirectType.ToString())
+                    : rules.OrderByDescending(rule => rule.RedirectType.ToString()),
+
+                _ => sortOrder == "asc"
+                    ? rules.OrderBy(rule => rule.CreatedAt)
+                    : rules.OrderByDescending(rule => rule.CreatedAt)
+            };
         }
     }
 }

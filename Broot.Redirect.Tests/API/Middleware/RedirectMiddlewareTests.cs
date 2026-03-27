@@ -309,5 +309,85 @@ namespace Broot.Redirect.Tests.API.Middleware
             context.Response.StatusCode.Should().Be(302);
             context.Response.Headers.Location.ToString().Should().Be("https://new.com/page");
         }
+
+        [Fact]
+        public async Task InvokeAsync_AutoRedirectWithEmptyTargetUrl_FallsThrough()
+        {
+            var rule = new RedirectRule { Matcher = "/old-page", AutoRedirect = true };
+
+            var matchResult = new RuleMatchResult
+            {
+                Rule = rule,
+                Score = 1000,
+                Quality = 100,
+                Level = MatchQualityLevel.Green
+            };
+
+            _ruleMatchingService
+                .ResolveMatch(Arg.Any<string>(), Arg.Any<RuleMatchingConfig>())
+                .Returns(matchResult);
+
+            _urlTransformService
+                .ResolveTargetUrl(Arg.Any<string>(), Arg.Any<RedirectRule>(), Arg.Any<string>())
+                .Returns(string.Empty);
+
+            _settingsCache.GetSettings().Returns(new AppSettings { AutoRedirect = true });
+
+            var (nextCalled, context) = await InvokeMiddleware("/old-page");
+
+            nextCalled.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task InvokeAsync_RedirectToDefaultWithEmptyDomain_FallsThrough()
+        {
+            _ruleMatchingService
+                .ResolveMatch(Arg.Any<string>(), Arg.Any<RuleMatchingConfig>())
+                .Returns((RuleMatchResult?)null);
+
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                NoMatchBehavior = "RedirectToDefault",
+                DefaultNewDomain = ""
+            });
+
+            var (nextCalled, context) = await InvokeMiddleware("/unknown-path");
+
+            nextCalled.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task InvokeAsync_UnknownNoMatchBehavior_FallsThrough()
+        {
+            _ruleMatchingService
+                .ResolveMatch(Arg.Any<string>(), Arg.Any<RuleMatchingConfig>())
+                .Returns((RuleMatchResult?)null);
+
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                NoMatchBehavior = "SomeUnknownBehavior"
+            });
+
+            var (nextCalled, context) = await InvokeMiddleware("/unknown-path");
+
+            nextCalled.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task InvokeAsync_NoMatch_ShowInfoBehavior_FallsThrough()
+        {
+            _ruleMatchingService
+                .ResolveMatch(Arg.Any<string>(), Arg.Any<RuleMatchingConfig>())
+                .Returns((RuleMatchResult?)null);
+
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                NoMatchBehavior = "ShowInfo"
+            });
+
+            var (nextCalled, context) = await InvokeMiddleware("/no-match-path");
+
+            nextCalled.Should().BeTrue();
+        }
     }
 }

@@ -69,36 +69,8 @@ namespace Broot.Redirect.API.Controllers
             }
 
             var allRules = _cacheService.GetAll();
-            var filteredRules = allRules.AsEnumerable();
-
-            var cleanSearch = search?.Trim();
-
-            if (!string.IsNullOrEmpty(cleanSearch))
-            {
-                filteredRules = filteredRules.Where(rule =>
-                    (rule.Matcher?.Contains(cleanSearch, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (rule.TargetUrl?.Contains(cleanSearch, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (rule.InfoText?.Contains(cleanSearch, StringComparison.OrdinalIgnoreCase) ?? false));
-            }
-
-            filteredRules = sortBy.ToLowerInvariant() switch
-            {
-                "matcher" => sortOrder == "asc"
-                    ? filteredRules.OrderBy(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase)
-                    : filteredRules.OrderByDescending(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase),
-
-                "targeturl" => sortOrder == "asc"
-                    ? filteredRules.OrderBy(rule => rule.TargetUrl, StringComparer.OrdinalIgnoreCase)
-                    : filteredRules.OrderByDescending(rule => rule.TargetUrl, StringComparer.OrdinalIgnoreCase),
-
-                "redirecttype" => sortOrder == "asc"
-                    ? filteredRules.OrderBy(rule => rule.RedirectType.ToString())
-                    : filteredRules.OrderByDescending(rule => rule.RedirectType.ToString()),
-
-                _ => sortOrder == "asc"
-                    ? filteredRules.OrderBy(rule => rule.CreatedAt)
-                    : filteredRules.OrderByDescending(rule => rule.CreatedAt)
-            };
+            var filteredRules = RuleImportExportService.ApplySearch(allRules, search);
+            filteredRules = RuleImportExportService.ApplySorting(filteredRules, sortBy, sortOrder);
 
             var filteredList = filteredRules.ToList();
             var total = filteredList.Count;
@@ -395,66 +367,26 @@ namespace Broot.Redirect.API.Controllers
         [HttpPost("import/preview")]
         public async Task<IActionResult> ImportPreview()
         {
-            List<ImportRuleEntry> entries;
-
             var contentType = Request.ContentType ?? string.Empty;
 
-            if (contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+            var files = contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase)
+                ? Request.Form.Files
+                : null;
+
+            var (entries, parseError) = await RuleImportExportService.ParseImportEntries(
+                contentType, files, Request.Body, supportJson: true);
+
+            if (parseError != null)
             {
-                var file = Request.Form.Files.FirstOrDefault();
-
-                if (file == null || file.Length == 0)
-                {
-                    return BadRequest(new { error = "No file uploaded" });
-                }
-
-                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-                try
-                {
-                    using var stream = file.OpenReadStream();
-
-                    entries = extension switch
-                    {
-                        ".csv" => RuleImportExportService.ParseCsv(stream),
-                        ".xlsx" => RuleImportExportService.ParseXlsx(stream),
-                        ".xls" => RuleImportExportService.ParseXlsx(stream),
-                        ".json" => await ParseJsonFromStreamAsync(stream),
-                        _ => throw new InvalidOperationException($"Unsupported file format: {extension}. Use .json, .csv, .xlsx, or .xls.")
-                    };
-                }
-                catch (InvalidOperationException exception)
-                {
-                    return BadRequest(new { error = exception.Message });
-                }
-                catch (Exception exception)
-                {
-                    _logger.LogError(exception, "Failed to parse preview file: {FileName}", file.FileName);
-
-                    return BadRequest(new { error = $"Failed to parse file: {exception.Message}" });
-                }
-            }
-            else
-            {
-                try
-                {
-                    entries = await ParseJsonFromStreamAsync(Request.Body);
-                }
-                catch (JsonException exception)
-                {
-                    return BadRequest(new { error = $"Invalid JSON: {exception.Message}" });
-                }
+                return BadRequest(new { error = parseError });
             }
 
-            if (entries.Count == 0)
+            if (entries!.Count == 0)
             {
                 return BadRequest(new { error = "No rules found in file" });
             }
 
-            var matcherLookup = _cacheService.GetAll()
-                .GroupBy(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-
+            var matcherLookup = RuleImportExportService.BuildMatcherLookup(_cacheService.GetAll());
             var appSettings = _settingsCache.GetSettings();
             var encodeUrls = appSettings.EncodeImportedUrls;
 
@@ -473,10 +405,12 @@ namespace Broot.Redirect.API.Controllers
                     InfoText = entry.InfoText
                 };
 
-                if (string.IsNullOrWhiteSpace(entry.Matcher))
+                var (_, validationError) = RuleImportExportService.ValidateImportEntry(entry, encodeUrls, _validationService);
+
+                if (validationError != null)
                 {
                     previewEntry.Status = "invalid";
-                    previewEntry.Reason = "Matcher is required";
+                    previewEntry.Reason = validationError;
                     counts.Invalid++;
 
                     previewEntries.Add(previewEntry);
@@ -484,66 +418,7 @@ namespace Broot.Redirect.API.Controllers
                     continue;
                 }
 
-                var redirectType = entry.RedirectType ?? "partial";
-
-                if (!TryParseRedirectType(redirectType, out _))
-                {
-                    previewEntry.Status = "invalid";
-                    previewEntry.Reason = $"Invalid redirect type: '{redirectType}'";
-                    counts.Invalid++;
-
-                    previewEntries.Add(previewEntry);
-
-                    continue;
-                }
-
-                var validationMatcher = entry.Matcher;
-                var validationTargetUrl = entry.TargetUrl;
-
-                if (encodeUrls)
-                {
-                    validationMatcher = PercentEncodePreservingSlashes(validationMatcher);
-                    validationTargetUrl = validationTargetUrl != null ? PercentEncodePreservingSlashes(validationTargetUrl) : null;
-                }
-
-                var mappedRequest = new CreateRuleRequest
-                {
-                    Matcher = validationMatcher,
-                    TargetUrl = validationTargetUrl,
-                    RedirectType = redirectType,
-                    InfoText = entry.InfoText,
-                    AutoRedirect = entry.AutoRedirect ?? false,
-                    DiscardQueryParams = entry.DiscardQueryParams ?? false,
-                    ForwardQueryParams = entry.ForwardQueryParams ?? false,
-                    KeptQueryParams = entry.KeptQueryParams ?? new List<KeptQueryParam>(),
-                    StaticQueryParams = entry.StaticQueryParams ?? new List<StaticQueryParam>(),
-                    SearchAndReplace = entry.SearchAndReplace ?? new List<SearchAndReplaceEntry>()
-                };
-
-                var validationErrors = _validationService.ValidateCreate(mappedRequest);
-
-                if (validationErrors.Count > 0)
-                {
-                    previewEntry.Status = "invalid";
-                    previewEntry.Reason = validationErrors[0];
-                    counts.Invalid++;
-
-                    previewEntries.Add(previewEntry);
-
-                    continue;
-                }
-
-                RedirectRule? existingRule = null;
-
-                if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
-                {
-                    existingRule = _cacheService.GetById(parsedId);
-                }
-
-                if (existingRule == null)
-                {
-                    matcherLookup.TryGetValue(entry.Matcher, out existingRule);
-                }
+                var existingRule = RuleImportExportService.ResolveExistingRule(entry, _cacheService, matcherLookup);
 
                 if (existingRule != null)
                 {
@@ -577,59 +452,21 @@ namespace Broot.Redirect.API.Controllers
         [HttpPost("import")]
         public async Task<IActionResult> Import()
         {
-            List<ImportRuleEntry> entries;
-
             var contentType = Request.ContentType ?? string.Empty;
 
-            if (contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+            var files = contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase)
+                ? Request.Form.Files
+                : null;
+
+            var (entries, parseError) = await RuleImportExportService.ParseImportEntries(
+                contentType, files, Request.Body, supportJson: true);
+
+            if (parseError != null)
             {
-                var file = Request.Form.Files.FirstOrDefault();
-
-                if (file == null || file.Length == 0)
-                {
-                    return BadRequest(new { error = "No file uploaded" });
-                }
-
-                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-                try
-                {
-                    using var stream = file.OpenReadStream();
-
-                    entries = extension switch
-                    {
-                        ".csv" => RuleImportExportService.ParseCsv(stream),
-                        ".xlsx" => RuleImportExportService.ParseXlsx(stream),
-                        ".xls" => RuleImportExportService.ParseXlsx(stream),
-                        _ => throw new InvalidOperationException($"Unsupported file format: {extension}. Use .csv, .xlsx, or .xls.")
-                    };
-                }
-                catch (InvalidOperationException exception)
-                {
-                    return BadRequest(new { error = exception.Message });
-                }
-                catch (Exception exception)
-                {
-                    _logger.LogError(exception, "Failed to parse import file: {FileName}", file.FileName);
-
-                    return BadRequest(new { error = $"Failed to parse file: {exception.Message}" });
-                }
-            }
-            else
-            {
-                try
-                {
-                    entries = await JsonSerializer.DeserializeAsync<List<ImportRuleEntry>>(
-                        Request.Body,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<ImportRuleEntry>();
-                }
-                catch (JsonException exception)
-                {
-                    return BadRequest(new { error = $"Invalid JSON: {exception.Message}" });
-                }
+                return BadRequest(new { error = parseError });
             }
 
-            if (entries.Count == 0)
+            if (entries!.Count == 0)
             {
                 return BadRequest(new { error = "No rules to import" });
             }
@@ -654,9 +491,7 @@ namespace Broot.Redirect.API.Controllers
                     var appSettings = settingsCache.GetSettings();
                     var encodeUrls = appSettings.EncodeImportedUrls;
 
-                    var matcherLookup = cacheService.GetAll()
-                        .GroupBy(r => r.Matcher, StringComparer.OrdinalIgnoreCase)
-                        .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+                    var matcherLookup = RuleImportExportService.BuildMatcherLookup(cacheService.GetAll());
 
                     for (var index = 0; index < entries.Count; index++)
                     {
@@ -664,95 +499,20 @@ namespace Broot.Redirect.API.Controllers
 
                         try
                         {
-                            if (string.IsNullOrWhiteSpace(entry.Matcher))
+                            var (mappedRequest, validationError) = RuleImportExportService.ValidateImportEntry(
+                                entry, encodeUrls, validationService);
+
+                            if (validationError != null)
                             {
-                                progress.Errors.Add($"Entry {index}: matcher is required");
+                                progress.Errors.Add($"Entry {index}: {validationError}");
                                 progress.Processed++;
 
                                 continue;
                             }
 
-                            if (!TryParseRedirectType(entry.RedirectType ?? "partial", out var redirectType))
-                            {
-                                progress.Errors.Add($"Entry {index}: invalid redirect type '{entry.RedirectType}'");
-                                progress.Processed++;
+                            var rule = BuildImportRule(entry, mappedRequest!, cacheService, matcherLookup);
 
-                                continue;
-                            }
-
-                            var importMatcher = entry.Matcher;
-                            var importTargetUrl = entry.TargetUrl;
-
-                            if (encodeUrls)
-                            {
-                                importMatcher = PercentEncodePreservingSlashes(importMatcher);
-                                importTargetUrl = importTargetUrl != null ? PercentEncodePreservingSlashes(importTargetUrl) : null;
-                            }
-
-                            var mappedRequest = new CreateRuleRequest
-                            {
-                                Matcher = importMatcher,
-                                TargetUrl = importTargetUrl,
-                                RedirectType = entry.RedirectType ?? "partial",
-                                InfoText = entry.InfoText,
-                                AutoRedirect = entry.AutoRedirect ?? false,
-                                DiscardQueryParams = entry.DiscardQueryParams ?? false,
-                                ForwardQueryParams = entry.ForwardQueryParams ?? false,
-                                KeptQueryParams = entry.KeptQueryParams ?? new List<KeptQueryParam>(),
-                                StaticQueryParams = entry.StaticQueryParams ?? new List<StaticQueryParam>(),
-                                SearchAndReplace = entry.SearchAndReplace ?? new List<SearchAndReplaceEntry>()
-                            };
-
-                            var validationErrors = validationService.ValidateCreate(mappedRequest);
-
-                            if (validationErrors.Count > 0)
-                            {
-                                progress.Errors.Add($"Entry {index}: {validationErrors[0]}");
-                                progress.Processed++;
-
-                                continue;
-                            }
-
-                            DateTimeOffset createdAt;
-
-                            if (!string.IsNullOrEmpty(entry.CreatedAt) && DateTimeOffset.TryParse(entry.CreatedAt, out var parsedCreatedAt))
-                            {
-                                createdAt = parsedCreatedAt;
-                            }
-                            else
-                            {
-                                createdAt = DateTimeOffset.UtcNow;
-                            }
-
-                            RedirectRule? existingRule = null;
-                            Guid ruleId;
-
-                            if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
-                            {
-                                existingRule = cacheService.GetById(parsedId);
-                                ruleId = parsedId;
-                            }
-                            else
-                            {
-                                matcherLookup.TryGetValue(entry.Matcher, out existingRule);
-                                ruleId = existingRule?.Id ?? Guid.NewGuid();
-                            }
-
-                            var rule = new RedirectRule
-                            {
-                                Id = ruleId,
-                                Matcher = importMatcher,
-                                TargetUrl = importTargetUrl ?? string.Empty,
-                                RedirectType = redirectType,
-                                InfoText = entry.InfoText,
-                                AutoRedirect = entry.AutoRedirect ?? false,
-                                DiscardQueryParams = entry.DiscardQueryParams ?? false,
-                                ForwardQueryParams = entry.ForwardQueryParams ?? false,
-                                KeptQueryParams = entry.KeptQueryParams ?? new List<KeptQueryParam>(),
-                                StaticQueryParams = entry.StaticQueryParams ?? new List<StaticQueryParam>(),
-                                SearchAndReplace = entry.SearchAndReplace ?? new List<SearchAndReplaceEntry>(),
-                                CreatedAt = existingRule?.CreatedAt ?? createdAt
-                            };
+                            var existingRule = RuleImportExportService.ResolveExistingRule(entry, cacheService, matcherLookup);
 
                             if (existingRule != null)
                             {
@@ -797,6 +557,45 @@ namespace Broot.Redirect.API.Controllers
             });
 
             return Ok(new { jobId, total = totalCount });
+        }
+
+        private static RedirectRule BuildImportRule(
+            ImportRuleEntry entry,
+            CreateRuleRequest mappedRequest,
+            IRuleCacheService cacheService,
+            Dictionary<string, RedirectRule> matcherLookup)
+        {
+            var createdAt = !string.IsNullOrEmpty(entry.CreatedAt) && DateTimeOffset.TryParse(entry.CreatedAt, out var parsedCreatedAt)
+                ? parsedCreatedAt
+                : DateTimeOffset.UtcNow;
+
+            var existingRule = RuleImportExportService.ResolveExistingRule(entry, cacheService, matcherLookup);
+            Guid ruleId;
+
+            if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
+            {
+                ruleId = parsedId;
+            }
+            else
+            {
+                ruleId = existingRule?.Id ?? Guid.NewGuid();
+            }
+
+            return new RedirectRule
+            {
+                Id = ruleId,
+                Matcher = mappedRequest.Matcher,
+                TargetUrl = mappedRequest.TargetUrl ?? string.Empty,
+                RedirectType = Enum.Parse<RedirectType>(mappedRequest.RedirectType, ignoreCase: true),
+                InfoText = entry.InfoText,
+                AutoRedirect = entry.AutoRedirect ?? false,
+                DiscardQueryParams = entry.DiscardQueryParams ?? false,
+                ForwardQueryParams = entry.ForwardQueryParams ?? false,
+                KeptQueryParams = entry.KeptQueryParams ?? new List<KeptQueryParam>(),
+                StaticQueryParams = entry.StaticQueryParams ?? new List<StaticQueryParam>(),
+                SearchAndReplace = entry.SearchAndReplace ?? new List<SearchAndReplaceEntry>(),
+                CreatedAt = existingRule?.CreatedAt ?? createdAt
+            };
         }
 
         [HttpGet("export")]
@@ -937,26 +736,7 @@ namespace Broot.Redirect.API.Controllers
 
         private static bool TryParseRedirectType(string value, out RedirectType redirectType)
         {
-            return Enum.TryParse(value, ignoreCase: true, out redirectType);
-        }
-
-        private static async Task<List<ImportRuleEntry>> ParseJsonFromStreamAsync(Stream stream)
-        {
-            return await JsonSerializer.DeserializeAsync<List<ImportRuleEntry>>(
-                stream,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<ImportRuleEntry>();
-        }
-
-        private static string PercentEncodePreservingSlashes(string value)
-        {
-            var segments = value.Split('/');
-
-            for (var index = 0; index < segments.Length; index++)
-            {
-                segments[index] = Uri.EscapeDataString(segments[index]);
-            }
-
-            return string.Join('/', segments);
+            return RuleImportExportService.TryParseRedirectType(value, out redirectType);
         }
 
     }

@@ -21,44 +21,7 @@ namespace Broot.Redirect.Core.Services
 
         public string ResolveTargetUrl(string originalUrl, RedirectRule rule, string defaultNewDomain)
         {
-            var cleanDomain = (defaultNewDomain ?? "https://thisisthenewurl.com/").TrimEnd('/');
-            var oldPath = ExtractPath(originalUrl);
-
-            var currentUrl = rule.RedirectType switch
-            {
-                RedirectType.Partial => ResolvePartial(oldPath, rule, cleanDomain),
-                RedirectType.Wildcard => ResolveWildcard(oldPath, originalUrl, rule, cleanDomain),
-                RedirectType.Domain => ResolveDomain(originalUrl, rule, cleanDomain),
-                _ => GenerateNewUrl(originalUrl, cleanDomain)
-            };
-
-            foreach (var entry in rule.SearchAndReplace)
-            {
-                currentUrl = ApplySearchAndReplace(currentUrl, entry);
-            }
-
-            var globalRules = _globalRuleCache.GetAll();
-
-            foreach (var globalRule in globalRules)
-            {
-                currentUrl = ApplyGlobalRule(currentUrl, globalRule);
-            }
-
-            if (rule.ForwardQueryParams)
-            {
-                currentUrl = ForwardOriginalQueryParams(originalUrl, currentUrl);
-            }
-            else if (rule.DiscardQueryParams && rule.KeptQueryParams.Count > 0)
-            {
-                currentUrl = ApplyKeptQueryParams(originalUrl, currentUrl, rule.KeptQueryParams);
-            }
-
-            if (rule.StaticQueryParams.Count > 0)
-            {
-                currentUrl = ApplyStaticQueryParams(currentUrl, rule.StaticQueryParams);
-            }
-
-            return currentUrl;
+            return ResolveTargetUrlCore(originalUrl, rule, defaultNewDomain, trace: null);
         }
 
         public (string ResolvedUrl, List<UrlTraceStep> Trace) ResolveTargetUrlWithTrace(
@@ -68,13 +31,21 @@ namespace Broot.Redirect.Core.Services
         {
             var trace = new List<UrlTraceStep>();
 
-            trace.Add(new UrlTraceStep
-            {
-                Type = "input",
-                Description = "Original incoming URL",
-                After = originalUrl
-            });
+            AddTraceStep(trace, "input", "Original incoming URL", after: originalUrl);
 
+            var resolvedUrl = ResolveTargetUrlCore(originalUrl, rule, defaultNewDomain, trace);
+
+            AddTraceStep(trace, "result", "Final resolved URL", after: resolvedUrl);
+
+            return (resolvedUrl, trace);
+        }
+
+        private string ResolveTargetUrlCore(
+            string originalUrl,
+            RedirectRule rule,
+            string defaultNewDomain,
+            List<UrlTraceStep>? trace)
+        {
             var cleanDomain = (defaultNewDomain ?? "https://thisisthenewurl.com/").TrimEnd('/');
             var oldPath = ExtractPath(originalUrl);
 
@@ -86,127 +57,148 @@ namespace Broot.Redirect.Core.Services
                 _ => GenerateNewUrl(originalUrl, cleanDomain)
             };
 
-            trace.Add(new UrlTraceStep
+            AddTraceStep(trace, "domain-replace",
+                $"Applied {rule.RedirectType} rule (matcher: {rule.Matcher})",
+                before: originalUrl, after: currentUrl);
+
+            currentUrl = ApplySearchAndReplaceAll(currentUrl, rule.SearchAndReplace, trace);
+            currentUrl = ApplyAllGlobalRules(currentUrl, _globalRuleCache.GetAll(), trace);
+            currentUrl = ApplyQueryStrategy(originalUrl, currentUrl, rule, trace);
+
+            if (rule.StaticQueryParams.Count > 0)
             {
-                Type = "domain-replace",
-                Description = $"Applied {rule.RedirectType} rule (matcher: {rule.Matcher})",
-                Before = originalUrl,
-                After = currentUrl
-            });
-
-            foreach (var entry in rule.SearchAndReplace)
-            {
-                var before = currentUrl;
-
-                currentUrl = ApplySearchAndReplace(currentUrl, entry);
-
-                if (before != currentUrl)
-                {
-                    trace.Add(new UrlTraceStep
-                    {
-                        Type = "search-replace",
-                        Description = $"Rule search-replace: '{entry.Search}' -> '{entry.Replace}'",
-                        Before = before,
-                        After = currentUrl
-                    });
-                }
+                currentUrl = ApplyStaticQueryParamsWithTrace(currentUrl, rule.StaticQueryParams, trace);
             }
 
-            var globalRules = _globalRuleCache.GetAll();
+            return currentUrl;
+        }
 
+        private static void AddTraceStep(
+            List<UrlTraceStep>? trace,
+            string type,
+            string description,
+            string? before = null,
+            string? after = null)
+        {
+            if (trace == null) return;
+
+            trace.Add(new UrlTraceStep
+            {
+                Type = type,
+                Description = description,
+                Before = before,
+                After = after
+            });
+        }
+
+        private static void AddTraceStepIfChanged(
+            List<UrlTraceStep>? trace,
+            string type,
+            string description,
+            string before,
+            string after)
+        {
+            if (trace != null && before != after)
+            {
+                trace.Add(new UrlTraceStep
+                {
+                    Type = type,
+                    Description = description,
+                    Before = before,
+                    After = after
+                });
+            }
+        }
+
+        private static string ApplySearchAndReplaceAll(
+            string currentUrl,
+            IReadOnlyList<SearchAndReplaceEntry> entries,
+            List<UrlTraceStep>? trace)
+        {
+            foreach (var entry in entries)
+            {
+                var before = currentUrl;
+                currentUrl = ApplySearchAndReplace(currentUrl, entry);
+                AddTraceStepIfChanged(trace, "search-replace",
+                    $"Rule search-replace: '{entry.Search}' -> '{entry.Replace}'",
+                    before, currentUrl);
+            }
+
+            return currentUrl;
+        }
+
+        private static string ApplyAllGlobalRules(
+            string currentUrl,
+            IReadOnlyList<GlobalRule> globalRules,
+            List<UrlTraceStep>? trace)
+        {
             foreach (var globalRule in globalRules)
             {
                 var before = currentUrl;
-
                 currentUrl = ApplyGlobalRule(currentUrl, globalRule);
-
-                if (before != currentUrl)
-                {
-                    trace.Add(new UrlTraceStep
-                    {
-                        Type = "global-rule",
-                        Description = $"Global search-replace: '{globalRule.Search}' -> '{globalRule.Replace}'",
-                        Before = before,
-                        After = currentUrl
-                    });
-                }
+                AddTraceStepIfChanged(trace, "global-rule",
+                    $"Global search-replace: '{globalRule.Search}' -> '{globalRule.Replace}'",
+                    before, currentUrl);
             }
 
+            return currentUrl;
+        }
+
+        private static string ApplyQueryStrategy(
+            string originalUrl,
+            string currentUrl,
+            RedirectRule rule,
+            List<UrlTraceStep>? trace)
+        {
             if (rule.ForwardQueryParams)
             {
                 var before = currentUrl;
-
                 currentUrl = ForwardOriginalQueryParams(originalUrl, currentUrl);
-
-                if (before != currentUrl)
-                {
-                    trace.Add(new UrlTraceStep
-                    {
-                        Type = "query-forward",
-                        Description = "Forwarded query parameters from original URL",
-                        Before = before,
-                        After = currentUrl
-                    });
-                }
+                AddTraceStepIfChanged(trace, "query-forward",
+                    "Forwarded query parameters from original URL",
+                    before, currentUrl);
             }
             else if (rule.DiscardQueryParams && rule.KeptQueryParams.Count > 0)
             {
                 var before = currentUrl;
-
                 currentUrl = ApplyKeptQueryParams(originalUrl, currentUrl, rule.KeptQueryParams);
 
-                if (before != currentUrl)
+                if (trace != null && before != currentUrl)
                 {
                     var patterns = string.Join(", ", rule.KeptQueryParams.Select(k => k.KeyPattern));
-
-                    trace.Add(new UrlTraceStep
-                    {
-                        Type = "query-kept",
-                        Description = $"Kept query parameters matching: {patterns}",
-                        Before = before,
-                        After = currentUrl
-                    });
+                    AddTraceStep(trace, "query-kept",
+                        $"Kept query parameters matching: {patterns}",
+                        before: before, after: currentUrl);
                 }
             }
 
             if (rule.DiscardQueryParams && !rule.ForwardQueryParams && rule.KeptQueryParams.Count == 0)
             {
-                trace.Add(new UrlTraceStep
-                {
-                    Type = "query-discard",
-                    Description = "Query parameters discarded (discardQueryParams enabled)",
-                    After = currentUrl
-                });
+                AddTraceStep(trace, "query-discard",
+                    "Query parameters discarded (discardQueryParams enabled)",
+                    after: currentUrl);
             }
 
-            if (rule.StaticQueryParams.Count > 0)
+            return currentUrl;
+        }
+
+        private static string ApplyStaticQueryParamsWithTrace(
+            string currentUrl,
+            IReadOnlyList<StaticQueryParam> staticParams,
+            List<UrlTraceStep>? trace)
+        {
+            var before = currentUrl;
+            currentUrl = ApplyStaticQueryParams(currentUrl, staticParams);
+
+            if (trace != null && before != currentUrl)
             {
-                var before = currentUrl;
-
-                currentUrl = ApplyStaticQueryParams(currentUrl, rule.StaticQueryParams);
-
-                if (before != currentUrl)
-                {
-                    var paramList = string.Join(", ", rule.StaticQueryParams.Select(p => $"{p.Key}={p.Value}"));
-
-                    trace.Add(new UrlTraceStep
-                    {
-                        Type = "query-static",
-                        Description = $"Appended static query parameters: {paramList}",
-                        Before = before,
-                        After = currentUrl
-                    });
-                }
+                var paramList = string.Join(", ", staticParams.Select(p => $"{p.Key}={p.Value}"));
+                AddTraceStep(trace, "query-static",
+                    $"Appended static query parameters: {paramList}",
+                    before: before, after: currentUrl);
             }
 
-            trace.Add(new UrlTraceStep
-            {
-                Type = "result",
-                Description = "Final resolved URL",
-                After = currentUrl
-            });
-
-            return (currentUrl, trace);
+            return currentUrl;
         }
 
         private static string ResolvePartial(string oldPath, RedirectRule rule, string cleanDomain)
@@ -401,62 +393,7 @@ namespace Broot.Redirect.Core.Services
 
             foreach (var keptRule in keptRules)
             {
-                if (string.IsNullOrEmpty(keptRule.KeyPattern))
-                {
-                    continue;
-                }
-
-                Regex keyRegex;
-
-                try { keyRegex = new Regex(keptRule.KeyPattern, RegexOptions.None, TimeSpan.FromSeconds(1)); }
-                catch { continue; }
-
-                Regex? valueRegex = null;
-
-                if (!string.IsNullOrEmpty(keptRule.ValuePattern))
-                {
-                    try { valueRegex = new Regex(keptRule.ValuePattern, RegexOptions.None, TimeSpan.FromSeconds(1)); }
-                    catch { continue; }
-                }
-
-                var allKeys = queryCollection.AllKeys;
-
-                for (var index = 0; index < allKeys.Length; index++)
-                {
-                    if (usedIndices.Contains(index))
-                    {
-                        continue;
-                    }
-
-                    var key = allKeys[index];
-
-                    if (key == null)
-                    {
-                        continue;
-                    }
-
-                    if (!keyRegex.IsMatch(key))
-                    {
-                        continue;
-                    }
-
-                    var value = queryCollection[key] ?? string.Empty;
-
-                    if (valueRegex != null && !valueRegex.IsMatch(value))
-                    {
-                        continue;
-                    }
-
-                    var finalKey = !string.IsNullOrWhiteSpace(keptRule.TargetKey)
-                        ? keptRule.TargetKey
-                        : key;
-
-                    var encodedKey = Uri.EscapeDataString(finalKey);
-                    var encodedValue = keptRule.SkipEncoding ? value : Uri.EscapeDataString(value);
-
-                    parts.Add($"{encodedKey}={encodedValue}");
-                    usedIndices.Add(index);
-                }
+                CollectMatchingParams(keptRule, queryCollection, usedIndices, parts);
             }
 
             if (parts.Count == 0)
@@ -465,6 +402,75 @@ namespace Broot.Redirect.Core.Services
             }
 
             return AppendQueryString(currentUrl, "?" + string.Join("&", parts));
+        }
+
+        private static void CollectMatchingParams(
+            KeptQueryParam keptRule,
+            System.Collections.Specialized.NameValueCollection queryCollection,
+            HashSet<int> usedIndices,
+            List<string> parts)
+        {
+            if (string.IsNullOrEmpty(keptRule.KeyPattern))
+            {
+                return;
+            }
+
+            var keyRegex = TryCompileRegex(keptRule.KeyPattern);
+            if (keyRegex == null) return;
+
+            Regex? valueRegex = null;
+
+            if (!string.IsNullOrEmpty(keptRule.ValuePattern))
+            {
+                valueRegex = TryCompileRegex(keptRule.ValuePattern);
+                if (valueRegex == null) return;
+            }
+
+            var allKeys = queryCollection.AllKeys;
+
+            for (var index = 0; index < allKeys.Length; index++)
+            {
+                if (usedIndices.Contains(index))
+                {
+                    continue;
+                }
+
+                var key = allKeys[index];
+
+                if (key == null || !keyRegex.IsMatch(key))
+                {
+                    continue;
+                }
+
+                var value = queryCollection[key] ?? string.Empty;
+
+                if (valueRegex != null && !valueRegex.IsMatch(value))
+                {
+                    continue;
+                }
+
+                var finalKey = !string.IsNullOrWhiteSpace(keptRule.TargetKey)
+                    ? keptRule.TargetKey
+                    : key;
+
+                var encodedKey = Uri.EscapeDataString(finalKey);
+                var encodedValue = keptRule.SkipEncoding ? value : Uri.EscapeDataString(value);
+
+                parts.Add($"{encodedKey}={encodedValue}");
+                usedIndices.Add(index);
+            }
+        }
+
+        private static Regex? TryCompileRegex(string pattern)
+        {
+            try
+            {
+                return new Regex(pattern, RegexOptions.None, TimeSpan.FromSeconds(1));
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static string ApplyStaticQueryParams(

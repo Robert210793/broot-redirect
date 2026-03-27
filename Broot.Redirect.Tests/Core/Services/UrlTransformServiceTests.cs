@@ -684,6 +684,57 @@ namespace Broot.Redirect.Tests.Core.Services
                 result.Should().Contain("#section");
                 result.Should().NotContain("q=1");
             }
+
+            [Fact]
+            public void ResolveTargetUrl_NeitherForwardNorDiscard_NoExtraQueryAppended()
+            {
+                // Partial rule: with DiscardQueryParams=false and ForwardQueryParams=false,
+                // no explicit query forwarding or kept-params logic runs.
+                var rule = CreateRule("/old", RedirectType.Partial, "/new");
+                rule.ForwardQueryParams = false;
+                rule.DiscardQueryParams = false;
+
+                var result = _sut.ResolveTargetUrl(
+                    "/old/sub?source=google",
+                    rule,
+                    "https://defaultdomain.com");
+
+                // Partial resolution includes the query in the replaced path,
+                // but ForwardOriginalQueryParams is NOT called, so no duplication
+                var queryCount = result.Split("source=google").Length - 1;
+                queryCount.Should().BeLessOrEqualTo(1);
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_MultipleSearchAndReplace_AppliesAll()
+            {
+                var rule = CreateRule("/old-page", RedirectType.Wildcard, "https://new.com/old-page");
+                rule.SearchAndReplace = new List<SearchAndReplaceEntry>
+                {
+                    new SearchAndReplaceEntry { Search = "old", Replace = "new", CaseSensitive = false },
+                    new SearchAndReplaceEntry { Search = "page", Replace = "site", CaseSensitive = false }
+                };
+
+                var result = _sut.ResolveTargetUrl("/old-page", rule, "https://default.com");
+
+                result.Should().Be("https://new.com/new-site");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_MultipleGlobalRules_AppliesAll()
+            {
+                _globalRuleCache.GetAll().Returns(new List<GlobalRule>
+                {
+                    new GlobalRule { Search = "aaa", Replace = "bbb" },
+                    new GlobalRule { Search = "bbb", Replace = "ccc" }
+                });
+
+                var rule = CreateRule("/aaa", RedirectType.Wildcard, "https://new.com/aaa");
+
+                var result = _sut.ResolveTargetUrl("/aaa", rule, "https://default.com");
+
+                result.Should().Be("https://new.com/ccc");
+            }
         }
 
         public class ResolveTargetUrlWithTraceTests
@@ -1207,6 +1258,52 @@ namespace Broot.Redirect.Tests.Core.Services
 
                 trace.First().Type.Should().Be("input");
                 trace.Last().Type.Should().Be("result");
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_NeitherForwardNorDiscard_NoQueryTraceSteps()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+                rule.ForwardQueryParams = false;
+                rule.DiscardQueryParams = false;
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace(
+                    "http://old.com/page?q=1", rule, "https://default.com");
+
+                trace.Should().NotContain(step => step.Type == "query-forward");
+                trace.Should().NotContain(step => step.Type == "query-kept");
+                trace.Should().NotContain(step => step.Type == "query-discard");
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_MultipleSearchAndReplace_TracksEachChange()
+            {
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/old-page");
+                rule.SearchAndReplace = new List<SearchAndReplaceEntry>
+                {
+                    new SearchAndReplaceEntry { Search = "old", Replace = "new", CaseSensitive = false },
+                    new SearchAndReplaceEntry { Search = "page", Replace = "site", CaseSensitive = false }
+                };
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace("/page", rule, "https://default.com");
+
+                trace.Count(step => step.Type == "search-replace").Should().Be(2);
+            }
+
+            [Fact]
+            public void ResolveTargetUrlWithTrace_MultipleGlobalRules_TracksEachChange()
+            {
+                _globalRuleCache.GetAll().Returns(new List<GlobalRule>
+                {
+                    new GlobalRule { Search = "com", Replace = "org", CaseSensitive = false },
+                    new GlobalRule { Search = "new", Replace = "updated", CaseSensitive = false }
+                });
+
+                var rule = CreateRule("/page", RedirectType.Wildcard, "https://new.com/page");
+
+                var (_, trace) = _sut.ResolveTargetUrlWithTrace("/page", rule, "https://default.com");
+
+                trace.Count(step => step.Type == "global-rule").Should().Be(2);
             }
         }
     }

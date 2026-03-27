@@ -1,31 +1,31 @@
 Summary
-  Generated on: 27.03.2026 - 15:48:14
+  Generated on: 27.03.2026 - 17:07:33
   Parser: OpenCover
   Assemblies: 3
-  Classes: 85
-  Files: 47
-  Line coverage: 91.9%
-  Covered lines: 4115
-  Uncovered lines: 362
-  Coverable lines: 4477
-  Total lines: 7923
-  Branch coverage: 82.5% (750 of 908)
-  Covered branches: 750
-  Total branches: 908
-  Method coverage: 98.5% (274 of 278)
-  Full method coverage: 80.9% (225 of 278)
-  Covered methods: 274
-  Fully covered methods: 225
-  Total methods: 278
+  Classes: 84
+  Files: 45
+  Line coverage: 96.4%
+  Covered lines: 4131
+  Uncovered lines: 153
+  Coverable lines: 4284
+  Total lines: 7773
+  Branch coverage: 89% (769 of 864)
+  Covered branches: 769
+  Total branches: 864
+  Method coverage: 100% (304 of 304)
+  Full method coverage: 83.5% (254 of 304)
+  Covered methods: 304
+  Fully covered methods: 254
+  Total methods: 304
 
-Broot.Redirect.API                                                              91.4%
+Broot.Redirect.API                                                              98.1%
   Broot.Redirect.API.Configuration.BrootRedirectOptions                          100%
   Broot.Redirect.API.Configuration.RuleMatchingConfigFactory                     100%
   Broot.Redirect.API.Controllers.AuthController                                 97.8%
   Broot.Redirect.API.Controllers.GlobalRulesController                          97.1%
   Broot.Redirect.API.Controllers.HealthController                               87.6%
   Broot.Redirect.API.Controllers.RedirectController                              100%
-  Broot.Redirect.API.Controllers.RulesController                                91.8%
+  Broot.Redirect.API.Controllers.RulesController                                99.4%
   Broot.Redirect.API.Controllers.SettingsController                              100%
   Broot.Redirect.API.Controllers.TrackingController                             96.6%
   Broot.Redirect.API.Dtos.AuthStatusResponse                                         
@@ -65,13 +65,13 @@ Broot.Redirect.API                                                              
   Broot.Redirect.API.Middleware.AdminSessionMiddleware                           100%
   Broot.Redirect.API.Middleware.CsrfProtectionMiddleware                         100%
   Broot.Redirect.API.Middleware.RateLimitMiddleware                             96.3%
-  Broot.Redirect.API.Middleware.RedirectMiddleware                                99%
+  Broot.Redirect.API.Middleware.RedirectMiddleware                               100%
   Broot.Redirect.API.Services.BruteForceProtectionService                        100%
-  Broot.Redirect.API.Services.RuleImportExportService                           96.5%
+  Broot.Redirect.API.Services.RuleImportExportService                           96.7%
   Broot.Redirect.API.Services.RuleValidationService                              100%
-  Program                                                                          0%
+  Program                                                                            
 
-Broot.Redirect.Core                                                             92.3%
+Broot.Redirect.Core                                                             94.5%
   Broot.Redirect.Core.Interfaces.TopRuleStat                                     100%
   Broot.Redirect.Core.Interfaces.TrackingStats                                   100%
   Broot.Redirect.Core.Interfaces.TrendDataPoint                                  100%
@@ -87,18 +87,17 @@ Broot.Redirect.Core                                                             
   Broot.Redirect.Core.Models.TrackingEntry                                       100%
   Broot.Redirect.Core.Models.UrlTraceStep                                            
   Broot.Redirect.Core.Models.UrlTransformationResult                                 
-  Broot.Redirect.Core.Services.RuleMatchingService                              90.6%
+  Broot.Redirect.Core.Services.RuleMatchingService                                96%
   Broot.Redirect.Core.Services.SmartSearchService                               88.4%
   Broot.Redirect.Core.Services.UrlTransformService                              93.6%
 
-Broot.Redirect.Infrastructure                                                   92.3%
+Broot.Redirect.Infrastructure                                                   94.8%
   Broot.Redirect.Infrastructure.Cache.AppSettingsCacheService                    100%
   Broot.Redirect.Infrastructure.Cache.CacheOptions                               100%
   Broot.Redirect.Infrastructure.Cache.CacheWarmupService                        89.5%
   Broot.Redirect.Infrastructure.Cache.GlobalRuleCacheService                     100%
   Broot.Redirect.Infrastructure.Cache.RuleCacheService                          98.6%
   Broot.Redirect.Infrastructure.Cache.TrackingCleanupService                    82.1%
-  Broot.Redirect.Infrastructure.Extensions.ServiceCollectionExtensions             0%
   Broot.Redirect.Infrastructure.Persistence.AppSettingsEntity                    100%
   Broot.Redirect.Infrastructure.Persistence.GlobalRuleEntity                     100%
   Broot.Redirect.Infrastructure.Persistence.RedirectRuleEntity                   100%
