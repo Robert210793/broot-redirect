@@ -40,6 +40,13 @@ jobs:
       - name: Test
         run: dotnet test --no-build
 
+      - name: Generate coverage report
+        if: always()
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator "-reports:Broot.Redirect.Tests/coverage.xml" "-targetdir:coverage-summary" "-reporttypes:MarkdownSummaryGithub"
+          cat coverage-summary/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
