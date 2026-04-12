@@ -36,7 +36,7 @@ export class BlockedIpsComponent implements OnInit {
                 this.isLoading.set(false);
             },
             error: () => {
-                this.toastService.show('Failed to load blocked IPs', 'error');
+                this.toastService.show('Blockierte IPs konnten nicht geladen werden.', 'error');
                 this.isLoading.set(false);
             }
         });
@@ -53,13 +53,13 @@ export class BlockedIpsComponent implements OnInit {
 
         this.authService.blockIp(trimmedIp).subscribe({
             next: () => {
-                this.toastService.show(`IP ${trimmedIp} blocked`, 'success');
+                this.toastService.show(`IP ${trimmedIp} blockiert.`, 'success');
                 this.newIpAddress = '';
                 this.isBlocking.set(false);
                 this.loadBlockedIps();
             },
             error: (error) => {
-                const message = error?.error?.error || 'Failed to block IP';
+                const message = error?.error?.error || 'IP konnte nicht blockiert werden.';
                 this.toastService.show(message, 'error');
                 this.isBlocking.set(false);
             }
@@ -69,11 +69,11 @@ export class BlockedIpsComponent implements OnInit {
     onUnblock(ip: string): void {
         this.authService.unblockIp(ip).subscribe({
             next: () => {
-                this.toastService.show(`IP ${ip} unblocked`, 'success');
+                this.toastService.show(`IP ${ip} Blockierung aufgehoben.`, 'success');
                 this.loadBlockedIps();
             },
             error: () => {
-                this.toastService.show('Failed to unblock IP', 'error');
+                this.toastService.show('Blockierung konnte nicht aufgehoben werden.', 'error');
             }
         });
     }
@@ -91,13 +91,13 @@ export class BlockedIpsComponent implements OnInit {
 
         this.authService.clearBlockedIps().subscribe({
             next: () => {
-                this.toastService.show('All blocked IPs cleared', 'success');
+                this.toastService.show('Alle Blockierungen aufgehoben.', 'success');
                 this.showClearConfirm.set(false);
                 this.isClearing.set(false);
                 this.loadBlockedIps();
             },
             error: () => {
-                this.toastService.show('Failed to clear blocked IPs', 'error');
+                this.toastService.show('Blockierungen konnten nicht aufgehoben werden.', 'error');
                 this.isClearing.set(false);
             }
         });
@@ -121,7 +121,7 @@ export class BlockedIpsComponent implements OnInit {
         const remainingMs = blockedUntil - now;
 
         if (remainingMs <= 0) {
-            return 'Expired';
+            return 'Abgelaufen';
         }
 
         const remainingMinutes = Math.ceil(remainingMs / 60000);

@@ -55,7 +55,7 @@ export class ValidateComponent {
                 this.isValidating.set(false);
             },
             error: (error) => {
-                const message = error?.error?.error || 'Validation failed';
+                const message = error?.error?.error || 'Validierung fehlgeschlagen.';
                 this.toastService.show(message, 'error');
                 this.isValidating.set(false);
             }

@@ -81,7 +81,7 @@ namespace Broot.Redirect.API.Services
             if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
                 && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                errors.Add("Bei Typ 'Vollstaendig' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein");
+                errors.Add("Bei Typ 'Vollständig' muss die Ziel-URL eine vollständige URL mit http:// oder https:// sein");
             }
         }
 
@@ -91,7 +91,7 @@ namespace Broot.Redirect.API.Services
                 && !targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
                 && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                errors.Add("Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen oder eine vollstaendige URL sein");
+                errors.Add("Bei Typ 'Teilweise' muss die Ziel-URL mit '/' beginnen oder eine vollständige URL sein");
             }
         }
 
@@ -100,7 +100,7 @@ namespace Broot.Redirect.API.Services
             if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
                 && !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                errors.Add("Bei Typ 'Domain-Ersatz' muss die Ziel-URL eine vollstaendige URL mit http:// oder https:// sein");
+                errors.Add("Bei Typ 'Domain-Ersatz' muss die Ziel-URL eine vollständige URL mit http:// oder https:// sein");
 
                 return;
             }
