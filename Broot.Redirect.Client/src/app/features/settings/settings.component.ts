@@ -43,9 +43,6 @@ export class SettingsComponent implements OnInit {
     specialHintsTitle = '';
     specialHintsDescription = '';
 
-    // -- Info page: footer --
-    footerCopyright = '';
-
     // -- Smart search fallback --
     smartSearchUrl = '';
     smartSearchRegex = '';
@@ -85,7 +82,6 @@ export class SettingsComponent implements OnInit {
             openButtonText: this.openButtonText,
             specialHintsTitle: this.specialHintsTitle,
             specialHintsDescription: this.specialHintsDescription,
-            footerCopyright: this.footerCopyright,
             smartSearchUrl: this.smartSearchUrl,
             smartSearchRegex: this.smartSearchRegex,
             smartSearchSkipEncoding: this.smartSearchSkipEncoding,
@@ -151,7 +147,6 @@ export class SettingsComponent implements OnInit {
         this.openButtonText = settings.openButtonText;
         this.specialHintsTitle = settings.specialHintsTitle;
         this.specialHintsDescription = settings.specialHintsDescription;
-        this.footerCopyright = settings.footerCopyright;
         this.smartSearchUrl = settings.smartSearchUrl;
         this.smartSearchRegex = settings.smartSearchRegex;
         this.smartSearchSkipEncoding = settings.smartSearchSkipEncoding;

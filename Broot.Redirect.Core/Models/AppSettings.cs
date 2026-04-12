@@ -55,8 +55,6 @@ namespace Broot.Redirect.Core.Models
 
         public string SpecialHintsDescription { get; set; } = "Die neue URL wurde automatisch generiert. Es kann sein, dass sie nicht wie erwartet funktioniert. Falls die URL ungültig ist, nutze bitte die Suchfunktion in der neuen Applikation, um den gewünschten Inhalt zu finden.";
 
-        public string FooterCopyright { get; set; } = "";
-
         public string SmartSearchUrl { get; set; } = string.Empty;
 
         public string SmartSearchRegex { get; set; } = string.Empty;

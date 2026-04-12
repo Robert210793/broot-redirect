@@ -61,7 +61,6 @@ namespace Broot.Redirect.API.Controllers
                 OpenButtonText = request.OpenButtonText ?? existing.OpenButtonText,
                 SpecialHintsTitle = request.SpecialHintsTitle ?? existing.SpecialHintsTitle,
                 SpecialHintsDescription = request.SpecialHintsDescription ?? existing.SpecialHintsDescription,
-                FooterCopyright = request.FooterCopyright ?? existing.FooterCopyright,
                 SmartSearchUrl = request.SmartSearchUrl ?? existing.SmartSearchUrl,
                 SmartSearchRegex = request.SmartSearchRegex ?? existing.SmartSearchRegex,
                 SmartSearchSkipEncoding = request.SmartSearchSkipEncoding ?? existing.SmartSearchSkipEncoding,

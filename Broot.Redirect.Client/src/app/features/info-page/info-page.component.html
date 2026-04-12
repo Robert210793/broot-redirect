@@ -208,7 +208,7 @@
     <footer class="info-footer">
         <div class="info-footer-inner">
             <div class="info-footer-left">
-                <span class="info-footer-copyright">{{ settings()?.footerCopyright || '' }}</span>
+                <span class="info-footer-copyright">{{ appVersion ? 'v' + appVersion : '' }}</span>
             </div>
             <div class="info-footer-right">
                 <button

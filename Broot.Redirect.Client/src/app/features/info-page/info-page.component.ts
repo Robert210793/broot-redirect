@@ -33,6 +33,12 @@ export class InfoPageComponent implements OnInit {
     originalUrl = '';
     currentYear = new Date().getFullYear();
 
+    appVersion = (() => {
+        const meta = document.querySelector('meta[name="app-version"]');
+        const version = meta?.getAttribute('content') ?? '';
+        return version && version !== '__APP_VERSION__' ? version : '';
+    })();
+
     // -- UI state --
 
     copied = signal(false);

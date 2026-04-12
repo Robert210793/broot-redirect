@@ -24,9 +24,6 @@ export interface AppSettings {
     specialHintsTitle: string;
     specialHintsDescription: string;
 
-    // -- Info page: footer --
-    footerCopyright: string;
-
     // -- Smart search fallback --
     smartSearchUrl: string;
     smartSearchRegex: string;

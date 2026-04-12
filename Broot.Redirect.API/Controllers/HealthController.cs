@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using Azure.Data.Tables;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,10 @@ namespace Broot.Redirect.API.Controllers
     public class HealthController : ControllerBase
     {
         private static readonly DateTimeOffset StartTime = DateTimeOffset.UtcNow;
+
+        private static readonly string AppVersion = typeof(HealthController).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion ?? "unknown";
 
         private readonly IRuleCacheService _cacheService;
         private readonly TableClient _tableClient;
@@ -44,6 +49,7 @@ namespace Broot.Redirect.API.Controllers
             var response = new HealthResponse
             {
                 Status = overallStatus,
+                Version = AppVersion,
                 Timestamp = DateTimeOffset.UtcNow.ToString("o"),
                 UptimeSeconds = uptimeSeconds,
                 RuleCount = _cacheService.RuleCount,

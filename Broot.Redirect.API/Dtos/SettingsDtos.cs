@@ -33,8 +33,6 @@
 
         public string? SpecialHintsDescription { get; set; }
 
-        public string? FooterCopyright { get; set; }
-
         public string? SmartSearchUrl { get; set; }
 
         public string? SmartSearchRegex { get; set; }

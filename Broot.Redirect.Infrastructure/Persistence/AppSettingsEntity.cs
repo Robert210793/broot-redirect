@@ -54,8 +54,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public string SpecialHintsDescription { get; set; } = string.Empty;
 
-        public string FooterCopyright { get; set; } = string.Empty;
-
         public string SmartSearchUrl { get; set; } = string.Empty;
 
         public string SmartSearchRegex { get; set; } = string.Empty;
@@ -103,7 +101,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 OpenButtonText = settings.OpenButtonText,
                 SpecialHintsTitle = settings.SpecialHintsTitle,
                 SpecialHintsDescription = settings.SpecialHintsDescription,
-                FooterCopyright = settings.FooterCopyright,
                 SmartSearchUrl = settings.SmartSearchUrl,
                 SmartSearchRegex = settings.SmartSearchRegex,
                 SmartSearchSkipEncoding = settings.SmartSearchSkipEncoding,
@@ -140,7 +137,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 OpenButtonText = OpenButtonText,
                 SpecialHintsTitle = SpecialHintsTitle,
                 SpecialHintsDescription = SpecialHintsDescription,
-                FooterCopyright = FooterCopyright,
                 SmartSearchUrl = SmartSearchUrl,
                 SmartSearchRegex = SmartSearchRegex,
                 SmartSearchSkipEncoding = SmartSearchSkipEncoding,

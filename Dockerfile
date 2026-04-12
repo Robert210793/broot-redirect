@@ -3,6 +3,8 @@
 # ----------------------------------------------------------
 FROM node:22-alpine AS node-build
 
+ARG APP_VERSION=0.0.0-dev
+
 WORKDIR /src/client
 
 # Install dependencies first (layer cache)
@@ -13,6 +15,9 @@ RUN npm ci --ignore-scripts
 # Copy source and build (base href defaults to / from angular.json)
 COPY Broot.Redirect.Client/ ./
 
+# Inject version into index.html before building
+RUN sed -i "s/__APP_VERSION__/${APP_VERSION}/g" src/index.html
+
 RUN npx ng build --configuration production
 
 # ----------------------------------------------------------
@@ -21,6 +26,7 @@ RUN npx ng build --configuration production
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS dotnet-build
 
 ARG BUILD_CONFIGURATION=Release
+ARG APP_VERSION=0.0.0-dev
 
 WORKDIR /src
 
@@ -39,7 +45,8 @@ COPY Broot.Redirect.API/ Broot.Redirect.API/
 RUN dotnet publish Broot.Redirect.API/Broot.Redirect.API.csproj \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    /p:InformationalVersion=${APP_VERSION}
 
 # ----------------------------------------------------------
 # Stage 3: Runtime image

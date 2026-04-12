@@ -209,6 +209,8 @@ namespace Broot.Redirect.API.Dtos
     {
         public string Status { get; set; } = "healthy";
 
+        public string Version { get; set; } = "unknown";
+
         public string Timestamp { get; set; } = DateTimeOffset.UtcNow.ToString("o");
 
         public long UptimeSeconds { get; set; }
