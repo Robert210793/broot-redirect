@@ -80,11 +80,6 @@ namespace Broot.Redirect.Core.Models
         public bool CaseSensitiveLinkDetection { get; set; } = false;
 
         /// <summary>
-        /// When true, imported matchers and target URLs are percent-encoded during import.
-        /// </summary>
-        public bool EncodeImportedUrls { get; set; } = true;
-
-        /// <summary>
         /// When true, the Referrer header is stored in tracking entries.
         /// Some customer deployments may want this disabled for privacy.
         /// </summary>

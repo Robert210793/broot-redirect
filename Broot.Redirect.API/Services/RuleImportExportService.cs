@@ -466,7 +466,6 @@ namespace Broot.Redirect.API.Services
 
         public static (CreateRuleRequest? Request, string? Error) ValidateImportEntry(
             ImportRuleEntry entry,
-            bool encodeUrls,
             RuleValidationService validationService)
         {
             if (string.IsNullOrWhiteSpace(entry.Matcher))
@@ -481,14 +480,9 @@ namespace Broot.Redirect.API.Services
                 return (null, $"Invalid redirect type: '{redirectType}'");
             }
 
-            var matcher = entry.Matcher;
-            var targetUrl = entry.TargetUrl;
-
-            if (encodeUrls)
-            {
-                matcher = PercentEncodePreservingSlashes(matcher);
-                targetUrl = targetUrl != null ? PercentEncodePreservingSlashes(targetUrl) : null;
-            }
+            // Always normalize: unescape then re-encode to handle both raw and pre-encoded input
+            var matcher = PercentEncodePreservingSlashes(entry.Matcher);
+            var targetUrl = entry.TargetUrl != null ? PercentEncodePreservingSlashes(entry.TargetUrl) : null;
 
             var request = new CreateRuleRequest
             {
@@ -548,11 +542,47 @@ namespace Broot.Redirect.API.Services
 
         public static string PercentEncodePreservingSlashes(string value)
         {
-            var segments = value.Split('/');
+            if (Uri.TryCreate(value, UriKind.Absolute, out var parsedUri)
+                && (parsedUri.Scheme == "http" || parsedUri.Scheme == "https"))
+            {
+                // Absolute URL: encode only the path segments, preserve scheme + authority + query + fragment
+                var encodedPath = EncodePathSegments(parsedUri.AbsolutePath);
+
+                var result = $"{parsedUri.Scheme}://{parsedUri.Authority}{encodedPath}";
+
+                if (!string.IsNullOrEmpty(parsedUri.Query))
+                {
+                    result += parsedUri.Query;
+                }
+
+                if (!string.IsNullOrEmpty(parsedUri.Fragment))
+                {
+                    result += parsedUri.Fragment;
+                }
+
+                return result;
+            }
+
+            // Relative path: encode each segment
+            return EncodePathSegments(value);
+        }
+
+        private static string EncodePathSegments(string path)
+        {
+            var segments = path.Split('/');
 
             for (var index = 0; index < segments.Length; index++)
             {
-                segments[index] = Uri.EscapeDataString(segments[index]);
+                string unescaped;
+
+                try { unescaped = Uri.UnescapeDataString(segments[index]); }
+                catch { unescaped = segments[index]; }
+
+                // Uri.EscapeDataString encodes everything except unreserved chars (RFC 3986).
+                // Path segments also allow sub-delims, ":" and "@", so restore those.
+                segments[index] = Uri.EscapeDataString(unescaped)
+                    .Replace("%3A", ":")
+                    .Replace("%40", "@");
             }
 
             return string.Join('/', segments);

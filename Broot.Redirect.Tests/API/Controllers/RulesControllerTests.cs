@@ -1058,10 +1058,8 @@ namespace Broot.Redirect.Tests.API.Controllers
         public class ImportPreviewAdditionalTests : RulesControllerTests
         {
             [Fact]
-            public async Task ImportPreview_WithUrlEncoding_EncodesMatcherAndTarget()
+            public async Task ImportPreview_AlwaysEncodesMatcherAndTarget()
             {
-                _settingsCache.GetSettings().Returns(new AppSettings { EncodeImportedUrls = true });
-
                 var entries = new List<ImportRuleEntry>
                 {
                     new ImportRuleEntry

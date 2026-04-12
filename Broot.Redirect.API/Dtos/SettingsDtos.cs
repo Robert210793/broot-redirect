@@ -51,8 +51,6 @@
 
         public bool? CaseSensitiveLinkDetection { get; set; }
 
-        public bool? EncodeImportedUrls { get; set; }
-
         public bool? EnableReferrerTracking { get; set; }
 
         public bool? EnableFeedbackSurvey { get; set; }

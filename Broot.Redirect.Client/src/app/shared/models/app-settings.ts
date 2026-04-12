@@ -40,7 +40,6 @@ export interface AppSettings {
 
     // -- Behavioral toggles --
     caseSensitiveLinkDetection: boolean;
-    encodeImportedUrls: boolean;
     enableReferrerTracking: boolean;
     enableFeedbackSurvey: boolean;
     enableFeedbackComment: boolean;

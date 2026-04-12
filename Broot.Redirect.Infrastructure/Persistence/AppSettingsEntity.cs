@@ -72,8 +72,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public bool CaseSensitiveLinkDetection { get; set; }
 
-        public bool EncodeImportedUrls { get; set; } = true;
-
         public bool EnableReferrerTracking { get; set; } = true;
 
         public bool EnableFeedbackSurvey { get; set; }
@@ -114,7 +112,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 MatchLowExplanation = settings.MatchLowExplanation,
                 MatchNoneExplanation = settings.MatchNoneExplanation,
                 CaseSensitiveLinkDetection = settings.CaseSensitiveLinkDetection,
-                EncodeImportedUrls = settings.EncodeImportedUrls,
                 EnableReferrerTracking = settings.EnableReferrerTracking,
                 EnableFeedbackSurvey = settings.EnableFeedbackSurvey,
                 EnableFeedbackComment = settings.EnableFeedbackComment,
@@ -152,7 +149,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 MatchLowExplanation = MatchLowExplanation,
                 MatchNoneExplanation = MatchNoneExplanation,
                 CaseSensitiveLinkDetection = CaseSensitiveLinkDetection,
-                EncodeImportedUrls = EncodeImportedUrls,
                 EnableReferrerTracking = EnableReferrerTracking,
                 EnableFeedbackSurvey = EnableFeedbackSurvey,
                 EnableFeedbackComment = EnableFeedbackComment,

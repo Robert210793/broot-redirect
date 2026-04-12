@@ -387,8 +387,6 @@ namespace Broot.Redirect.API.Controllers
             }
 
             var matcherLookup = RuleImportExportService.BuildMatcherLookup(_cacheService.GetAll());
-            var appSettings = _settingsCache.GetSettings();
-            var encodeUrls = appSettings.EncodeImportedUrls;
 
             var previewEntries = new List<ImportPreviewEntry>();
             var counts = new ImportPreviewCounts();
@@ -405,7 +403,7 @@ namespace Broot.Redirect.API.Controllers
                     InfoText = entry.InfoText
                 };
 
-                var (_, validationError) = RuleImportExportService.ValidateImportEntry(entry, encodeUrls, _validationService);
+                var (_, validationError) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 if (validationError != null)
                 {
@@ -479,7 +477,6 @@ namespace Broot.Redirect.API.Controllers
             var repository = _repository;
             var cacheService = _cacheService;
             var validationService = _validationService;
-            var settingsCache = _settingsCache;
             var logger = _logger;
 
             _ = Task.Run(async () =>
@@ -488,9 +485,6 @@ namespace Broot.Redirect.API.Controllers
 
                 try
                 {
-                    var appSettings = settingsCache.GetSettings();
-                    var encodeUrls = appSettings.EncodeImportedUrls;
-
                     var matcherLookup = RuleImportExportService.BuildMatcherLookup(cacheService.GetAll());
 
                     for (var index = 0; index < entries.Count; index++)
@@ -500,7 +494,7 @@ namespace Broot.Redirect.API.Controllers
                         try
                         {
                             var (mappedRequest, validationError) = RuleImportExportService.ValidateImportEntry(
-                                entry, encodeUrls, validationService);
+                                entry, validationService);
 
                             if (validationError != null)
                             {

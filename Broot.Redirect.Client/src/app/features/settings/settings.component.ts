@@ -59,7 +59,6 @@ export class SettingsComponent implements OnInit {
 
     // -- Behavioral toggles --
     caseSensitiveLinkDetection = false;
-    encodeImportedUrls = true;
     enableReferrerTracking = true;
     enableFeedbackSurvey = false;
     enableFeedbackComment = false;
@@ -95,7 +94,6 @@ export class SettingsComponent implements OnInit {
             matchLowExplanation: this.matchLowExplanation,
             matchNoneExplanation: this.matchNoneExplanation,
             caseSensitiveLinkDetection: this.caseSensitiveLinkDetection,
-            encodeImportedUrls: this.encodeImportedUrls,
             enableReferrerTracking: this.enableReferrerTracking,
             enableFeedbackSurvey: this.enableFeedbackSurvey,
             enableFeedbackComment: this.enableFeedbackComment,
@@ -162,7 +160,6 @@ export class SettingsComponent implements OnInit {
         this.matchLowExplanation = settings.matchLowExplanation;
         this.matchNoneExplanation = settings.matchNoneExplanation;
         this.caseSensitiveLinkDetection = settings.caseSensitiveLinkDetection;
-        this.encodeImportedUrls = settings.encodeImportedUrls;
         this.enableReferrerTracking = settings.enableReferrerTracking;
         this.enableFeedbackSurvey = settings.enableFeedbackSurvey;
         this.enableFeedbackComment = settings.enableFeedbackComment;

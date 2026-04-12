@@ -508,7 +508,7 @@ namespace Broot.Redirect.Tests.API.Services
                     RedirectType = "wildcard"
                 };
 
-                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, false, _validationService);
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 error.Should().BeNull();
                 request.Should().NotBeNull();
@@ -520,7 +520,7 @@ namespace Broot.Redirect.Tests.API.Services
             {
                 var entry = new ImportRuleEntry { Matcher = "", TargetUrl = "https://new.com" };
 
-                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, false, _validationService);
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 error.Should().Be("Matcher is required");
                 request.Should().BeNull();
@@ -535,7 +535,7 @@ namespace Broot.Redirect.Tests.API.Services
                     RedirectType = "bogus"
                 };
 
-                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, false, _validationService);
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 error.Should().Contain("Invalid redirect type");
                 request.Should().BeNull();
@@ -551,14 +551,14 @@ namespace Broot.Redirect.Tests.API.Services
                     RedirectType = null
                 };
 
-                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, false, _validationService);
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 error.Should().BeNull();
                 request!.RedirectType.Should().Be("partial");
             }
 
             [Fact]
-            public void ValidateImportEntry_EncodeUrls_EncodesMatcherAndTarget()
+            public void ValidateImportEntry_AlwaysEncodesMatcherAndTarget()
             {
                 var entry = new ImportRuleEntry
                 {
@@ -567,11 +567,30 @@ namespace Broot.Redirect.Tests.API.Services
                     RedirectType = "partial"
                 };
 
-                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, true, _validationService);
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 error.Should().BeNull();
                 request!.Matcher.Should().Contain("path%20with%20spaces");
                 request.TargetUrl.Should().Contain("target%20with%20spaces");
+            }
+
+            [Fact]
+            public void ValidateImportEntry_AbsoluteTargetUrl_PreservesSchemeAndQuery()
+            {
+                var entry = new ImportRuleEntry
+                {
+                    Matcher = "/sites/old path/file name.pdf",
+                    TargetUrl = "https://example.com/:b:/r/sites/new path/file name.pdf?csf=1&web=1",
+                    RedirectType = "wildcard"
+                };
+
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
+
+                error.Should().BeNull();
+                request!.Matcher.Should().Contain("old%20path");
+                request.TargetUrl.Should().StartWith("https://example.com/");
+                request.TargetUrl.Should().Contain("new%20path");
+                request.TargetUrl.Should().EndWith("?csf=1&web=1");
             }
 
             [Fact]
@@ -584,7 +603,7 @@ namespace Broot.Redirect.Tests.API.Services
                     RedirectType = "wildcard"
                 };
 
-                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, false, _validationService);
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 error.Should().NotBeNull();
                 request.Should().BeNull();
@@ -603,7 +622,7 @@ namespace Broot.Redirect.Tests.API.Services
                     SearchAndReplace = null
                 };
 
-                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, false, _validationService);
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 error.Should().BeNull();
                 request!.KeptQueryParams.Should().BeEmpty();
@@ -905,6 +924,36 @@ namespace Broot.Redirect.Tests.API.Services
                 var result = RuleImportExportService.PercentEncodePreservingSlashes("/a/b/c");
 
                 result.Should().Be("/a/b/c");
+            }
+
+            [Fact]
+            public void PercentEncodePreservingSlashes_AbsoluteUrl_PreservesSchemeAndAuthority()
+            {
+                var result = RuleImportExportService.PercentEncodePreservingSlashes(
+                    "https://example.com/:b:/r/sites/test path/file name.pdf?csf=1&web=1");
+
+                result.Should().StartWith("https://example.com/");
+                result.Should().Contain("test%20path");
+                result.Should().Contain("file%20name.pdf");
+                result.Should().EndWith("?csf=1&web=1");
+            }
+
+            [Fact]
+            public void PercentEncodePreservingSlashes_AbsoluteUrl_NoSpaces_Unchanged()
+            {
+                var input = "https://example.com/:w:/r/sites/docs/report.docx?csf=1&web=1";
+
+                var result = RuleImportExportService.PercentEncodePreservingSlashes(input);
+
+                result.Should().Be(input);
+            }
+
+            [Fact]
+            public void PercentEncodePreservingSlashes_PreEncodedInput_NormalizesWithoutDoubleEncoding()
+            {
+                var result = RuleImportExportService.PercentEncodePreservingSlashes("/path%20already%20encoded/file");
+
+                result.Should().Be("/path%20already%20encoded/file");
             }
         }
     }

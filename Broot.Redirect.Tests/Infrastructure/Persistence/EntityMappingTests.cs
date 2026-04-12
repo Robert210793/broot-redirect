@@ -312,7 +312,6 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
                 DefaultNewDomain = "https://round.com",
                 HeaderTitle = "Round Trip",
                 SmartSearchSkipEncoding = true,
-                EncodeImportedUrls = false,
                 EnableFeedbackComment = true
             };
 
@@ -322,7 +321,6 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
             restored.DefaultNewDomain.Should().Be(original.DefaultNewDomain);
             restored.HeaderTitle.Should().Be(original.HeaderTitle);
             restored.SmartSearchSkipEncoding.Should().Be(original.SmartSearchSkipEncoding);
-            restored.EncodeImportedUrls.Should().Be(original.EncodeImportedUrls);
             restored.EnableFeedbackComment.Should().Be(original.EnableFeedbackComment);
         }
     }

@@ -70,7 +70,6 @@ namespace Broot.Redirect.API.Controllers
                 MatchLowExplanation = request.MatchLowExplanation ?? existing.MatchLowExplanation,
                 MatchNoneExplanation = request.MatchNoneExplanation ?? existing.MatchNoneExplanation,
                 CaseSensitiveLinkDetection = request.CaseSensitiveLinkDetection ?? existing.CaseSensitiveLinkDetection,
-                EncodeImportedUrls = request.EncodeImportedUrls ?? existing.EncodeImportedUrls,
                 EnableReferrerTracking = request.EnableReferrerTracking ?? existing.EnableReferrerTracking,
                 EnableFeedbackSurvey = request.EnableFeedbackSurvey ?? existing.EnableFeedbackSurvey,
                 EnableFeedbackComment = request.EnableFeedbackComment ?? existing.EnableFeedbackComment,
