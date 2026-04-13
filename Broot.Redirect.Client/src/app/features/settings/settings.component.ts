@@ -21,7 +21,6 @@ export class SettingsComponent implements OnInit {
     // -- Redirect behavior --
     defaultNewDomain = '';
     noMatchBehavior = 'RedirectToDefault';
-    autoRedirect = false;
 
     // -- Info page: header --
     headerTitle = '';
@@ -71,7 +70,6 @@ export class SettingsComponent implements OnInit {
         const payload: Partial<AppSettings> = {
             defaultNewDomain: this.defaultNewDomain,
             noMatchBehavior: this.noMatchBehavior,
-            autoRedirect: this.autoRedirect,
             headerTitle: this.headerTitle,
             infoPageTitle: this.infoPageTitle,
             infoPageMessage: this.infoPageMessage,
@@ -136,7 +134,6 @@ export class SettingsComponent implements OnInit {
     private populateForm(settings: AppSettings): void {
         this.defaultNewDomain = settings.defaultNewDomain;
         this.noMatchBehavior = settings.noMatchBehavior;
-        this.autoRedirect = settings.autoRedirect;
         this.headerTitle = settings.headerTitle;
         this.infoPageTitle = settings.infoPageTitle;
         this.infoPageMessage = settings.infoPageMessage;

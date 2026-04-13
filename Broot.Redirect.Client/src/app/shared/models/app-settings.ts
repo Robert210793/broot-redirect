@@ -2,7 +2,6 @@ export interface AppSettings {
     // -- Redirect behavior --
     defaultNewDomain: string;
     noMatchBehavior: string;
-    autoRedirect: boolean;
 
     // -- Info page: header --
     headerTitle: string;
