@@ -32,8 +32,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public string NoMatchBehavior { get; set; } = "RedirectToDefault";
 
-        public bool AutoRedirect { get; set; }
-
         public string HeaderTitle { get; set; } = string.Empty;
 
         public string InfoPageTitle { get; set; } = string.Empty;
@@ -90,7 +88,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 RowKey = DefaultRowKey,
                 DefaultNewDomain = settings.DefaultNewDomain,
                 NoMatchBehavior = settings.NoMatchBehavior,
-                AutoRedirect = settings.AutoRedirect,
                 HeaderTitle = settings.HeaderTitle,
                 InfoPageTitle = settings.InfoPageTitle,
                 InfoPageMessage = settings.InfoPageMessage,
@@ -126,7 +123,6 @@ namespace Broot.Redirect.Infrastructure.Persistence
             {
                 DefaultNewDomain = DefaultNewDomain,
                 NoMatchBehavior = NoMatchBehavior,
-                AutoRedirect = AutoRedirect,
                 HeaderTitle = HeaderTitle,
                 InfoPageTitle = InfoPageTitle,
                 InfoPageMessage = InfoPageMessage,

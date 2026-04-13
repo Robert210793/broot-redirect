@@ -23,13 +23,6 @@ namespace Broot.Redirect.Core.Models
         /// 
         public string NoMatchBehavior { get; set; } = "RedirectToDefault";
 
-        /// <summary>
-        /// Global auto-redirect toggle. When false, all matched URLs show the info page
-        /// regardless of per-rule AutoRedirect settings.
-        /// </summary>
-        /// 
-        public bool AutoRedirect { get; set; } = true;
-
         public string HeaderTitle { get; set; } = "SmartRedirect Suite";
 
         public string InfoPageTitle { get; set; } = "URL veraltet - Aktualisierung erforderlich";

@@ -61,7 +61,6 @@ namespace Broot.Redirect.Tests.Integration
             {
                 DefaultNewDomain = "https://test.com",
                 NoMatchBehavior = "SmartSearch",
-                AutoRedirect = true,
                 HeaderTitle = "Integration Test",
                 SmartSearchUrl = "https://search.com/q=",
                 CaseSensitiveLinkDetection = true,
@@ -75,7 +74,6 @@ namespace Broot.Redirect.Tests.Integration
             result.Should().NotBeNull();
             result!.DefaultNewDomain.Should().Be("https://test.com");
             result.NoMatchBehavior.Should().Be("SmartSearch");
-            result.AutoRedirect.Should().BeTrue();
             result.HeaderTitle.Should().Be("Integration Test");
             result.CaseSensitiveLinkDetection.Should().BeTrue();
         }

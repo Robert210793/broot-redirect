@@ -263,7 +263,6 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
             {
                 DefaultNewDomain = "https://test.com",
                 NoMatchBehavior = "SmartSearch",
-                AutoRedirect = true,
                 HeaderTitle = "Test",
                 SmartSearchUrl = "https://search.com/q=",
                 CaseSensitiveLinkDetection = true,
@@ -274,7 +273,6 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
 
             entity.DefaultNewDomain.Should().Be("https://test.com");
             entity.NoMatchBehavior.Should().Be("SmartSearch");
-            entity.AutoRedirect.Should().BeTrue();
             entity.HeaderTitle.Should().Be("Test");
             entity.SmartSearchUrl.Should().Be("https://search.com/q=");
             entity.CaseSensitiveLinkDetection.Should().BeTrue();
@@ -290,7 +288,6 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
             {
                 DefaultNewDomain = "https://mapped.com",
                 NoMatchBehavior = "Return404",
-                AutoRedirect = false,
                 PopupMode = "active",
                 ShowLinkQualityGauge = false
             };
@@ -299,7 +296,6 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
 
             settings.DefaultNewDomain.Should().Be("https://mapped.com");
             settings.NoMatchBehavior.Should().Be("Return404");
-            settings.AutoRedirect.Should().BeFalse();
             settings.PopupMode.Should().Be("active");
             settings.ShowLinkQualityGauge.Should().BeFalse();
         }

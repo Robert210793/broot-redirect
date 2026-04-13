@@ -95,7 +95,8 @@ namespace Broot.Redirect.API.Middleware
         {
             var rule = matchResult.Rule;
 
-            if (!appSettings.AutoRedirect || !rule.AutoRedirect)
+            // Only check the per-rule AutoRedirect flag
+            if (!rule.AutoRedirect)
             {
                 return false;
             }

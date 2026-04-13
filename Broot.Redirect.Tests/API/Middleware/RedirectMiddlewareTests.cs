@@ -125,7 +125,7 @@ namespace Broot.Redirect.Tests.API.Middleware
                 .ResolveTargetUrl(Arg.Any<string>(), Arg.Any<RedirectRule>(), Arg.Any<string>())
                 .Returns("https://new.com/page");
 
-            _settingsCache.GetSettings().Returns(new AppSettings { AutoRedirect = true });
+            _settingsCache.GetSettings().Returns(new AppSettings());
 
             var (nextCalled, context) = await InvokeMiddleware("/old-page");
 
@@ -151,31 +151,7 @@ namespace Broot.Redirect.Tests.API.Middleware
                 .ResolveMatch(Arg.Any<string>(), Arg.Any<RuleMatchingConfig>())
                 .Returns(matchResult);
 
-            _settingsCache.GetSettings().Returns(new AppSettings { AutoRedirect = true });
-
-            var (nextCalled, context) = await InvokeMiddleware("/old-page");
-
-            nextCalled.Should().BeTrue();
-        }
-
-        [Fact]
-        public async Task InvokeAsync_MatchButGlobalAutoRedirectFalse_FallsThrough()
-        {
-            var rule = new RedirectRule { Matcher = "/old-page", AutoRedirect = true };
-
-            var matchResult = new RuleMatchResult
-            {
-                Rule = rule,
-                Score = 1000,
-                Quality = 100,
-                Level = MatchQualityLevel.Green
-            };
-
-            _ruleMatchingService
-                .ResolveMatch(Arg.Any<string>(), Arg.Any<RuleMatchingConfig>())
-                .Returns(matchResult);
-
-            _settingsCache.GetSettings().Returns(new AppSettings { AutoRedirect = false });
+            _settingsCache.GetSettings().Returns(new AppSettings());
 
             var (nextCalled, context) = await InvokeMiddleware("/old-page");
 
@@ -267,7 +243,7 @@ namespace Broot.Redirect.Tests.API.Middleware
                 .ResolveTargetUrl(Arg.Any<string>(), Arg.Any<RedirectRule>(), Arg.Any<string>())
                 .Returns("https://new.com/tracked");
 
-            _settingsCache.GetSettings().Returns(new AppSettings { AutoRedirect = true });
+            _settingsCache.GetSettings().Returns(new AppSettings());
 
             await InvokeMiddleware("/tracked");
 
@@ -297,7 +273,7 @@ namespace Broot.Redirect.Tests.API.Middleware
                 .ResolveTargetUrl(Arg.Any<string>(), Arg.Any<RedirectRule>(), Arg.Any<string>())
                 .Returns("https://new.com/page");
 
-            _settingsCache.GetSettings().Returns(new AppSettings { AutoRedirect = true });
+            _settingsCache.GetSettings().Returns(new AppSettings());
 
             _trackingRepository
                 .CreateAsync(Arg.Any<TrackingEntry>(), Arg.Any<CancellationToken>())
@@ -331,7 +307,7 @@ namespace Broot.Redirect.Tests.API.Middleware
                 .ResolveTargetUrl(Arg.Any<string>(), Arg.Any<RedirectRule>(), Arg.Any<string>())
                 .Returns(string.Empty);
 
-            _settingsCache.GetSettings().Returns(new AppSettings { AutoRedirect = true });
+            _settingsCache.GetSettings().Returns(new AppSettings());
 
             var (nextCalled, context) = await InvokeMiddleware("/old-page");
 

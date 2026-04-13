@@ -50,7 +50,6 @@ namespace Broot.Redirect.API.Controllers
             {
                 DefaultNewDomain = request.DefaultNewDomain ?? existing.DefaultNewDomain,
                 NoMatchBehavior = request.NoMatchBehavior ?? existing.NoMatchBehavior,
-                AutoRedirect = request.AutoRedirect ?? existing.AutoRedirect,
                 HeaderTitle = request.HeaderTitle ?? existing.HeaderTitle,
                 InfoPageTitle = request.InfoPageTitle ?? existing.InfoPageTitle,
                 InfoPageMessage = request.InfoPageMessage ?? existing.InfoPageMessage,

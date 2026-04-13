@@ -11,8 +11,6 @@
 
         public string? NoMatchBehavior { get; set; }
 
-        public bool? AutoRedirect { get; set; }
-
         public string? HeaderTitle { get; set; }
 
         public string? InfoPageTitle { get; set; }
