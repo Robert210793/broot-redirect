@@ -3,6 +3,7 @@ export interface RedirectRule {
     matcher: string;
     targetUrl: string | null;
     redirectType: RedirectType;
+    source: RuleSource;
     infoText: string | null;
     autoRedirect: boolean;
     discardQueryParams: boolean;
@@ -14,6 +15,8 @@ export interface RedirectRule {
 }
 
 export type RedirectType = 'wildcard' | 'partial' | 'domain' | 'regex';
+
+export type RuleSource = 'manual' | 'import' | 'unknown';
 
 export type MatchQualityLevel = 'red' | 'yellow' | 'green';
 

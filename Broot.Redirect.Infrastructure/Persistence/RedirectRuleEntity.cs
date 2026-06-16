@@ -32,6 +32,8 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public string RedirectType { get; set; } = "partial";
 
+        public string? Source { get; set; }
+
         public string? InfoText { get; set; }
 
         public bool AutoRedirect { get; set; }
@@ -57,6 +59,7 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 Matcher = rule.Matcher,
                 TargetUrl = rule.TargetUrl,
                 RedirectType = rule.RedirectType.ToString().ToLowerInvariant(),
+                Source = rule.Source.ToString().ToLowerInvariant(),
                 InfoText = rule.InfoText,
                 AutoRedirect = rule.AutoRedirect,
                 DiscardQueryParams = rule.DiscardQueryParams,
@@ -90,6 +93,7 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 Matcher = Matcher,
                 TargetUrl = TargetUrl,
                 RedirectType = ParseRedirectType(RedirectType),
+                Source = ParseRuleSource(Source),
                 InfoText = InfoText,
                 AutoRedirect = AutoRedirect,
                 DiscardQueryParams = DiscardQueryParams,
@@ -139,6 +143,16 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 "domain" => Core.Models.RedirectType.Domain,
                 "regex" => Core.Models.RedirectType.Regex,
                 _ => Core.Models.RedirectType.Partial
+            };
+        }
+
+        private static Core.Models.RuleSource ParseRuleSource(string? value)
+        {
+            return value?.ToLowerInvariant() switch
+            {
+                "manual" => Core.Models.RuleSource.Manual,
+                "import" => Core.Models.RuleSource.Import,
+                _ => Core.Models.RuleSource.Unknown
             };
         }
     }

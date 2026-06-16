@@ -470,6 +470,21 @@ body {
   color: #be185d;
 }
 
+.badge-source-manual {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.badge-source-import {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge-source-unknown {
+  background: var(--color-surface-hover);
+  color: var(--color-text-tertiary);
+}
+
 .badge-new {
   background: var(--color-success-light);
   color: var(--color-success);

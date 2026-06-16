@@ -170,6 +170,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
                 Matcher = "/round-trip",
                 TargetUrl = "https://target.com",
                 RedirectType = RedirectType.Domain,
+                Source = RuleSource.Import,
                 InfoText = "Round trip test",
                 AutoRedirect = true,
                 DiscardQueryParams = true,
@@ -196,6 +197,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
             restored.Matcher.Should().Be(original.Matcher);
             restored.TargetUrl.Should().Be(original.TargetUrl);
             restored.RedirectType.Should().Be(original.RedirectType);
+            restored.Source.Should().Be(original.Source);
             restored.AutoRedirect.Should().Be(original.AutoRedirect);
             restored.KeptQueryParams.Should().HaveCount(1);
             restored.StaticQueryParams.Should().HaveCount(1);
@@ -235,6 +237,39 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
             var rule = entity.ToDomainModel();
 
             rule.RedirectType.Should().Be(RedirectType.Partial);
+        }
+
+        [Theory]
+        [InlineData("manual", RuleSource.Manual)]
+        [InlineData("import", RuleSource.Import)]
+        [InlineData("unknown", RuleSource.Unknown)]
+        public void ToDomainModel_ParsesRuleSource(string sourceString, RuleSource expected)
+        {
+            var entity = new RedirectRuleEntity
+            {
+                RowKey = Guid.NewGuid().ToString("N"),
+                Matcher = "/path",
+                Source = sourceString
+            };
+
+            var rule = entity.ToDomainModel();
+
+            rule.Source.Should().Be(expected);
+        }
+
+        [Fact]
+        public void ToDomainModel_MissingSource_DefaultsToUnknown()
+        {
+            var entity = new RedirectRuleEntity
+            {
+                RowKey = Guid.NewGuid().ToString("N"),
+                Matcher = "/path",
+                Source = null
+            };
+
+            var rule = entity.ToDomainModel();
+
+            rule.Source.Should().Be(RuleSource.Unknown);
         }
 
         [Fact]

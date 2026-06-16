@@ -103,7 +103,7 @@
                 <p>Erstelle deine erste Regel, um zu beginnen.</p>
             </div>
         } @else {
-            <table class="data-table" appResizableColumns="rules-table">
+            <table class="data-table" appResizableColumns="rules-table-v3">
                 <thead>
                     <tr>
                         <th style="width: 40px">
@@ -114,15 +114,21 @@
                                 (change)="onToggleAll($event)"
                             />
                         </th>
-                        <th class="sortable" (click)="onSort('matcher')" style="width: 38%">
+                        <th class="sortable" (click)="onSort('matcher')" style="width: 30%">
                             Matcher
                             @if (queryParams.sortBy === 'matcher') {
                                 <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
                             }
                         </th>
-                        <th class="sortable" (click)="onSort('targetUrl')" style="width: 38%">
+                        <th class="sortable" (click)="onSort('targetUrl')" style="width: 30%">
                             Ziel-URL
                             @if (queryParams.sortBy === 'targetUrl') {
+                                <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
+                            }
+                        </th>
+                        <th class="sortable" (click)="onSort('infoText')" style="width: 16%">
+                            Info-Text
+                            @if (queryParams.sortBy === 'infoText') {
                                 <span>{{ queryParams.sortOrder === 'asc' ? ' \u2191' : ' \u2193' }}</span>
                             }
                         </th>
@@ -133,6 +139,12 @@
                             }
                         </th>
                         <th style="width: 60px">Auto</th>
+                        <th class="sortable" (click)="onSort('source')" style="width: 90px">
+                            Quelle
+                            @if (queryParams.sortBy === 'source') {
+                                <span>{{ queryParams.sortOrder === 'asc' ? ' ↑' : ' ↓' }}</span>
+                            }
+                        </th>
                         <th class="sortable" (click)="onSort('createdAt')" style="width: 110px">
                             Erstellt
                             @if (queryParams.sortBy === 'createdAt') {
@@ -160,6 +172,13 @@
                                 <span class="mono cell-truncate" [title]="rule.targetUrl || ''">{{ rule.targetUrl || '(default)' }}</span>
                             </td>
                             <td>
+                                @if (rule.infoText) {
+                                    <span class="cell-truncate" [title]="rule.infoText">{{ rule.infoText }}</span>
+                                } @else {
+                                    <span class="text-tertiary">&mdash;</span>
+                                }
+                            </td>
+                            <td>
                                 <span class="badge" [class]="'badge-' + rule.redirectType">{{ rule.redirectType }}</span>
                             </td>
                             <td>
@@ -168,6 +187,9 @@
                                 } @else {
                                     <span class="text-tertiary" style="font-size: 0.8rem">Info</span>
                                 }
+                            </td>
+                            <td>
+                                <span class="badge" [class]="'badge-source-' + rule.source">{{ sourceLabel(rule.source) }}</span>
                             </td>
                             <td>
                                 <span class="text-secondary" style="font-size: 0.8rem">{{ formatDate(rule.createdAt) }}</span>

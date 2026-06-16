@@ -315,6 +315,17 @@ export class RulesListComponent implements OnInit, OnDestroy {
         });
     }
 
+    sourceLabel(source: RedirectRule['source']): string {
+        switch (source) {
+            case 'manual':
+                return 'Manuell';
+            case 'import':
+                return 'Importiert';
+            default:
+                return 'Unbekannt';
+        }
+    }
+
     formatDate(isoDate: string): string {
         try {
             const date = new Date(isoDate);

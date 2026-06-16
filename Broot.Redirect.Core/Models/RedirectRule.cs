@@ -16,6 +16,8 @@ namespace Broot.Redirect.Core.Models
 
         public RedirectType RedirectType { get; set; } = RedirectType.Partial;
 
+        public RuleSource Source { get; set; } = RuleSource.Unknown;
+
         public string InfoText { get; set; } = string.Empty;
 
         public bool AutoRedirect { get; set; }

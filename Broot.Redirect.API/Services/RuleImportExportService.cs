@@ -622,6 +622,14 @@ namespace Broot.Redirect.API.Services
                     ? rules.OrderBy(rule => rule.RedirectType.ToString())
                     : rules.OrderByDescending(rule => rule.RedirectType.ToString()),
 
+                "infotext" => sortOrder == "asc"
+                    ? rules.OrderBy(rule => rule.InfoText, StringComparer.OrdinalIgnoreCase)
+                    : rules.OrderByDescending(rule => rule.InfoText, StringComparer.OrdinalIgnoreCase),
+
+                "source" => sortOrder == "asc"
+                    ? rules.OrderBy(rule => rule.Source.ToString())
+                    : rules.OrderByDescending(rule => rule.Source.ToString()),
+
                 _ => sortOrder == "asc"
                     ? rules.OrderBy(rule => rule.CreatedAt)
                     : rules.OrderByDescending(rule => rule.CreatedAt)
