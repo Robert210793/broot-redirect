@@ -10,10 +10,11 @@ import { ResolveResponse, MatchQualityLevel } from '../../shared/models/redirect
 import { AppSettings } from '../../shared/models/app-settings';
 import { QualityGaugeComponent } from '../../shared/components/quality-gauge/quality-gauge.component';
 import { PasswordModalComponent } from '../../shared/components/password-modal/password-modal.component';
+import { LinkifyPipe } from '../../shared/pipes/linkify.pipe';
 
 @Component({
     selector: 'app-info-page',
-    imports: [QualityGaugeComponent, PasswordModalComponent, FormsModule],
+    imports: [QualityGaugeComponent, PasswordModalComponent, FormsModule, LinkifyPipe],
     templateUrl: './info-page.component.html',
     styleUrl: './info-page.component.css',
 })

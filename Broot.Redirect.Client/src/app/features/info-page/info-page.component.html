@@ -145,7 +145,7 @@
                                     </svg>
                                     <span class="hints-title">{{ settings()?.specialHintsTitle || 'Bitte beachte folgendes für diese URL:' }}</span>
                                 </div>
-                                <p class="hints-text">{{ infoText() }}</p>
+                                <p class="hints-text" [innerHTML]="infoText() | linkify"></p>
                             </div>
 
                             <!-- Old URL Section -->
