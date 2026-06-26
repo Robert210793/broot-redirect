@@ -293,6 +293,8 @@ export class RuleModalComponent {
             validationErrors['matcher'] = `URL-Muster ist zu lang (maximal ${MATCHER_MAX_LENGTH} Zeichen).`;
         } else if (!MATCHER_PATTERN.test(trimmedMatcher)) {
             validationErrors['matcher'] = "URL-Muster muss mit '/' beginnen oder eine Domain sein (z.B. example.com).";
+        } else if (this.redirectType !== 'regex' && !trimmedMatcher.startsWith('/') && trimmedMatcher.includes('/')) {
+            validationErrors['matcher'] = "Pfad-Muster müssen mit '/' beginnen (z.B. /ims/...). Ohne '/' wird es als Domain interpretiert.";
         }
 
         // -- Regex-specific matcher check --

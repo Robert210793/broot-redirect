@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RedirectService } from '../../shared/services/redirect.service';
@@ -23,6 +24,7 @@ export class InfoPageComponent implements OnInit {
     private readonly settingsService = inject(SettingsService);
     private readonly authService = inject(AuthService);
     private readonly trackingService = inject(TrackingService);
+    private readonly http = inject(HttpClient);
 
     // -- State --
 
@@ -33,11 +35,13 @@ export class InfoPageComponent implements OnInit {
     originalUrl = '';
     currentYear = new Date().getFullYear();
 
-    appVersion = (() => {
+    // Prefer the build-injected meta tag (no extra request); fall back to /api/health
+    // at runtime when the placeholder wasn't replaced (e.g. dev / ng serve).
+    appVersion = signal<string>((() => {
         const meta = document.querySelector('meta[name="app-version"]');
         const version = meta?.getAttribute('content') ?? '';
         return version && version !== '__APP_VERSION__' ? version : '';
-    })();
+    })());
 
     // -- UI state --
 
@@ -148,7 +152,26 @@ export class InfoPageComponent implements OnInit {
 
     // -- Lifecycle --
 
+    // /api/health returns the backend's assembly version. It may answer 503 while
+    // warming up / unhealthy, but the body still carries the version, so read both paths.
+    private loadVersionFallback(): void {
+        const apply = (version?: string | null) => {
+            if (version && version !== 'unknown') {
+                this.appVersion.set(version);
+            }
+        };
+
+        this.http.get<{ version?: string }>('/api/health').subscribe({
+            next: (response) => apply(response?.version),
+            error: (error) => apply(error?.error?.version),
+        });
+    }
+
     ngOnInit(): void {
+        if (!this.appVersion()) {
+            this.loadVersionFallback();
+        }
+
         const path = this.extractPath();
 
         // Build the original URL from the extracted path (base href stripped)
@@ -373,6 +396,11 @@ export class InfoPageComponent implements OnInit {
     }
 
     private promptFeedback(): void {
+        // Respect the admin "Feedback-Umfrage" toggle (AppSettings.EnableFeedbackSurvey).
+        if (!this.settings()?.enableFeedbackSurvey) {
+            return;
+        }
+
         if (this.hasAskedFeedback() || !this.trackingId()) {
             return;
         }

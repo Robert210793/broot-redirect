@@ -30,6 +30,12 @@ namespace Broot.Redirect.API.Services
             {
                 errors.Add("URL-Muster muss mit '/' beginnen oder eine Domain sein (z.B. example.com)");
             }
+            else if (!string.Equals(request.RedirectType, "regex", StringComparison.OrdinalIgnoreCase)
+                && !request.Matcher.StartsWith('/')
+                && request.Matcher.Contains('/'))
+            {
+                errors.Add("Pfad-Muster müssen mit '/' beginnen (z.B. /ims/...). Ohne '/' wird es als Domain interpretiert.");
+            }
 
             if (request.TargetUrl != null && request.TargetUrl.Length > 2000)
             {

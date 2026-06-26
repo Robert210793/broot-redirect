@@ -63,6 +63,49 @@ namespace Broot.Redirect.Tests.API.Services
             errors.Should().BeEmpty();
         }
 
+        [Theory]
+        [InlineData("ims/Einkauf_Logistik_Apotheke/Forms")]
+        [InlineData("foo/bar")]
+        public void ValidateCreate_PathWithoutLeadingSlash_ReturnsError(string matcher)
+        {
+            var request = CreateValidRequest();
+            request.Matcher = matcher;
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().Contain(error => error.Contains("Pfad"));
+        }
+
+        [Fact]
+        public void ValidateCreate_DomainMatcherWithoutSlash_IsAllowed()
+        {
+            var request = new CreateRuleRequest
+            {
+                Matcher = "example.com",
+                TargetUrl = "https://new.example.com",
+                RedirectType = "domain"
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ValidateCreate_RegexMatcherWithSlash_IsAllowed()
+        {
+            var request = new CreateRuleRequest
+            {
+                Matcher = "old.example.com/.*",
+                TargetUrl = null,
+                RedirectType = "regex"
+            };
+
+            var errors = _sut.ValidateCreate(request);
+
+            errors.Should().BeEmpty();
+        }
+
         [Fact]
         public void ValidateCreate_WildcardWithoutHttp_ReturnsError()
         {
