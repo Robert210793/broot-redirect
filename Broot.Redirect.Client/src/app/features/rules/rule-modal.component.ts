@@ -81,6 +81,10 @@ export class RuleModalComponent {
     // -- Actions --
 
     onSave(): void {
+        // Normalize before validating so the admin sees the cleaned matcher and the
+        // request matches what the backend stores (mirrors RuleImportExportService.NormalizeMatcher).
+        this.matcher = this.normalizeMatcher(this.matcher);
+
         if (!this.validate()) {
             return;
         }
@@ -146,12 +150,6 @@ export class RuleModalComponent {
         }
 
         this.closed.emit();
-    }
-
-    onBackdropClick(event: MouseEvent): void {
-        if ((event.target as HTMLElement).classList.contains('rule-modal-backdrop')) {
-            this.onClose();
-        }
     }
 
     onKeydown(event: KeyboardEvent): void {
@@ -266,6 +264,20 @@ export class RuleModalComponent {
         this.staticQueryParams = [];
         this.searchAndReplace = [];
         this.errors.set({});
+    }
+
+    /// Strips redundant trailing slashes (e.g. pasted from the browser URL bar) while
+    /// preserving the root "/" and a trailing "*" wildcard. Mirrors the backend.
+    private normalizeMatcher(value: string): string {
+        const trimmed = value.trim();
+
+        if (trimmed.endsWith('*') || trimmed.length <= 1) {
+            return trimmed;
+        }
+
+        const stripped = trimmed.replace(/\/+$/, '');
+
+        return stripped.length === 0 ? '/' : stripped;
     }
 
     private validate(): boolean {

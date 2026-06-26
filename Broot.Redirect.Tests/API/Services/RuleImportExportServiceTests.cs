@@ -955,6 +955,34 @@ namespace Broot.Redirect.Tests.API.Services
 
                 result.Should().Be("/path%20already%20encoded/file");
             }
+
+            [Theory]
+            [InlineData("/ims/Einkauf_Logistik_Apotheke/", "/ims/Einkauf_Logistik_Apotheke")]
+            [InlineData("/ims/Einkauf_Logistik_Apotheke/Forms/", "/ims/Einkauf_Logistik_Apotheke/Forms")]
+            [InlineData("/ims/Einkauf_Logistik_Apotheke///", "/ims/Einkauf_Logistik_Apotheke")]
+            [InlineData("  /a/b/  ", "/a/b")]
+            [InlineData("example.com/", "example.com")]
+            public void NormalizeMatcher_StripsTrailingSlashes(string input, string expected)
+            {
+                RuleImportExportService.NormalizeMatcher(input).Should().Be(expected);
+            }
+
+            [Theory]
+            [InlineData("/old/*")]
+            [InlineData("/ims/section/*")]
+            public void NormalizeMatcher_PreservesTrailingWildcard(string input)
+            {
+                RuleImportExportService.NormalizeMatcher(input).Should().Be(input);
+            }
+
+            [Theory]
+            [InlineData("/", "/")]
+            [InlineData("//", "/")]
+            [InlineData("/a/b/c", "/a/b/c")]
+            public void NormalizeMatcher_PreservesRootAndCleanPaths(string input, string expected)
+            {
+                RuleImportExportService.NormalizeMatcher(input).Should().Be(expected);
+            }
         }
     }
 }

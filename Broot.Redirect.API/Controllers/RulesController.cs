@@ -112,6 +112,8 @@ namespace Broot.Redirect.API.Controllers
                 return BadRequest(new { error = $"Invalid redirect type: {request.RedirectType}" });
             }
 
+            request.Matcher = RuleImportExportService.NormalizeMatcher(request.Matcher);
+
             if (_cacheService.MatcherExists(request.Matcher))
             {
                 return BadRequest(new { error = $"A rule with matcher '{request.Matcher}' already exists" });
@@ -167,6 +169,11 @@ namespace Broot.Redirect.API.Controllers
             if (existingRule == null)
             {
                 return NotFound(new { error = "Rule not found" });
+            }
+
+            if (request.Matcher != null)
+            {
+                request.Matcher = RuleImportExportService.NormalizeMatcher(request.Matcher);
             }
 
             if (request.Matcher != null && request.Matcher != existingRule.Matcher)

@@ -480,8 +480,9 @@ namespace Broot.Redirect.API.Services
                 return (null, $"Invalid redirect type: '{redirectType}'");
             }
 
-            // Always normalize: unescape then re-encode to handle both raw and pre-encoded input
-            var matcher = PercentEncodePreservingSlashes(entry.Matcher);
+            // Always normalize: unescape then re-encode to handle both raw and pre-encoded input,
+            // then strip any redundant trailing slash so URL-bar pastes resolve cleanly.
+            var matcher = NormalizeMatcher(PercentEncodePreservingSlashes(entry.Matcher));
             var targetUrl = entry.TargetUrl != null ? PercentEncodePreservingSlashes(entry.TargetUrl) : null;
 
             var request = new CreateRuleRequest
@@ -538,6 +539,33 @@ namespace Broot.Redirect.API.Services
         public static bool TryParseRedirectType(string value, out RedirectType redirectType)
         {
             return Enum.TryParse(value, ignoreCase: true, out redirectType);
+        }
+
+        /// <summary>
+        /// Normalizes a matcher for storage so equivalent admin input resolves consistently.
+        /// Strips redundant trailing slashes (e.g. pasted from the browser URL bar) while
+        /// preserving the root "/" and a trailing "*" wildcard. Trailing slashes are ignored
+        /// during matching anyway, but a stored trailing slash corrupts the resolved target
+        /// in <see cref="UrlTransformService"/> (stray "/" appended / StartsWith mismatch),
+        /// so we remove it once at the point of entry.
+        /// </summary>
+        public static string NormalizeMatcher(string matcher)
+        {
+            if (string.IsNullOrWhiteSpace(matcher))
+            {
+                return matcher ?? string.Empty;
+            }
+
+            var normalized = matcher.Trim();
+
+            if (normalized.EndsWith('*') || normalized.Length <= 1)
+            {
+                return normalized;
+            }
+
+            normalized = normalized.TrimEnd('/');
+
+            return normalized.Length == 0 ? "/" : normalized;
         }
 
         public static string PercentEncodePreservingSlashes(string value)
