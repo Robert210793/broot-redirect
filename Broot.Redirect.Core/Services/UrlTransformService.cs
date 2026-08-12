@@ -205,7 +205,7 @@ namespace Broot.Redirect.Core.Services
         {
             var workingOldPath = oldPath;
 
-            if (rule.DiscardQueryParams)
+            if (rule.DiscardQueryParams || rule.ForwardQueryParams)
             {
                 workingOldPath = StripQueryParams(workingOldPath);
             }
@@ -281,7 +281,7 @@ namespace Broot.Redirect.Core.Services
         {
             var workingOldPath = oldPath;
 
-            if (rule.DiscardQueryParams)
+            if (rule.DiscardQueryParams || rule.ForwardQueryParams)
             {
                 workingOldPath = StripQueryParams(workingOldPath);
             }
@@ -310,6 +310,26 @@ namespace Broot.Redirect.Core.Services
             if (decodedOldPath.StartsWith(decodedMatcher, StringComparison.OrdinalIgnoreCase))
             {
                 var suffix = decodedOldPath[decodedMatcher.Length..];
+
+                // Matching is performed on decoded text, but forwarded source query values
+                // must keep their original percent-encoding.
+                if (workingOldPath.StartsWith(cleanMatcher, StringComparison.OrdinalIgnoreCase))
+                {
+                    suffix = workingOldPath[cleanMatcher.Length..];
+                }
+                else if (!cleanMatcher.Contains('?'))
+                {
+                    var rawTailIndex = workingOldPath.IndexOfAny(new[] { '?', '#' });
+
+                    if (rawTailIndex >= 0)
+                    {
+                        var suffixTailIndex = suffix.IndexOfAny(new[] { '?', '#' });
+                        var suffixPath = suffixTailIndex >= 0 ? suffix[..suffixTailIndex] : suffix;
+
+                        suffix = suffixPath + workingOldPath[rawTailIndex..];
+                    }
+                }
+
                 var targetBase = rawTarget;
 
                 if (cleanMatcher.EndsWith('/') && !targetBase.EndsWith('/'))
@@ -326,10 +346,10 @@ namespace Broot.Redirect.Core.Services
 
                 if (targetBase.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 {
-                    return targetBase + suffix;
+                    return CombineTargetAndSuffix(targetBase, suffix);
                 }
 
-                return cleanDomain + targetBase + suffix;
+                return CombineTargetAndSuffix(cleanDomain + targetBase, suffix);
             }
 
             return cleanDomain + workingOldPath;
@@ -583,14 +603,82 @@ namespace Broot.Redirect.Core.Services
                 fragment = string.Empty;
             }
 
-            var queryPart = queryString.StartsWith('?') ? queryString[1..] : queryString;
+            var queryPart = queryString.TrimStart('?', '&');
+
+            if (queryPart.Length == 0)
+            {
+                return url;
+            }
 
             if (baseUrl.Contains('?'))
             {
-                return $"{baseUrl}&{queryPart}{fragment}";
+                var separator = baseUrl.EndsWith('?') || baseUrl.EndsWith('&') ? string.Empty : "&";
+
+                return $"{baseUrl}{separator}{queryPart}{fragment}";
             }
 
             return $"{baseUrl}?{queryPart}{fragment}";
+        }
+
+        private static string CombineTargetAndSuffix(string targetUrl, string suffix)
+        {
+            if (string.IsNullOrEmpty(suffix))
+            {
+                return targetUrl;
+            }
+
+            var fragmentIndex = suffix.IndexOf('#');
+            var sourceFragment = fragmentIndex >= 0 ? suffix[fragmentIndex..] : string.Empty;
+            var suffixWithoutFragment = fragmentIndex >= 0 ? suffix[..fragmentIndex] : suffix;
+
+            string pathSuffix;
+            string querySuffix;
+
+            if (suffixWithoutFragment.StartsWith('&'))
+            {
+                pathSuffix = string.Empty;
+                querySuffix = suffixWithoutFragment[1..];
+            }
+            else
+            {
+                var queryIndex = suffixWithoutFragment.IndexOf('?');
+                pathSuffix = queryIndex >= 0 ? suffixWithoutFragment[..queryIndex] : suffixWithoutFragment;
+                querySuffix = queryIndex >= 0 ? suffixWithoutFragment[(queryIndex + 1)..] : string.Empty;
+            }
+
+            var combined = InsertPathBeforeQueryAndFragment(targetUrl, pathSuffix);
+
+            if (!string.IsNullOrEmpty(querySuffix))
+            {
+                combined = AppendQueryString(combined, querySuffix);
+            }
+
+            if (!string.IsNullOrEmpty(sourceFragment) && !combined.Contains('#'))
+            {
+                combined += sourceFragment;
+            }
+
+            return combined;
+        }
+
+        private static string InsertPathBeforeQueryAndFragment(string url, string pathSuffix)
+        {
+            if (string.IsNullOrEmpty(pathSuffix))
+            {
+                return url;
+            }
+
+            var queryIndex = url.IndexOf('?');
+            var fragmentIndex = url.IndexOf('#');
+            var insertionIndex = queryIndex switch
+            {
+                >= 0 when fragmentIndex >= 0 => Math.Min(queryIndex, fragmentIndex),
+                >= 0 => queryIndex,
+                _ when fragmentIndex >= 0 => fragmentIndex,
+                _ => url.Length
+            };
+
+            return url.Insert(insertionIndex, pathSuffix);
         }
 
         private static string StripQueryParams(string path)

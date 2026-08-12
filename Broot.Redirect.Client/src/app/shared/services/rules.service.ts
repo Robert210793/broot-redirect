@@ -22,6 +22,7 @@ export interface StreamProgress {
     total: number;
     imported?: number;
     updated?: number;
+    unchanged?: number;
     errors?: string[];
 }
 
@@ -36,6 +37,7 @@ interface JobStatusResponse {
     isComplete: boolean;
     imported?: number;
     updated?: number;
+    unchanged?: number;
     errors?: string[];
     error?: string;
 }
@@ -170,6 +172,7 @@ export class RulesService {
                     total: data.total,
                     imported: data.imported,
                     updated: data.updated,
+                    unchanged: data.unchanged,
                     errors: data.errors
                 })),
                 tap((progress) => subscriber.next(progress)),

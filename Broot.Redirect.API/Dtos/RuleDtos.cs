@@ -117,6 +117,8 @@ namespace Broot.Redirect.API.Dtos
 
         public int Updated { get; set; }
 
+        public int Unchanged { get; set; }
+
         public string? Error { get; set; }
 
         public List<string> Errors { get; set; } = new();
@@ -133,7 +135,9 @@ namespace Broot.Redirect.API.Dtos
         public string? InfoText { get; set; }
 
         /// <summary>
-        /// "new" = no existing rule matches, "update" = existing rule found by ID or matcher, "invalid" = missing required fields or bad redirect type.
+        /// "new" = no existing rule matches, "update" = existing rule differs,
+        /// "unchanged" = existing rule has identical importable content,
+        /// "invalid" = missing required fields or bad redirect type.
         /// </summary>
         public string Status { get; set; } = "new";
 
@@ -143,7 +147,7 @@ namespace Broot.Redirect.API.Dtos
         public string? Reason { get; set; }
 
         /// <summary>
-        /// The ID of the existing rule when Status is "update".
+        /// The ID of the existing rule when Status is "update" or "unchanged".
         /// </summary>
         public string? ExistingRuleId { get; set; }
     }
@@ -166,6 +170,8 @@ namespace Broot.Redirect.API.Dtos
         public int New { get; set; }
 
         public int Update { get; set; }
+
+        public int Unchanged { get; set; }
 
         public int Invalid { get; set; }
     }

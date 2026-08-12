@@ -989,6 +989,59 @@ namespace Broot.Redirect.Tests.API.Controllers
             }
 
             [Fact]
+            public async Task ImportPreview_IdenticalManualRootFolderExport_MarkedAsUnchanged()
+            {
+                var matcher = "/ims/Strategie/Forms/AllItems.aspx"
+                    + "?RootFolder=%2Fims%2FStrategie%2F11%20IMS"
+                    + "&FolderCTID=0x012000773E66E4"
+                    + "&View=%7B41949723%2DAAEB%7D";
+                var existingRule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = matcher,
+                    TargetUrl = "https://example.sharepoint.com/sites/Lhg-ims/SitePages/Prozess.aspx?ProzessId=abc#Dokumentenmanagementsystem",
+                    RedirectType = RedirectType.Wildcard,
+                    Source = RuleSource.Manual,
+                    InfoText = "Testeintrag DSC",
+                    AutoRedirect = false,
+                    DiscardQueryParams = false,
+                    ForwardQueryParams = false,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existingRule });
+                _cacheService.GetById(existingRule.Id).Returns(existingRule);
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Id = existingRule.Id.ToString(),
+                        Matcher = matcher,
+                        TargetUrl = existingRule.TargetUrl,
+                        RedirectType = "wildcard",
+                        InfoText = existingRule.InfoText,
+                        AutoRedirect = false,
+                        DiscardQueryParams = false,
+                        ForwardQueryParams = false,
+                        CreatedAt = existingRule.CreatedAt.ToString("O")
+                    }
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.ImportPreview() as OkObjectResult;
+                var response = result!.Value as ImportPreviewResponse;
+
+                response!.Counts.Unchanged.Should().Be(1);
+                response.Counts.Update.Should().Be(0);
+                response.Counts.New.Should().Be(0);
+                response.Preview[0].Status.Should().Be("unchanged");
+                response.Preview[0].ExistingRuleId.Should().Be(existingRule.Id.ToString());
+            }
+
+            [Fact]
             public async Task ImportPreview_EmptyEntries_ReturnsBadRequest()
             {
                 var json = "[]";
@@ -1325,6 +1378,110 @@ namespace Broot.Redirect.Tests.API.Controllers
                 var result = await _sut.Import() as OkObjectResult;
 
                 result.Should().NotBeNull();
+            }
+
+            [Fact]
+            public async Task Import_UpdatingManualRule_PreservesSourceCreatedAtAndId()
+            {
+                var existingRule = CreateRule("/existing-manual");
+                existingRule.Source = RuleSource.Manual;
+                existingRule.CreatedAt = new DateTimeOffset(2024, 1, 2, 3, 4, 5, TimeSpan.Zero);
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existingRule });
+                _cacheService.GetById(existingRule.Id).Returns(existingRule);
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule> { existingRule });
+
+                var updatedRule = new TaskCompletionSource<RedirectRule>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _repository.UpdateAsync(
+                        Arg.Do<RedirectRule>(rule => updatedRule.TrySetResult(rule)),
+                        Arg.Any<CancellationToken>())
+                    .Returns(Task.FromResult(true));
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Id = existingRule.Id.ToString(),
+                        Matcher = existingRule.Matcher,
+                        TargetUrl = "/changed-target",
+                        RedirectType = "partial",
+                        CreatedAt = DateTimeOffset.UtcNow.ToString("O")
+                    }
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.Import() as OkObjectResult;
+                var completed = await Task.WhenAny(updatedRule.Task, Task.Delay(TimeSpan.FromSeconds(3)));
+
+                result.Should().NotBeNull();
+                completed.Should().Be(updatedRule.Task);
+                var persistedRule = await updatedRule.Task;
+                persistedRule.Id.Should().Be(existingRule.Id);
+                persistedRule.Source.Should().Be(RuleSource.Manual);
+                persistedRule.CreatedAt.Should().Be(existingRule.CreatedAt);
+            }
+
+            [Fact]
+            public async Task Import_IdenticalExistingRule_SkipsRepositoryWrite()
+            {
+                var existingRule = CreateRule("/already-current");
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existingRule });
+                _cacheService.GetById(existingRule.Id).Returns(existingRule);
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule> { existingRule });
+
+                var entries = new List<ImportRuleEntry>
+                {
+                    new ImportRuleEntry
+                    {
+                        Id = existingRule.Id.ToString(),
+                        Matcher = existingRule.Matcher,
+                        TargetUrl = existingRule.TargetUrl,
+                        RedirectType = existingRule.RedirectType.ToString(),
+                        InfoText = existingRule.InfoText,
+                        AutoRedirect = existingRule.AutoRedirect,
+                        DiscardQueryParams = existingRule.DiscardQueryParams,
+                        ForwardQueryParams = existingRule.ForwardQueryParams,
+                        KeptQueryParams = existingRule.KeptQueryParams,
+                        StaticQueryParams = existingRule.StaticQueryParams,
+                        SearchAndReplace = existingRule.SearchAndReplace,
+                        CreatedAt = existingRule.CreatedAt.ToString("O")
+                    }
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+                var result = await _sut.Import() as OkObjectResult;
+                var jobId = result!.Value!.GetType().GetProperty("jobId")!.GetValue(result.Value)!.ToString()!;
+                ImportResponse? progress = null;
+
+                for (var attempt = 0; attempt < 100; attempt++)
+                {
+                    var progressResult = _sut.GetJobProgress(jobId) as OkObjectResult;
+                    progress = progressResult?.Value as ImportResponse;
+
+                    if (progress?.IsComplete == true)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(10);
+                }
+
+                progress.Should().NotBeNull();
+                progress!.IsComplete.Should().BeTrue();
+                progress.Unchanged.Should().Be(1);
+                progress.Updated.Should().Be(0);
+                progress.Imported.Should().Be(0);
+                await _repository.DidNotReceive().UpdateAsync(
+                    Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
+                await _repository.DidNotReceive().CreateAsync(
+                    Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
             }
         }
 

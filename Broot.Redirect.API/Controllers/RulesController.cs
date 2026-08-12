@@ -412,7 +412,7 @@ namespace Broot.Redirect.API.Controllers
                     InfoText = entry.InfoText
                 };
 
-                var (_, validationError) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
+                var (mappedRequest, validationError) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
 
                 if (validationError != null)
                 {
@@ -429,9 +429,18 @@ namespace Broot.Redirect.API.Controllers
 
                 if (existingRule != null)
                 {
-                    previewEntry.Status = "update";
                     previewEntry.ExistingRuleId = existingRule.Id.ToString();
-                    counts.Update++;
+
+                    if (RuleImportExportService.HasImportChanges(existingRule, mappedRequest!))
+                    {
+                        previewEntry.Status = "update";
+                        counts.Update++;
+                    }
+                    else
+                    {
+                        previewEntry.Status = "unchanged";
+                        counts.Unchanged++;
+                    }
                 }
                 else
                 {
@@ -513,9 +522,18 @@ namespace Broot.Redirect.API.Controllers
                                 continue;
                             }
 
-                            var rule = BuildImportRule(entry, mappedRequest!, cacheService, matcherLookup);
-
                             var existingRule = RuleImportExportService.ResolveExistingRule(entry, cacheService, matcherLookup);
+
+                            if (existingRule != null
+                                && !RuleImportExportService.HasImportChanges(existingRule, mappedRequest!))
+                            {
+                                progress.Unchanged++;
+                                progress.Processed++;
+
+                                continue;
+                            }
+
+                            var rule = BuildImportRule(entry, mappedRequest!, existingRule);
 
                             if (existingRule != null)
                             {
@@ -529,6 +547,11 @@ namespace Broot.Redirect.API.Controllers
 
                                 progress.Imported++;
                             }
+
+                            RuleImportExportService.AddToMatcherLookup(
+                                matcherLookup,
+                                rule,
+                                existingRule?.Matcher);
                         }
                         catch (Exception exception)
                         {
@@ -545,8 +568,8 @@ namespace Broot.Redirect.API.Controllers
                     progress.IsComplete = true;
 
                     logger.LogInformation(
-                        "Import completed: {Imported} imported, {Updated} updated, {ErrorCount} errors. Job: {JobId}",
-                        progress.Imported, progress.Updated, progress.Errors.Count, jobId);
+                        "Import completed: {Imported} imported, {Updated} updated, {Unchanged} unchanged, {ErrorCount} errors. Job: {JobId}",
+                        progress.Imported, progress.Updated, progress.Unchanged, progress.Errors.Count, jobId);
                 }
                 catch (Exception exception)
                 {
@@ -565,23 +588,25 @@ namespace Broot.Redirect.API.Controllers
         private static RedirectRule BuildImportRule(
             ImportRuleEntry entry,
             CreateRuleRequest mappedRequest,
-            IRuleCacheService cacheService,
-            Dictionary<string, RedirectRule> matcherLookup)
+            RedirectRule? existingRule)
         {
             var createdAt = !string.IsNullOrEmpty(entry.CreatedAt) && DateTimeOffset.TryParse(entry.CreatedAt, out var parsedCreatedAt)
                 ? parsedCreatedAt
                 : DateTimeOffset.UtcNow;
 
-            var existingRule = RuleImportExportService.ResolveExistingRule(entry, cacheService, matcherLookup);
             Guid ruleId;
 
-            if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
+            if (existingRule != null)
+            {
+                ruleId = existingRule.Id;
+            }
+            else if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
             {
                 ruleId = parsedId;
             }
             else
             {
-                ruleId = existingRule?.Id ?? Guid.NewGuid();
+                ruleId = Guid.NewGuid();
             }
 
             return new RedirectRule
@@ -590,14 +615,14 @@ namespace Broot.Redirect.API.Controllers
                 Matcher = mappedRequest.Matcher,
                 TargetUrl = mappedRequest.TargetUrl ?? string.Empty,
                 RedirectType = Enum.Parse<RedirectType>(mappedRequest.RedirectType, ignoreCase: true),
-                Source = RuleSource.Import,
-                InfoText = entry.InfoText,
-                AutoRedirect = entry.AutoRedirect ?? false,
-                DiscardQueryParams = entry.DiscardQueryParams ?? false,
-                ForwardQueryParams = entry.ForwardQueryParams ?? false,
-                KeptQueryParams = entry.KeptQueryParams ?? new List<KeptQueryParam>(),
-                StaticQueryParams = entry.StaticQueryParams ?? new List<StaticQueryParam>(),
-                SearchAndReplace = entry.SearchAndReplace ?? new List<SearchAndReplaceEntry>(),
+                Source = existingRule?.Source ?? RuleSource.Import,
+                InfoText = mappedRequest.InfoText ?? string.Empty,
+                AutoRedirect = mappedRequest.AutoRedirect,
+                DiscardQueryParams = mappedRequest.DiscardQueryParams,
+                ForwardQueryParams = mappedRequest.ForwardQueryParams,
+                KeptQueryParams = mappedRequest.KeptQueryParams,
+                StaticQueryParams = mappedRequest.StaticQueryParams,
+                SearchAndReplace = mappedRequest.SearchAndReplace,
                 CreatedAt = existingRule?.CreatedAt ?? createdAt
             };
         }

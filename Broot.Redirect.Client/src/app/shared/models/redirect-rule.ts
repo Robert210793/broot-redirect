@@ -84,6 +84,7 @@ export interface BulkDeleteResponse {
 export interface ImportResult {
     imported: number;
     updated: number;
+    unchanged: number;
     errors: string[];
 }
 
@@ -92,7 +93,7 @@ export interface ImportPreviewEntry {
     targetUrl: string | null;
     redirectType: string | null;
     infoText: string | null;
-    status: 'new' | 'update' | 'invalid';
+    status: 'new' | 'update' | 'unchanged' | 'invalid';
     reason: string | null;
     existingRuleId: string | null;
 }
@@ -105,6 +106,7 @@ export interface ImportPreviewResponse {
     counts: {
         new: number;
         update: number;
+        unchanged: number;
         invalid: number;
     };
 }

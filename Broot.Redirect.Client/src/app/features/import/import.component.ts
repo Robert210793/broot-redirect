@@ -8,7 +8,7 @@ import { ImportResult, ImportPreviewResponse, ImportPreviewEntry } from '../../s
 
 type ImportMode = 'file' | 'paste';
 
-type StatusFilter = 'all' | 'new' | 'update' | 'invalid';
+type StatusFilter = 'all' | 'new' | 'update' | 'unchanged' | 'invalid';
 
 @Component({
     selector: 'app-import',
@@ -261,6 +261,7 @@ export class ImportComponent {
             const result: ImportResult = {
                 imported: finalProgress.imported ?? 0,
                 updated: finalProgress.updated ?? 0,
+                unchanged: finalProgress.unchanged ?? 0,
                 errors: finalProgress.errors ?? []
             };
 
@@ -268,7 +269,7 @@ export class ImportComponent {
             this.previewData.set(null);
 
             this.toastService.show(
-                `${result.imported} neu importiert, ${result.updated} aktualisiert.`,
+                `${result.imported} neu importiert, ${result.updated} aktualisiert, ${result.unchanged} unverändert.`,
                 result.errors.length > 0 ? 'error' : 'success'
             );
         }

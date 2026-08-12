@@ -395,6 +395,70 @@ namespace Broot.Redirect.Tests.Core.Services
             }
 
             [Fact]
+            public void ResolveTargetUrl_WildcardTargetWithQuery_MergesIncomingQuerySafely()
+            {
+                var rule = CreateRule(
+                    "/ims/Library/Document.docx",
+                    RedirectType.Wildcard,
+                    "https://example.sharepoint.com/:w:/r/sites/docs/Document.docx?d=w123&web=1");
+                rule.DiscardQueryParams = false;
+                rule.ForwardQueryParams = false;
+
+                var result = _sut.ResolveTargetUrl(
+                    "/ims/Library/Document.docx?Source=%2Fims%2Fstart.aspx&download=1",
+                    rule,
+                    "https://default.com");
+
+                result.Should().Be(
+                    "https://example.sharepoint.com/:w:/r/sites/docs/Document.docx"
+                    + "?d=w123&web=1&Source=%2Fims%2Fstart.aspx&download=1");
+                result.Count(character => character == '?').Should().Be(1);
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_WildcardTargetFragment_KeepsTargetFragmentAfterMergedQuery()
+            {
+                var rule = CreateRule(
+                    "/old",
+                    RedirectType.Wildcard,
+                    "https://new.com/page?process=abc#Dokumentenmanagementsystem");
+
+                var result = _sut.ResolveTargetUrl("/old?Source=test", rule, "https://default.com");
+
+                result.Should().Be(
+                    "https://new.com/page?process=abc&Source=test#Dokumentenmanagementsystem");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_QuerySpecificWildcard_MergesExtraEncodedQueryBeforeTargetFragment()
+            {
+                var rule = CreateRule(
+                    "/ims/Strategie/Forms/AllItems.aspx?RootFolder=%2Fims%2FStrategie",
+                    RedirectType.Wildcard,
+                    "https://new.com/Prozess.aspx?ProzessId=abc#Dokumentenmanagementsystem");
+
+                var result = _sut.ResolveTargetUrl(
+                    "/ims/Strategie/Forms/AllItems.aspx?RootFolder=%2Fims%2FStrategie&Source=%2Fims%2Fstart.aspx",
+                    rule,
+                    "https://default.com");
+
+                result.Should().Be(
+                    "https://new.com/Prozess.aspx?ProzessId=abc&Source=%2Fims%2Fstart.aspx#Dokumentenmanagementsystem");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_ForwardQueryParamsWithTargetQuery_DoesNotDuplicateIncomingQuery()
+            {
+                var rule = CreateRule("/old", RedirectType.Wildcard, "https://new.com/page?fixed=1");
+                rule.ForwardQueryParams = true;
+
+                var result = _sut.ResolveTargetUrl("/old?source=test", rule, "https://default.com");
+
+                result.Should().Be("https://new.com/page?fixed=1&source=test");
+                result.Split("source=test").Length.Should().Be(2);
+            }
+
+            [Fact]
             public void ResolveTargetUrl_WildcardNoMatchPrefix_FallsBackToCleanDomain()
             {
                 var rule = CreateRule("/specific", RedirectType.Wildcard, "https://new.com/specific");

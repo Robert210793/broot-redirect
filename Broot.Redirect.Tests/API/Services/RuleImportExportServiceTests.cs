@@ -594,6 +594,29 @@ namespace Broot.Redirect.Tests.API.Services
             }
 
             [Fact]
+            public void ValidateImportEntry_RelativeSharePointMatcher_PreservesQuerySyntax()
+            {
+                var matcher = "/ims/Strategie/Forms/AllItems.aspx"
+                    + "?RootFolder=%2Fims%2FStrategie%2F11%20IMS"
+                    + "&FolderCTID=0x012000773E66E4"
+                    + "&View=%7B41949723%2DAAEB%7D";
+                var entry = new ImportRuleEntry
+                {
+                    Matcher = matcher,
+                    TargetUrl = "https://example.com/SitePages/Prozess.aspx?ProzessId=abc#Dokumentenmanagementsystem",
+                    RedirectType = "wildcard"
+                };
+
+                var (request, error) = RuleImportExportService.ValidateImportEntry(entry, _validationService);
+
+                error.Should().BeNull();
+                request!.Matcher.Should().Be(matcher);
+                request.Matcher.Should().NotContain("%3FRootFolder");
+                request.Matcher.Should().NotContain("%3D");
+                request.Matcher.Should().NotContain("%26");
+            }
+
+            [Fact]
             public void ValidateImportEntry_ValidationServiceRejectsEntry_ReturnsError()
             {
                 var entry = new ImportRuleEntry
@@ -698,6 +721,26 @@ namespace Broot.Redirect.Tests.API.Services
 
                 result.Should().Be(existingRule);
             }
+
+            [Fact]
+            public void ResolveExistingRule_RawMatcherMatchesEncodedStoredMatcher()
+            {
+                var existingRule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/ims/Library/My%20Document%20%28Final%29.docx"
+                };
+                var cacheService = Substitute.For<IRuleCacheService>();
+                var lookup = RuleImportExportService.BuildMatcherLookup(new[] { existingRule });
+                var entry = new ImportRuleEntry
+                {
+                    Matcher = "/ims/Library/My Document (Final).docx"
+                };
+
+                var result = RuleImportExportService.ResolveExistingRule(entry, cacheService, lookup);
+
+                result.Should().Be(existingRule);
+            }
         }
 
         public class BuildMatcherLookupTests
@@ -722,6 +765,74 @@ namespace Broot.Redirect.Tests.API.Services
                 var lookup = RuleImportExportService.BuildMatcherLookup(new[] { rule });
 
                 lookup.Should().ContainKey("/path");
+            }
+
+            [Fact]
+            public void BuildMatcherLookup_UsesCanonicalEncodedMatchers()
+            {
+                var rule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/ims/Library/My Document.docx"
+                };
+
+                var lookup = RuleImportExportService.BuildMatcherLookup(new[] { rule });
+
+                lookup.Should().ContainKey("/ims/Library/My%20Document.docx");
+            }
+        }
+
+        public class HasImportChangesTests
+        {
+            [Fact]
+            public void HasImportChanges_EquivalentExportedRule_ReturnsFalse()
+            {
+                var existingRule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/ims/Library/My%20Document.docx",
+                    TargetUrl = "https://example.sharepoint.com/:w:/r/sites/docs/file.docx?d=w123&web=1",
+                    RedirectType = RedirectType.Wildcard,
+                    Source = RuleSource.Manual,
+                    InfoText = "Manual rule",
+                    AutoRedirect = false,
+                    DiscardQueryParams = false,
+                    ForwardQueryParams = false,
+                    KeptQueryParams = new List<KeptQueryParam>(),
+                    StaticQueryParams = new List<StaticQueryParam>(),
+                    SearchAndReplace = new List<SearchAndReplaceEntry>()
+                };
+                var request = new CreateRuleRequest
+                {
+                    Matcher = "/ims/Library/My%20Document.docx",
+                    TargetUrl = existingRule.TargetUrl,
+                    RedirectType = "wildcard",
+                    InfoText = "Manual rule"
+                };
+
+                var result = RuleImportExportService.HasImportChanges(existingRule, request);
+
+                result.Should().BeFalse();
+            }
+
+            [Fact]
+            public void HasImportChanges_ChangedTarget_ReturnsTrue()
+            {
+                var existingRule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/same",
+                    TargetUrl = "/old",
+                    RedirectType = RedirectType.Wildcard
+                };
+                var request = new CreateRuleRequest
+                {
+                    Matcher = "/same",
+                    TargetUrl = "/new",
+                    RedirectType = "wildcard"
+                };
+
+                RuleImportExportService.HasImportChanges(existingRule, request).Should().BeTrue();
             }
         }
 
@@ -954,6 +1065,17 @@ namespace Broot.Redirect.Tests.API.Services
                 var result = RuleImportExportService.PercentEncodePreservingSlashes("/path%20already%20encoded/file");
 
                 result.Should().Be("/path%20already%20encoded/file");
+            }
+
+            [Fact]
+            public void PercentEncodePreservingSlashes_RelativeUrl_PreservesQueryAndFragment()
+            {
+                var input = "/path with space/AllItems.aspx?RootFolder=%2Fpath%20with%20space&View=%7B123%7D#section";
+
+                var result = RuleImportExportService.PercentEncodePreservingSlashes(input);
+
+                result.Should().Be(
+                    "/path%20with%20space/AllItems.aspx?RootFolder=%2Fpath%20with%20space&View=%7B123%7D#section");
             }
 
             [Theory]

@@ -147,6 +147,16 @@
                         <span class="preview-count">{{ previewData()!.counts.update }}</span>
                     </button>
                 }
+                @if (previewData()!.counts.unchanged > 0) {
+                    <button
+                        class="preview-filter-btn filter-unchanged"
+                        [class.active]="statusFilter === 'unchanged'"
+                        (click)="onStatusFilter('unchanged')"
+                    >
+                        Unverändert
+                        <span class="preview-count">{{ previewData()!.counts.unchanged }}</span>
+                    </button>
+                }
                 @if (previewData()!.counts.invalid > 0) {
                     <button
                         class="preview-filter-btn filter-invalid"
@@ -159,9 +169,15 @@
                 }
             </div>
 
-            @if (previewData()!.counts.invalid > 0 && previewData()!.counts.new === 0 && previewData()!.counts.update === 0) {
+            @if (previewData()!.counts.invalid === previewData()!.total) {
                 <div class="alert alert-danger">
                     Alle Einträge sind ungültig. Korrigiere die Datei und versuche es erneut.
+                </div>
+            }
+
+            @if (previewData()!.counts.unchanged === previewData()!.total) {
+                <div class="alert alert-info">
+                    Alle Regeln sind bereits identisch vorhanden. Es ist kein Import erforderlich.
                 </div>
             }
 
@@ -192,6 +208,8 @@
                                         <span class="badge badge-new">Neu</span>
                                     } @else if (row.status === 'update') {
                                         <span class="badge badge-update">Aktualisierung</span>
+                                    } @else if (row.status === 'unchanged') {
+                                        <span class="badge badge-unchanged">Unverändert</span>
                                     } @else if (row.status === 'invalid') {
                                         <span class="badge badge-invalid" [title]="row.reason || ''">Ungültig</span>
                                         @if (row.reason) {
@@ -221,7 +239,7 @@
                     <div class="progress-info">
                         {{ progress.processed }} / {{ progress.total }} verarbeitet
                         @if (progress.imported !== undefined) {
-                            ({{ progress.imported }} neu, {{ progress.updated }} aktualisiert)
+                            ({{ progress.imported }} neu, {{ progress.updated }} aktualisiert, {{ progress.unchanged }} unverändert)
                         }
                     </div>
                     <div class="progress-bar-track">
@@ -247,7 +265,8 @@
                 </div>
                 <h3 class="import-result-title">Import abgeschlossen</h3>
                 <p class="import-result-text">
-                    {{ importResult()!.imported }} neu, {{ importResult()!.updated }} aktualisiert.
+                    {{ importResult()!.imported }} neu, {{ importResult()!.updated }} aktualisiert,
+                    {{ importResult()!.unchanged }} unverändert.
                     @if (importResult()!.errors.length > 0) {
                         {{ importResult()!.errors.length }} Fehler.
                     }

@@ -482,7 +482,7 @@ namespace Broot.Redirect.API.Services
 
             // Always normalize: unescape then re-encode to handle both raw and pre-encoded input,
             // then strip any redundant trailing slash so URL-bar pastes resolve cleanly.
-            var matcher = NormalizeMatcher(PercentEncodePreservingSlashes(entry.Matcher));
+            var matcher = CanonicalizeMatcher(entry.Matcher);
             var targetUrl = entry.TargetUrl != null ? PercentEncodePreservingSlashes(entry.TargetUrl) : null;
 
             var request = new CreateRuleRequest
@@ -524,7 +524,7 @@ namespace Broot.Redirect.API.Services
                 }
             }
 
-            matcherLookup.TryGetValue(entry.Matcher, out var byMatcher);
+            matcherLookup.TryGetValue(CanonicalizeMatcher(entry.Matcher), out var byMatcher);
 
             return byMatcher;
         }
@@ -532,8 +532,50 @@ namespace Broot.Redirect.API.Services
         public static Dictionary<string, RedirectRule> BuildMatcherLookup(IReadOnlyList<RedirectRule> rules)
         {
             return rules
-                .GroupBy(rule => rule.Matcher, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(rule => CanonicalizeMatcher(rule.Matcher), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        }
+
+        public static string CanonicalizeMatcher(string matcher)
+        {
+            return NormalizeMatcher(PercentEncodePreservingSlashes(matcher));
+        }
+
+        public static bool HasImportChanges(RedirectRule existingRule, CreateRuleRequest request)
+        {
+            if (!string.Equals(CanonicalizeMatcher(existingRule.Matcher), request.Matcher, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(existingRule.TargetUrl ?? string.Empty, request.TargetUrl ?? string.Empty, StringComparison.Ordinal)
+                || !TryParseRedirectType(request.RedirectType, out var redirectType)
+                || existingRule.RedirectType != redirectType
+                || !string.Equals(existingRule.InfoText ?? string.Empty, request.InfoText ?? string.Empty, StringComparison.Ordinal)
+                || existingRule.AutoRedirect != request.AutoRedirect
+                || existingRule.DiscardQueryParams != request.DiscardQueryParams
+                || existingRule.ForwardQueryParams != request.ForwardQueryParams)
+            {
+                return true;
+            }
+
+            return !KeptQueryParamsEqual(existingRule.KeptQueryParams, request.KeptQueryParams)
+                || !StaticQueryParamsEqual(existingRule.StaticQueryParams, request.StaticQueryParams)
+                || !SearchAndReplaceEqual(existingRule.SearchAndReplace, request.SearchAndReplace);
+        }
+
+        public static void AddToMatcherLookup(
+            Dictionary<string, RedirectRule> matcherLookup,
+            RedirectRule rule,
+            string? previousMatcher = null)
+        {
+            if (!string.IsNullOrEmpty(previousMatcher))
+            {
+                var previousKey = CanonicalizeMatcher(previousMatcher);
+
+                if (matcherLookup.TryGetValue(previousKey, out var previousRule) && previousRule.Id == rule.Id)
+                {
+                    matcherLookup.Remove(previousKey);
+                }
+            }
+
+            matcherLookup[CanonicalizeMatcher(rule.Matcher)] = rule;
         }
 
         public static bool TryParseRedirectType(string value, out RedirectType redirectType)
@@ -591,8 +633,56 @@ namespace Broot.Redirect.API.Services
                 return result;
             }
 
-            // Relative path: encode each segment
-            return EncodePathSegments(value);
+            // Relative URL: encode only its path. Query delimiters and fragments are URL
+            // syntax, not path characters (important for SharePoint RootFolder matchers).
+            var fragmentIndex = value.IndexOf('#');
+            var fragment = fragmentIndex >= 0 ? value[fragmentIndex..] : string.Empty;
+            var withoutFragment = fragmentIndex >= 0 ? value[..fragmentIndex] : value;
+            var queryIndex = withoutFragment.IndexOf('?');
+            var query = queryIndex >= 0 ? withoutFragment[queryIndex..] : string.Empty;
+            var path = queryIndex >= 0 ? withoutFragment[..queryIndex] : withoutFragment;
+
+            return EncodePathSegments(path) + query + fragment;
+        }
+
+        private static bool KeptQueryParamsEqual(
+            IReadOnlyList<KeptQueryParam>? left,
+            IReadOnlyList<KeptQueryParam>? right)
+        {
+            left ??= Array.Empty<KeptQueryParam>();
+            right ??= Array.Empty<KeptQueryParam>();
+
+            return left.Count == right.Count && left.Zip(right).All(pair =>
+                string.Equals(pair.First.KeyPattern, pair.Second.KeyPattern, StringComparison.Ordinal)
+                && string.Equals(pair.First.ValuePattern ?? string.Empty, pair.Second.ValuePattern ?? string.Empty, StringComparison.Ordinal)
+                && string.Equals(pair.First.TargetKey ?? string.Empty, pair.Second.TargetKey ?? string.Empty, StringComparison.Ordinal)
+                && pair.First.SkipEncoding == pair.Second.SkipEncoding);
+        }
+
+        private static bool StaticQueryParamsEqual(
+            IReadOnlyList<StaticQueryParam>? left,
+            IReadOnlyList<StaticQueryParam>? right)
+        {
+            left ??= Array.Empty<StaticQueryParam>();
+            right ??= Array.Empty<StaticQueryParam>();
+
+            return left.Count == right.Count && left.Zip(right).All(pair =>
+                string.Equals(pair.First.Key, pair.Second.Key, StringComparison.Ordinal)
+                && string.Equals(pair.First.Value ?? string.Empty, pair.Second.Value ?? string.Empty, StringComparison.Ordinal)
+                && pair.First.SkipEncoding == pair.Second.SkipEncoding);
+        }
+
+        private static bool SearchAndReplaceEqual(
+            IReadOnlyList<SearchAndReplaceEntry>? left,
+            IReadOnlyList<SearchAndReplaceEntry>? right)
+        {
+            left ??= Array.Empty<SearchAndReplaceEntry>();
+            right ??= Array.Empty<SearchAndReplaceEntry>();
+
+            return left.Count == right.Count && left.Zip(right).All(pair =>
+                string.Equals(pair.First.Search, pair.Second.Search, StringComparison.Ordinal)
+                && string.Equals(pair.First.Replace ?? string.Empty, pair.Second.Replace ?? string.Empty, StringComparison.Ordinal)
+                && pair.First.CaseSensitive == pair.Second.CaseSensitive);
         }
 
         private static string EncodePathSegments(string path)
