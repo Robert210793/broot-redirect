@@ -28,7 +28,7 @@ namespace Broot.Redirect.Infrastructure.Cache
 
         private readonly ConcurrentDictionary<Guid, RedirectRule> _rulesById = new();
 
-        private Dictionary<string, RedirectRule> _wildcardIndex = new();
+        private Dictionary<string, List<RedirectRule>> _wildcardIndex = new();
 
         private List<RedirectRule> _partialAndDomainRules = new();
 
@@ -64,15 +64,15 @@ namespace Broot.Redirect.Infrastructure.Cache
             return rule;
         }
 
-        public RedirectRule? LookupWildcard(string normalizedPath)
+        public IReadOnlyList<RedirectRule> LookupWildcardCandidates(string normalizedPath)
         {
             _indexLock.EnterReadLock();
 
             try
             {
-                _wildcardIndex.TryGetValue(normalizedPath, out var rule);
-
-                return rule;
+                return _wildcardIndex.TryGetValue(normalizedPath, out var rules)
+                    ? rules
+                    : Array.Empty<RedirectRule>();
             }
             finally
             {
@@ -212,7 +212,7 @@ namespace Broot.Redirect.Infrastructure.Cache
             _logger.LogInformation(
                 "Cache initialized with {RuleCount} rules ({WildcardCount} wildcard, {PartialDomainCount} partial/domain, {RegexCount} regex).",
                 rules.Count,
-                _wildcardIndex.Count,
+                _wildcardIndex.Values.Sum(rules => rules.Count),
                 _partialAndDomainRules.Count,
                 _regexRules.Count);
         }
@@ -272,7 +272,7 @@ namespace Broot.Redirect.Infrastructure.Cache
 
         private void RebuildIndexes()
         {
-            var wildcardIndex = new Dictionary<string, RedirectRule>(
+            var wildcardIndex = new Dictionary<string, List<RedirectRule>>(
                 _options.CaseSensitiveMatching ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
 
             var partialAndDomainRules = new List<RedirectRule>();
@@ -289,9 +289,15 @@ namespace Broot.Redirect.Infrastructure.Cache
                 {
                     case Core.Models.RedirectType.Wildcard:
                         {
-                            var normalizedKey = NormalizeMatcher(rule.Matcher);
+                            var normalizedKey = NormalizeMatcherPath(rule.Matcher);
 
-                            wildcardIndex[normalizedKey] = rule;
+                            if (!wildcardIndex.TryGetValue(normalizedKey, out var candidates))
+                            {
+                                candidates = new List<RedirectRule>();
+                                wildcardIndex[normalizedKey] = candidates;
+                            }
+
+                            candidates.Add(rule);
 
                             break;
                         }
@@ -346,9 +352,9 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
         }
 
-        private string NormalizeMatcher(string matcher)
+        private string NormalizeMatcherPath(string matcher)
         {
-            var normalized = matcher;
+            var normalized = matcher.Split('?', 2)[0];
 
             try { normalized = Uri.UnescapeDataString(normalized); }
             catch { /* keep original if decoding fails */ }

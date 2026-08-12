@@ -50,35 +50,49 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
 
                 sut.RuleCount.Should().Be(4);
                 sut.IsWarmedUp.Should().BeTrue();
-                sut.LookupWildcard("/path").Should().Be(wildcardRule);
+                sut.LookupWildcardCandidates("/path").Should().ContainSingle().Which.Should().Be(wildcardRule);
                 sut.GetPartialAndDomainRules().Should().HaveCount(2);
                 sut.GetRegexRules().Should().HaveCount(1);
             }
         }
 
-        public class LookupWildcardTests
+        public class LookupWildcardCandidatesTests
         {
             [Fact]
-            public void LookupWildcard_ValidPath_ReturnsRule()
+            public void LookupWildcardCandidates_ValidPath_ReturnsRule()
             {
                 var sut = CreateService();
                 var rule = CreateRule("/path", RedirectType.Wildcard);
 
                 sut.Initialize(new[] { rule });
 
-                sut.LookupWildcard("/path").Should().Be(rule);
+                sut.LookupWildcardCandidates("/path").Should().ContainSingle().Which.Should().Be(rule);
             }
 
             [Fact]
-            public void LookupWildcard_CaseInsensitive_MatchesRegardlessOfCase()
+            public void LookupWildcardCandidates_CaseInsensitive_MatchesRegardlessOfCase()
             {
                 var sut = CreateService(new CacheOptions { CaseSensitiveMatching = false });
                 var rule = CreateRule("/Some/Path", RedirectType.Wildcard);
 
                 sut.Initialize(new[] { rule });
 
-                sut.LookupWildcard("/some/path").Should().Be(rule);
-                sut.LookupWildcard("/SOME/PATH").Should().Be(rule);
+                sut.LookupWildcardCandidates("/some/path").Should().ContainSingle().Which.Should().Be(rule);
+                sut.LookupWildcardCandidates("/SOME/PATH").Should().ContainSingle().Which.Should().Be(rule);
+            }
+
+            [Fact]
+            public void LookupWildcardCandidates_QuerySpecificRulesSharePath_ReturnsAllRules()
+            {
+                var sut = CreateService();
+                var firstRule = CreateRule("/path?folder=first", RedirectType.Wildcard);
+                var secondRule = CreateRule("/path?folder=second", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { firstRule, secondRule });
+
+                sut.LookupWildcardCandidates("/path")
+                    .Should()
+                    .BeEquivalentTo(new[] { firstRule, secondRule });
             }
         }
 
@@ -216,7 +230,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.AddRule(rule);
 
                 sut.RuleCount.Should().Be(1);
-                sut.LookupWildcard("/new-rule").Should().Be(rule);
+                sut.LookupWildcardCandidates("/new-rule").Should().ContainSingle().Which.Should().Be(rule);
             }
 
             [Fact]
@@ -233,8 +247,8 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.UpdateRule(updatedRule);
 
                 sut.RuleCount.Should().Be(1);
-                sut.LookupWildcard("/original").Should().BeNull();
-                sut.LookupWildcard("/updated").Should().Be(updatedRule);
+                sut.LookupWildcardCandidates("/original").Should().BeEmpty();
+                sut.LookupWildcardCandidates("/updated").Should().ContainSingle().Which.Should().Be(updatedRule);
             }
 
             [Fact]
@@ -249,7 +263,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.RemoveRule(rule.Id);
 
                 sut.RuleCount.Should().Be(0);
-                sut.LookupWildcard("/path").Should().BeNull();
+                sut.LookupWildcardCandidates("/path").Should().BeEmpty();
             }
 
             [Fact]
@@ -267,7 +281,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.RemoveRules(new HashSet<Guid> { rule1.Id, rule2.Id });
 
                 sut.RuleCount.Should().Be(1);
-                sut.LookupWildcard("/path3").Should().Be(rule3);
+                sut.LookupWildcardCandidates("/path3").Should().ContainSingle().Which.Should().Be(rule3);
             }
 
             [Fact]
@@ -283,8 +297,8 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.ReplaceAll(new[] { newRule });
 
                 sut.RuleCount.Should().Be(1);
-                sut.LookupWildcard("/old").Should().BeNull();
-                sut.LookupWildcard("/new").Should().Be(newRule);
+                sut.LookupWildcardCandidates("/old").Should().BeEmpty();
+                sut.LookupWildcardCandidates("/new").Should().ContainSingle().Which.Should().Be(newRule);
             }
         }
 
@@ -323,7 +337,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
         public class TrailingSlashTests
         {
             [Fact]
-            public void LookupWildcard_TrailingSlashIgnore_TrimsTrailingSlash()
+            public void LookupWildcardCandidates_TrailingSlashIgnore_TrimsTrailingSlash()
             {
                 var sut = CreateService(new CacheOptions { TrailingSlashPolicy = "ignore" });
                 var rule = CreateRule("/path/", RedirectType.Wildcard);
@@ -331,45 +345,45 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.Initialize(new[] { rule });
 
                 // The normalizer should trim the trailing slash, so lookup without slash should work
-                sut.LookupWildcard("/path").Should().Be(rule);
+                sut.LookupWildcardCandidates("/path").Should().ContainSingle().Which.Should().Be(rule);
             }
 
             [Fact]
-            public void LookupWildcard_TrailingSlashStrict_PreservesTrailingSlash()
+            public void LookupWildcardCandidates_TrailingSlashStrict_PreservesTrailingSlash()
             {
                 var sut = CreateService(new CacheOptions { TrailingSlashPolicy = "strict" });
                 var rule = CreateRule("/path/", RedirectType.Wildcard);
 
                 sut.Initialize(new[] { rule });
 
-                sut.LookupWildcard("/path/").Should().Be(rule);
-                sut.LookupWildcard("/path").Should().BeNull();
+                sut.LookupWildcardCandidates("/path/").Should().ContainSingle().Which.Should().Be(rule);
+                sut.LookupWildcardCandidates("/path").Should().BeEmpty();
             }
 
             [Fact]
-            public void LookupWildcard_RootSlash_NotTrimmed()
+            public void LookupWildcardCandidates_RootSlash_NotTrimmed()
             {
                 var sut = CreateService(new CacheOptions { TrailingSlashPolicy = "ignore" });
                 var rule = CreateRule("/", RedirectType.Wildcard);
 
                 sut.Initialize(new[] { rule });
 
-                sut.LookupWildcard("/").Should().Be(rule);
+                sut.LookupWildcardCandidates("/").Should().ContainSingle().Which.Should().Be(rule);
             }
         }
 
         public class CaseSensitivityTests
         {
             [Fact]
-            public void LookupWildcard_CaseSensitive_DoesNotMatchDifferentCase()
+            public void LookupWildcardCandidates_CaseSensitive_DoesNotMatchDifferentCase()
             {
                 var sut = CreateService(new CacheOptions { CaseSensitiveMatching = true });
                 var rule = CreateRule("/Path", RedirectType.Wildcard);
 
                 sut.Initialize(new[] { rule });
 
-                sut.LookupWildcard("/Path").Should().Be(rule);
-                sut.LookupWildcard("/path").Should().BeNull();
+                sut.LookupWildcardCandidates("/Path").Should().ContainSingle().Which.Should().Be(rule);
+                sut.LookupWildcardCandidates("/path").Should().BeEmpty();
             }
         }
 

@@ -63,33 +63,76 @@ namespace Broot.Redirect.Core.Services
                 path = path.ToLowerInvariant();
             }
 
-            var rule = _cacheService.LookupWildcard(path);
-            if (rule == null)
+            var candidates = _cacheService.LookupWildcardCandidates(path);
+            if (candidates.Count == 0)
             {
                 return null;
             }
 
             var requestQuery = NormalizeQuery(parsed.Query, config);
-            var matcherParts = rule.Matcher.Split('?', 2);
-            var ruleQuery = matcherParts.Length > 1
-                ? NormalizeQuery("?" + matcherParts[1], config)
-                : new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            RuleMatchResult? best = null;
+            var bestQueryPairs = -1;
 
-            if (!QueryMatches(ruleQuery, requestQuery, out var queryPairs))
+            foreach (var rule in candidates)
             {
-                return null;
+                var matcherParts = rule.Matcher.Split('?', 2);
+                var ruleQuery = matcherParts.Length > 1
+                    ? NormalizeQuery("?" + matcherParts[1], config)
+                    : new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+                if (!QueryMatches(ruleQuery, requestQuery, out var queryPairs))
+                {
+                    continue;
+                }
+
+                var isExact = ruleQuery.Count == requestQuery.Count;
+                var score = 1000
+                    + (queryPairs * config.WeightQueryPair)
+                    + (isExact ? config.BonusExactMatch : 0);
+
+                if (best != null && !IsBetterWildcardCandidate(best, bestQueryPairs, rule, score, queryPairs))
+                {
+                    continue;
+                }
+
+                var quality = isExact ? 100 : 75;
+
+                best = new RuleMatchResult
+                {
+                    Rule = rule,
+                    Score = score,
+                    Quality = quality,
+                    Level = QualityToLevel(quality)
+                };
+                bestQueryPairs = queryPairs;
             }
 
-            var isExact = ruleQuery.Count == requestQuery.Count;
-            var quality = isExact ? 100 : 75;
+            return best;
+        }
 
-            return new RuleMatchResult
+        private static bool IsBetterWildcardCandidate(
+            RuleMatchResult current,
+            int currentQueryPairs,
+            RedirectRule candidate,
+            int candidateScore,
+            int candidateQueryPairs)
+        {
+            if (candidateScore != current.Score)
             {
-                Rule = rule,
-                Score = 1000 + (queryPairs * config.WeightQueryPair) + (isExact ? config.BonusExactMatch : 0),
-                Quality = quality,
-                Level = QualityToLevel(quality)
-            };
+                return candidateScore > current.Score;
+            }
+
+            if (candidateQueryPairs != currentQueryPairs)
+            {
+                return candidateQueryPairs > currentQueryPairs;
+            }
+
+            if (candidate.Matcher.Length != current.Rule.Matcher.Length)
+            {
+                return candidate.Matcher.Length > current.Rule.Matcher.Length;
+            }
+
+            return CompareCreatedAtThenId(candidate, current.Rule) < 0;
         }
 
         private RuleMatchResult? TryRegexMatch(string requestUrl)

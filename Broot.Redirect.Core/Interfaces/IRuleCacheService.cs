@@ -43,11 +43,11 @@ namespace Broot.Redirect.Core.Interfaces
         RedirectRule? GetById(Guid id);
 
         /// <summary>
-        /// Attempts an O(1) wildcard lookup by normalized path.
-        /// Returns null if no wildcard rule matches.
+        /// Performs an O(1) lookup of wildcard candidates by normalized path.
+        /// Multiple rules can share a path and differ only by query parameters.
         /// </summary>
         /// 
-        RedirectRule? LookupWildcard(string normalizedPath);
+        IReadOnlyList<RedirectRule> LookupWildcardCandidates(string normalizedPath);
 
         /// <summary>
         /// Returns partial and domain rules sorted by matcher length (longest first).

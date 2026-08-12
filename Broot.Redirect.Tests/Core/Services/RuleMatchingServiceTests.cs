@@ -1,7 +1,10 @@
 using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Models;
 using Broot.Redirect.Core.Services;
+using Broot.Redirect.Infrastructure.Cache;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using System.Text.RegularExpressions;
 using Xunit;
@@ -49,7 +52,7 @@ namespace Broot.Redirect.Tests.Core.Services
                 _sut = new RuleMatchingService(_cacheService);
                 _config = DefaultConfig();
 
-                _cacheService.LookupWildcard(Arg.Any<string>()).Returns((RedirectRule?)null);
+                _cacheService.LookupWildcardCandidates(Arg.Any<string>()).Returns(Array.Empty<RedirectRule>());
                 _cacheService.GetPartialAndDomainRules().Returns(new List<RedirectRule>());
                 _cacheService.GetRegexRules().Returns(new List<(Regex, RedirectRule)>());
             }
@@ -59,7 +62,7 @@ namespace Broot.Redirect.Tests.Core.Services
             {
                 var rule = CreateRule("/old-page", RedirectType.Wildcard);
 
-                _cacheService.LookupWildcard("/old-page").Returns(rule);
+                _cacheService.LookupWildcardCandidates("/old-page").Returns(new[] { rule });
 
                 var result = _sut.ResolveMatch("/old-page", _config);
 
@@ -74,7 +77,7 @@ namespace Broot.Redirect.Tests.Core.Services
             {
                 var rule = CreateRule("/old-page", RedirectType.Wildcard);
 
-                _cacheService.LookupWildcard("/old-page").Returns(rule);
+                _cacheService.LookupWildcardCandidates("/old-page").Returns(new[] { rule });
 
                 var result = _sut.ResolveMatch("/old-page?extra=1", _config);
 
@@ -88,7 +91,7 @@ namespace Broot.Redirect.Tests.Core.Services
             {
                 var rule = CreateRule("/old-page?required=yes", RedirectType.Wildcard);
 
-                _cacheService.LookupWildcard("/old-page").Returns(rule);
+                _cacheService.LookupWildcardCandidates("/old-page").Returns(new[] { rule });
 
                 var result = _sut.ResolveMatch("/old-page", _config);
 
@@ -96,11 +99,27 @@ namespace Broot.Redirect.Tests.Core.Services
             }
 
             [Fact]
+            public void ResolveMatch_MultipleWildcardCandidates_SelectsMatchingQueryRule()
+            {
+                var genericRule = CreateRule("/old-page", RedirectType.Wildcard);
+                var queryRule = CreateRule("/old-page?required=yes", RedirectType.Wildcard);
+
+                _cacheService.LookupWildcardCandidates("/old-page")
+                    .Returns(new[] { genericRule, queryRule });
+
+                var result = _sut.ResolveMatch("/old-page?required=yes&extra=1", _config);
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().Be(queryRule);
+                result.Quality.Should().Be(75);
+            }
+
+            [Fact]
             public void ResolveMatch_WildcardTrailingSlashIgnore_MatchesPathWithoutSlash()
             {
                 var rule = CreateRule("/path/", RedirectType.Wildcard);
 
-                _cacheService.LookupWildcard("/path").Returns(rule);
+                _cacheService.LookupWildcardCandidates("/path").Returns(new[] { rule });
 
                 var config = DefaultConfig();
                 config.TrailingSlashPolicy = TrailingSlashPolicy.Ignore;
@@ -117,7 +136,7 @@ namespace Broot.Redirect.Tests.Core.Services
                 var config = DefaultConfig();
                 config.TrailingSlashPolicy = TrailingSlashPolicy.Strict;
 
-                _cacheService.LookupWildcard("/path").Returns((RedirectRule?)null);
+                _cacheService.LookupWildcardCandidates("/path").Returns(Array.Empty<RedirectRule>());
 
                 var result = _sut.ResolveMatch("/path", config);
 
@@ -129,7 +148,7 @@ namespace Broot.Redirect.Tests.Core.Services
             {
                 var rule = CreateRule("/path", RedirectType.Wildcard);
 
-                _cacheService.LookupWildcard("/path").Returns(rule);
+                _cacheService.LookupWildcardCandidates("/path").Returns(new[] { rule });
 
                 var result = _sut.ResolveMatch("/Path", _config);
 
@@ -143,7 +162,7 @@ namespace Broot.Redirect.Tests.Core.Services
                 var config = DefaultConfig();
                 config.CaseSensitivePath = true;
 
-                _cacheService.LookupWildcard("/Path").Returns((RedirectRule?)null);
+                _cacheService.LookupWildcardCandidates("/Path").Returns(Array.Empty<RedirectRule>());
 
                 var result = _sut.ResolveMatch("/Path", config);
 
@@ -261,7 +280,7 @@ namespace Broot.Redirect.Tests.Core.Services
                 var wildcardRule = CreateRule("/test-path", RedirectType.Wildcard);
                 var partialRule = CreateRule("/test", RedirectType.Partial);
 
-                _cacheService.LookupWildcard("/test-path").Returns(wildcardRule);
+                _cacheService.LookupWildcardCandidates("/test-path").Returns(new[] { wildcardRule });
                 _cacheService.GetPartialAndDomainRules()
                     .Returns(new List<RedirectRule> { partialRule });
 
@@ -342,6 +361,59 @@ namespace Broot.Redirect.Tests.Core.Services
                 var result = _sut.ResolveMatch("/other-path", _config);
 
                 result.Should().BeNull();
+            }
+        }
+
+        public class WildcardCacheIntegrationTests
+        {
+            [Fact]
+            public void ResolveMatch_QuerySpecificSharePointWildcardFromRealCache_ReturnsIntendedRule()
+            {
+                const string path = "/ims/Strategie/Forms/AllItems.aspx";
+                const string requestUrl = path
+                    + "?RootFolder=%2Fims%2FStrategie%2F11%20IMS%20%28Integr%2E%20Mgmt%2Esystem%29%2FDokumentenmanagementsystem"
+                    + "&FolderCTID=0x012000773E66E4B493D644840363F8F545A6FD"
+                    + "&View=%7B41949723%2DAAEB%2D476F%2DA489%2DE7397F5E41A5%7D";
+                const string expectedTarget =
+                    "https://lindenhofgruppech.sharepoint.com/sites/Lhg-ims/SitePages/Prozess.aspx"
+                    + "?ProzessId=bc42861a-2049-49be-9e62-d3db2f0c324b#Dokumentenmanagementsystem";
+
+                var fallbackRule = CreateRule(
+                    path,
+                    RedirectType.Wildcard,
+                    "https://lindenhofgruppech.sharepoint.com/sites/lhg-ims/SitePages/Prozesslandkarte.aspx");
+                var intendedRule = CreateRule(
+                    requestUrl,
+                    RedirectType.Wildcard,
+                    expectedTarget);
+                var otherFolderRule = CreateRule(
+                    path + "?RootFolder=%2Fims%2FStrategie%2FOtherFolder",
+                    RedirectType.Wildcard,
+                    "https://example.com/other");
+
+                var cache = new RuleCacheService(
+                    Options.Create(new CacheOptions
+                    {
+                        CaseSensitiveMatching = false,
+                        TrailingSlashPolicy = "ignore"
+                    }),
+                    Substitute.For<ILogger<RuleCacheService>>());
+                cache.Initialize(new[] { fallbackRule, intendedRule, otherFolderRule });
+
+                var sut = new RuleMatchingService(cache);
+                var result = sut.ResolveMatch(requestUrl, DefaultConfig());
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().Be(intendedRule);
+                result.Quality.Should().Be(100);
+
+                var globalRuleCache = Substitute.For<IGlobalRuleCacheService>();
+                globalRuleCache.GetAll().Returns(Array.Empty<GlobalRule>());
+                var transformService = new UrlTransformService(globalRuleCache);
+
+                transformService.ResolveTargetUrl(requestUrl, result.Rule, "https://fallback.example.com")
+                    .Should()
+                    .Be(expectedTarget);
             }
         }
 
@@ -908,7 +980,7 @@ namespace Broot.Redirect.Tests.Core.Services
                 _cacheService = Substitute.For<IRuleCacheService>();
                 _sut = new RuleMatchingService(_cacheService);
 
-                _cacheService.LookupWildcard(Arg.Any<string>()).Returns((RedirectRule?)null);
+                _cacheService.LookupWildcardCandidates(Arg.Any<string>()).Returns(Array.Empty<RedirectRule>());
                 _cacheService.GetPartialAndDomainRules().Returns(new List<RedirectRule>());
                 _cacheService.GetRegexRules().Returns(new List<(System.Text.RegularExpressions.Regex, RedirectRule)>());
             }
@@ -949,7 +1021,7 @@ namespace Broot.Redirect.Tests.Core.Services
                 var config = DefaultConfig();
                 var rule = CreateRule("/page?key=val", RedirectType.Wildcard);
 
-                _cacheService.LookupWildcard("/page").Returns(rule);
+                _cacheService.LookupWildcardCandidates("/page").Returns(new[] { rule });
 
                 var result = _sut.ResolveMatch("/page?key=val", config);
 
