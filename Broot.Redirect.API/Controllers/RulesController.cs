@@ -119,7 +119,7 @@ namespace Broot.Redirect.API.Controllers
                 return BadRequest(new { error = $"A rule with matcher '{request.Matcher}' already exists" });
             }
 
-            var overlapping = _cacheService.FindOverlappingMatcher(request.Matcher);
+            var overlapping = _cacheService.FindOverlappingMatcher(request.Matcher, redirectType);
 
             if (overlapping != null)
             {
@@ -183,7 +183,22 @@ namespace Broot.Redirect.API.Controllers
                     return BadRequest(new { error = $"A rule with matcher '{request.Matcher}' already exists" });
                 }
 
-                var overlapping = _cacheService.FindOverlappingMatcher(request.Matcher, excludeRuleId: id);
+                // The type may change in this same request, and it decides whether the new
+                // matcher can hierarchically swallow existing rules.
+                var effectiveType = existingRule.RedirectType;
+
+                if (request.RedirectType != null)
+                {
+                    if (!TryParseRedirectType(request.RedirectType, out effectiveType))
+                    {
+                        return BadRequest(new { error = $"Invalid redirect type: {request.RedirectType}" });
+                    }
+                }
+
+                var overlapping = _cacheService.FindOverlappingMatcher(
+                    request.Matcher,
+                    effectiveType,
+                    excludeRuleId: id);
 
                 if (overlapping != null)
                 {

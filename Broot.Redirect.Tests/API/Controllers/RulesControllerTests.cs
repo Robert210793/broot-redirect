@@ -207,7 +207,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                 };
 
                 _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
-                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<Guid?>()).Returns((RedirectRule?)null);
+                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>()).Returns((RedirectRule?)null);
 
                 var result = await _sut.Create(request) as CreatedAtActionResult;
 
@@ -258,12 +258,34 @@ namespace Broot.Redirect.Tests.API.Controllers
                 };
 
                 _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
-                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<Guid?>())
+                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>())
                     .Returns(CreateRule("/a/b"));
 
                 var result = await _sut.Create(request);
 
                 result.Should().BeOfType<ConflictObjectResult>();
+            }
+
+            [Fact]
+            public async Task Create_PassesEffectiveRedirectTypeToOverlapCheck()
+            {
+                var request = new CreateRuleRequest
+                {
+                    Matcher = "/a/b",
+                    TargetUrl = "https://example.com/target",
+                    RedirectType = "wildcard"
+                };
+
+                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>())
+                    .Returns((RedirectRule?)null);
+
+                await _sut.Create(request);
+
+                _cacheService.Received(1).FindOverlappingMatcher(
+                    "/a/b",
+                    RedirectType.Wildcard,
+                    Arg.Any<Guid?>());
             }
         }
 
@@ -317,13 +339,56 @@ namespace Broot.Redirect.Tests.API.Controllers
 
                 _cacheService.GetById(rule.Id).Returns(rule);
                 _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
-                _cacheService.FindOverlappingMatcher("/a/b/c", rule.Id).Returns(CreateRule("/a/b"));
+                _cacheService.FindOverlappingMatcher("/a/b/c", Arg.Any<RedirectType>(), rule.Id).Returns(CreateRule("/a/b"));
 
                 var request = new UpdateRuleRequest { Matcher = "/a/b/c" };
 
                 var result = await _sut.Update(rule.Id, request);
 
                 result.Should().BeOfType<ConflictObjectResult>();
+            }
+
+            [Fact]
+            public async Task Update_MatcherAndTypeChange_UsesNewTypeForOverlapCheck()
+            {
+                var rule = CreateRule("/original", RedirectType.Wildcard);
+
+                _cacheService.GetById(rule.Id).Returns(rule);
+                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>())
+                    .Returns((RedirectRule?)null);
+
+                var request = new UpdateRuleRequest
+                {
+                    Matcher = "/a/b",
+                    RedirectType = "partial"
+                };
+
+                await _sut.Update(rule.Id, request);
+
+                _cacheService.Received(1).FindOverlappingMatcher(
+                    "/a/b",
+                    RedirectType.Partial,
+                    Arg.Any<Guid?>());
+            }
+
+            [Fact]
+            public async Task Update_MatcherAndInvalidTypeChange_ReturnsBadRequest()
+            {
+                var rule = CreateRule("/original", RedirectType.Wildcard);
+
+                _cacheService.GetById(rule.Id).Returns(rule);
+                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+
+                var request = new UpdateRuleRequest
+                {
+                    Matcher = "/a/b",
+                    RedirectType = "not-a-type"
+                };
+
+                var result = await _sut.Update(rule.Id, request);
+
+                result.Should().BeOfType<BadRequestObjectResult>();
             }
 
             [Fact]
@@ -1522,7 +1587,7 @@ namespace Broot.Redirect.Tests.API.Controllers
 
                 _cacheService.GetById(rule.Id).Returns(rule);
                 _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
-                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<Guid?>()).Returns((RedirectRule?)null);
+                _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>()).Returns((RedirectRule?)null);
 
                 var request = new UpdateRuleRequest
                 {

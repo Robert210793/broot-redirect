@@ -183,7 +183,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
 
                 sut.Initialize(new[] { existingRule });
 
-                var result = sut.FindOverlappingMatcher("/a/b/c");
+                var result = sut.FindOverlappingMatcher("/a/b/c", RedirectType.Wildcard);
 
                 result.Should().Be(existingRule);
             }
@@ -196,7 +196,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
 
                 sut.Initialize(new[] { existingRule });
 
-                var result = sut.FindOverlappingMatcher("/a/b");
+                var result = sut.FindOverlappingMatcher("/a/b", RedirectType.Wildcard);
 
                 result.Should().BeNull();
             }
@@ -209,7 +209,135 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
 
                 sut.Initialize(new[] { regexRule });
 
-                var result = sut.FindOverlappingMatcher("/archive/123");
+                var result = sut.FindOverlappingMatcher("/archive/123", RedirectType.Wildcard);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_WildcardFolderAboveWildcardFile_DoesNotFlag()
+            {
+                var sut = CreateService();
+                var existingFile = CreateRule(
+                    "/ims/KVP_Innovation/11%20Audit%20intern%20u.%20extern/Richtlinie%20Auditmanagement.docx",
+                    RedirectType.Wildcard);
+
+                sut.Initialize(new[] { existingFile });
+
+                var result = sut.FindOverlappingMatcher(
+                    "/ims/KVP_Innovation/11%20Audit%20intern%20u.%20extern",
+                    RedirectType.Wildcard);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_WildcardFileBelowWildcardFolder_DoesNotFlag()
+            {
+                var sut = CreateService();
+                var existingFolder = CreateRule("/a/b", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { existingFolder });
+
+                var result = sut.FindOverlappingMatcher("/a/b/c.docx", RedirectType.Wildcard);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_NewPartialAboveExistingWildcard_DetectsOverlap()
+            {
+                var sut = CreateService();
+                var existingWildcard = CreateRule("/a/b/c", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { existingWildcard });
+
+                var result = sut.FindOverlappingMatcher("/a/b", RedirectType.Partial);
+
+                result.Should().Be(existingWildcard);
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_NewWildcardBelowExistingPartial_DetectsOverlap()
+            {
+                var sut = CreateService();
+                var existingPartial = CreateRule("/a/b", RedirectType.Partial);
+
+                sut.Initialize(new[] { existingPartial });
+
+                var result = sut.FindOverlappingMatcher("/a/b/c", RedirectType.Wildcard);
+
+                result.Should().Be(existingPartial);
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_LongerPartialBelowShorterWildcard_DoesNotFlag()
+            {
+                var sut = CreateService();
+                var existingWildcard = CreateRule("/a/b", RedirectType.Wildcard);
+
+                sut.Initialize(new[] { existingWildcard });
+
+                var result = sut.FindOverlappingMatcher("/a/b/c", RedirectType.Partial);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_DomainRuleAbovePath_DoesNotFlag()
+            {
+                var sut = CreateService();
+                var domainRule = CreateRule("example.com", RedirectType.Domain);
+
+                sut.Initialize(new[] { domainRule });
+
+                var result = sut.FindOverlappingMatcher("/example.com/foo", RedirectType.Wildcard);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_EncodedAndDecodedSpelling_AreComparable()
+            {
+                var sut = CreateService();
+                var existingPartial = CreateRule("/ims/11%20Audit%20intern", RedirectType.Partial);
+
+                sut.Initialize(new[] { existingPartial });
+
+                var result = sut.FindOverlappingMatcher(
+                    "/ims/11 Audit intern/Richtlinie.docx",
+                    RedirectType.Wildcard);
+
+                result.Should().Be(existingPartial);
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_QueryStringIsIgnored_ForSegmentComparison()
+            {
+                var sut = CreateService();
+                var existingPartial = CreateRule("/ims/KVP_Innovation", RedirectType.Partial);
+
+                sut.Initialize(new[] { existingPartial });
+
+                var result = sut.FindOverlappingMatcher(
+                    "/ims/KVP_Innovation/Forms/AllItems.aspx?RootFolder=%2Fims%2FKVP%5FInnovation",
+                    RedirectType.Wildcard);
+
+                result.Should().Be(existingPartial);
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_EncodedSlashInSegment_DoesNotCreateExtraSegments()
+            {
+                var sut = CreateService();
+                var existingPartial = CreateRule("/a/b", RedirectType.Partial);
+
+                sut.Initialize(new[] { existingPartial });
+
+                // '/a/b%2Fc' is a two-segment path whose second segment happens to contain a
+                // slash. Decoding before splitting would make it a three-segment path and
+                // wrongly report an overlap with the two-segment '/a/b'.
+                var result = sut.FindOverlappingMatcher("/a/b%2Fc", RedirectType.Wildcard);
 
                 result.Should().BeNull();
             }
@@ -429,7 +557,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
 
                 sut.Initialize(new[] { rule });
 
-                var result = sut.FindOverlappingMatcher("");
+                var result = sut.FindOverlappingMatcher("", RedirectType.Wildcard);
 
                 result.Should().BeNull();
             }
@@ -442,7 +570,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
 
                 sut.Initialize(new[] { rule });
 
-                var result = sut.FindOverlappingMatcher("/a/b/c", excludeRuleId: rule.Id);
+                var result = sut.FindOverlappingMatcher("/a/b/c", RedirectType.Wildcard, excludeRuleId: rule.Id);
 
                 result.Should().BeNull();
             }
@@ -455,7 +583,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
 
                 sut.Initialize(new[] { rule });
 
-                var result = sut.FindOverlappingMatcher("/a/b/c");
+                var result = sut.FindOverlappingMatcher("/a/b/c", RedirectType.Wildcard);
 
                 result.Should().BeNull();
             }

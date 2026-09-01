@@ -287,7 +287,13 @@ Wird nach der Auswahl des Siegers in `CalculateQuality` bestimmt:
 
 ### Überlappungsprüfung von Matchern
 
-Beim Anlegen oder Ändern einer Regel weist `RuleCacheService.FindOverlappingMatcher` Matcher zurück, die hierarchisch ein Pfadsegment-Präfix eines bestehenden Matchers sind (oder umgekehrt) — etwa `/a/b` im Konflikt mit `/a/b/c`. Gleich lange Matcher und Regex-Regeln werden übersprungen. Die API antwortet mit `409 Conflict`, `code: "MATCHER_CONFLICT"` und der konfliktierenden Regel; das Admin-UI zeigt dies in einem Dialog an. Exakte Duplikate ergeben `400`.
+Beim Anlegen oder Ändern einer Regel weist `RuleCacheService.FindOverlappingMatcher` Matcher zurück, die hierarchisch von einem bestehenden Matcher verschluckt werden (oder umgekehrt) — etwa `/a/b` im Konflikt mit `/a/b/c`.
+
+Entscheidend ist der Typ des **kürzeren** der beiden Matcher: nur `Partial` matcht über ein Pfadsegment-Präfix und kann darunterliegende Pfade verschlucken. `Wildcard` wird über einen exakten Pfad-Lookup im `_wildcardIndex` aufgelöst und `Domain` über den Hostnamen — beide überlappen deshalb nie hierarchisch. Eine Wildcard-Regel für einen Ordner (`/ims/Bereich/11%20Audit`) und Wildcard-Regeln für Dateien darunter (`/ims/Bereich/11%20Audit/Richtlinie.docx`) sind also kein Konflikt und dürfen nebeneinander existieren. Gleich lange Matcher und Regex-Regeln werden übersprungen.
+
+Beim Segmentvergleich wird der Query-String verworfen (`/a/b.aspx?x=1` zählt als Pfad `/a/b.aspx`) und jedes Segment nach dem Split prozentdekodiert — dadurch sind kodierte und dekodierte Schreibweisen desselben Pfads vergleichbar (`11%20Audit` und `11 Audit`), ohne dass ein kodiertes `%2F` innerhalb eines Segments zu einem zusätzlichen Trennzeichen wird.
+
+Die API antwortet mit `409 Conflict`, `code: "MATCHER_CONFLICT"` und der konfliktierenden Regel; das Admin-UI zeigt dies in einem Dialog an. Exakte Duplikate ergeben `400`. Bei `PUT` wird der Typ aus dem Request berücksichtigt, sofern er mitgeändert wird.
 
 ---
 
@@ -446,7 +452,7 @@ Alle Endpunkte liefern camelCase-JSON. Enums werden als camelCase-Strings serial
 |---|---|---|
 | `GET` | `/api/rules?page=&limit=&search=&sortBy=&sortOrder=` | Paginierte Liste. `limit` maximal 500, Standard 50. Wird aus dem Cache bedient. |
 | `GET` | `/api/rules/{id}` | Einzelne Regel. |
-| `POST` | `/api/rules` | Anlegen. `400` bei doppeltem Matcher, `409` `MATCHER_CONFLICT` bei hierarchischer Überlappung. |
+| `POST` | `/api/rules` | Anlegen. `400` bei doppeltem Matcher, `409` `MATCHER_CONFLICT` bei hierarchischer Überlappung mit einer `Partial`-Regel. |
 | `PUT` | `/api/rules/{id}` | Teilaktualisierung — Felder mit `null` behalten ihren bisherigen Wert. `Source` bleibt erhalten; `RedirectType` ändert sich nur bei expliziter Angabe. |
 | `DELETE` | `/api/rules/{id}` | Löscht eine Regel. |
 | `DELETE` | `/api/rules/bulk` | Body `{ ids: [...] }`. Liefert `{ deleted, notFound }`. |

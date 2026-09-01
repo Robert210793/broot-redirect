@@ -132,7 +132,10 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
         }
 
-        public RedirectRule? FindOverlappingMatcher(string matcher, Guid? excludeRuleId = null)
+        public RedirectRule? FindOverlappingMatcher(
+            string matcher,
+            RedirectType redirectType,
+            Guid? excludeRuleId = null)
         {
             var inputSegments = NormalizeAndSplitSegments(matcher);
 
@@ -165,6 +168,18 @@ namespace Broot.Redirect.Infrastructure.Cache
                     }
 
                     if (existingSegments.Length == inputSegments.Length)
+                    {
+                        continue;
+                    }
+
+                    // Only the shorter matcher can swallow the longer one, and only when it
+                    // matches by path-segment prefix. Wildcard rules resolve through an exact
+                    // path lookup, so a folder rule and a file rule beneath it never compete.
+                    var shorterType = inputSegments.Length < existingSegments.Length
+                        ? redirectType
+                        : rule.RedirectType;
+
+                    if (shorterType != RedirectType.Partial)
                     {
                         continue;
                     }
@@ -377,10 +392,21 @@ namespace Broot.Redirect.Infrastructure.Cache
 
         private static string[] NormalizeAndSplitSegments(string matcher)
         {
-            var normalized = matcher.Trim().ToLowerInvariant().TrimEnd('/');
+            // Drop the query string so '/a/b.aspx?x=1' compares as the path '/a/b.aspx'.
+            var normalized = matcher.Trim().Split('?', 2)[0].ToLowerInvariant().TrimEnd('/');
 
-            return normalized
-                .Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+            // Split first, then decode, so an encoded '%2F' inside a segment does not
+            // turn into an extra separator. Keeps encoded and decoded spellings of the
+            // same path comparable ('11%20Audit' vs '11 Audit').
+            for (var index = 0; index < segments.Length; index++)
+            {
+                try { segments[index] = Uri.UnescapeDataString(segments[index]); }
+                catch { /* keep original segment if decoding fails */ }
+            }
+
+            return segments;
         }
     }
 }

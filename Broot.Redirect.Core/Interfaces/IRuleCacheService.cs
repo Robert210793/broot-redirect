@@ -71,11 +71,17 @@ namespace Broot.Redirect.Core.Interfaces
         bool MatcherExists(string matcher, Guid? excludeRuleId = null);
 
         /// <summary>
-        /// Finds an existing non-regex rule whose matcher overlaps hierarchically
-        /// with the given matcher (one is a path-segment prefix of the other).
-        /// Returns null if no overlap is found. Skips regex rules.
+        /// Finds an existing rule whose matcher hierarchically swallows the given matcher
+        /// (or is swallowed by it). Only the shorter of the two matchers can swallow the
+        /// longer one, and only if it belongs to a <see cref="RedirectType.Partial"/> rule,
+        /// because partial rules match by path-segment prefix. Wildcard and domain rules
+        /// resolve by exact path respectively host, so they never overlap hierarchically.
+        /// Regex rules are skipped. Returns null if no overlap is found.
         /// </summary>
-        RedirectRule? FindOverlappingMatcher(string matcher, Guid? excludeRuleId = null);
+        RedirectRule? FindOverlappingMatcher(
+            string matcher,
+            RedirectType redirectType,
+            Guid? excludeRuleId = null);
 
         /// <summary>
         /// Populates the cache from a complete set of rules.
