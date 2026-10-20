@@ -1,0 +1,30 @@
+# Azure DevOps is the source of truth. Every push to main is mirrored to GitHub,
+# where .github/workflows/build.yaml builds the Docker image and pushes it to ghcr.io.
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: github-mirror # must contain the secret variable GITHUB_PAT
+  - name: GitHubRepo
+    value: Robert210793/broot-redirect
+
+steps:
+  - checkout: self
+    fetchDepth: 0 # full history; pushing from a shallow clone can be rejected
+    fetchTags: false
+    persistCredentials: false
+
+  - bash: |
+      set -euo pipefail
+      git push "https://x-access-token:${GITHUB_PAT}@github.com/$(GitHubRepo).git" "HEAD:$(Build.SourceBranch)"
+    displayName: Push to GitHub
+    env:
+      GITHUB_PAT: $(GITHUB_PAT)
