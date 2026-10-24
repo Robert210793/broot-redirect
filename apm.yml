@@ -1,0 +1,17 @@
+name: broot-redirect
+version: 1.0.0
+description: broot-redirect
+author: robert.fodor
+targets:
+- claude
+dependencies:
+  apm:
+  - git: https://beetrootag@dev.azure.com/beetrootag/Beetroot-Framework/_git/broot-ai-dev-toolkit
+    path: packages/00-core
+    ref: main
+  - git: https://beetrootag@dev.azure.com/beetrootag/Beetroot-Framework/_git/broot-ai-dev-toolkit
+    path: packages/dotnet
+    ref: main
+  mcp: []
+includes: auto
+scripts: {}

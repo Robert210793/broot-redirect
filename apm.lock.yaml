@@ -1,0 +1,82 @@
+lockfile_version: '1'
+generated_at: '2026-10-24T00:08:19.678708+00:00'
+apm_version: 0.23.1
+dependencies:
+- repo_url: beetrootag/Beetroot-Framework/broot-ai-dev-toolkit
+  name: broot-ai-core
+  host: dev.azure.com
+  resolved_commit: 7d922ddaa97bdc0703179ba1875f3bf09c99f14a
+  resolved_ref: main
+  version: 0.10.0
+  virtual_path: packages/00-core
+  is_virtual: true
+  package_type: apm_package
+  deployed_files:
+  - .claude/agents/brt-requirements-engineer.md
+  - .claude/agents/brt-reviewer.md
+  - .claude/agents/brt-software-architect.md
+  - .claude/agents/brt-test-engineer.md
+  - .claude/commands/brt-accept.md
+  - .claude/commands/brt-adr.md
+  - .claude/commands/brt-approve.md
+  - .claude/commands/brt-bug.md
+  - .claude/commands/brt-commit.md
+  - .claude/commands/brt-ideate.md
+  - .claude/commands/brt-implement.md
+  - .claude/commands/brt-initialize.md
+  - .claude/commands/brt-plan.md
+  - .claude/commands/brt-pr-review.md
+  - .claude/commands/brt-refine.md
+  - .claude/commands/brt-run.md
+  - .claude/commands/brt-scaffolding.md
+  - .claude/commands/brt-story.md
+  - .claude/rules/AGENT-TEMPLATE.md
+  - .claude/rules/DOMAIN-GLOSSARY.md
+  - .claude/rules/GIT-TRUNK-BASED-WORKFLOW.md
+  - .claude/rules/PROJECT-PLACEHOLDERS.md
+  - .claude/rules/USER-STORY-TEMPLATE.md
+  - .claude/rules/WORKITEM-PROZESS.md
+  deployed_file_hashes:
+    .claude/agents/brt-requirements-engineer.md: sha256:421150694f49c0ce0ba8fd3d4370998daa9bbe5338d9f366e2d1b6391eb16a99
+    .claude/agents/brt-reviewer.md: sha256:c109c73ed7f160305126cf60317d56c7a48913de8e9ab16499a7d09de08a1677
+    .claude/agents/brt-software-architect.md: sha256:dda83855b91dee2f261046c1819b08db29a0d957db3e1662bace913c06e999d1
+    .claude/agents/brt-test-engineer.md: sha256:2cc391c0076e72c99f1ea193b0a1e7146abd99dab81e8bca83c06c9400b8ba3e
+    .claude/commands/brt-accept.md: sha256:bd43445705a7f1c582c8184726cbe244137e844141801055dddc32c896629764
+    .claude/commands/brt-adr.md: sha256:1ec68cd4c5def02ef5122bcd488d7c14923358a13948161477022c8bbaf0d2b8
+    .claude/commands/brt-approve.md: sha256:82e6f9e9a694cb8c6c3e63c3758f806a9f8937581049b3c3c563a2c921a7d4a1
+    .claude/commands/brt-bug.md: sha256:71e05f0acbff84b92a4c54f37bf17d7e2cbbf85266afe62721515e82e3f5d942
+    .claude/commands/brt-commit.md: sha256:decadf38cf3b3a1c06340457b86f20ed742c8a3d9e997709385d6fac9e510b3e
+    .claude/commands/brt-ideate.md: sha256:bb0b999b47ee4143740f0915c57300d0f90dd8f9e5635bbce334543a723a9503
+    .claude/commands/brt-implement.md: sha256:9061f0e3640d7f1981dcba3a798d4387e10de4f811ec5b4c1db756d292543c61
+    .claude/commands/brt-initialize.md: sha256:467bba6ea07eba6614e4484a6c7f06feca26ae999ff61ff80cb2b2cfa54c7f96
+    .claude/commands/brt-plan.md: sha256:5409179a34fb1379cb46a2f643eb4c318326cb5afa7dce1b018dc673797d268d
+    .claude/commands/brt-pr-review.md: sha256:0969f51333dd0e4bdba6a93c9443d9fca81288067a4b435354de7e0bb6ba41fc
+    .claude/commands/brt-refine.md: sha256:ab03eedaeda2a95dbdb376c6bfdb29a2d0365382612c26d62e86e8f071fe6e81
+    .claude/commands/brt-run.md: sha256:763dfee912a82cb84a5266f697aa3c91a9bb4c231dd16ac1a3c35c8429ce02d0
+    .claude/commands/brt-scaffolding.md: sha256:44922e07e5092e2596ab6e9fbe3ec2881fd72a976dc6ee7cc0b6647ad83cb063
+    .claude/commands/brt-story.md: sha256:dcfee425590d91182f165cb8692114f3016f0c78fc09f3ead614e2d52fde780a
+    .claude/rules/AGENT-TEMPLATE.md: sha256:49ce48f2bd1d338305e0052c15e665ff9d5cc9f8be303e40632587a887405470
+    .claude/rules/DOMAIN-GLOSSARY.md: sha256:701ac4395e9f277a6cf174a235cb4306af88bbe535f89a4f1f1e0c2204e9e9a0
+    .claude/rules/GIT-TRUNK-BASED-WORKFLOW.md: sha256:7b2ed9c2a9c2f3c256692f999301437d77c9a58bbd0f5fcab29ba1713a038e13
+    .claude/rules/PROJECT-PLACEHOLDERS.md: sha256:1a1af7986e92a530544575dc44852fafe8419a4aa4d1276cdf91b09ba56dbcc6
+    .claude/rules/USER-STORY-TEMPLATE.md: sha256:e3f4bc5385b05226769f7473dd3410610e859e0fbea882b6ec24a34d6bc01b88
+    .claude/rules/WORKITEM-PROZESS.md: sha256:ee5b5d7c40b876b6115194cbe962350b7afec0ca3e9e92143e4523ec28f7eebb
+  content_hash: sha256:9f9caa2de7d45c103407f656bf010553ebfeb4db995a0fcf02178b1250768d30
+  declared_license: MIT
+- repo_url: beetrootag/Beetroot-Framework/broot-ai-dev-toolkit
+  name: broot-ai-dotnet
+  host: dev.azure.com
+  resolved_commit: 7d922ddaa97bdc0703179ba1875f3bf09c99f14a
+  resolved_ref: main
+  version: 0.10.0
+  virtual_path: packages/dotnet
+  is_virtual: true
+  package_type: apm_package
+  deployed_files:
+  - .claude/agents/brt-dn-backend-engineer.md
+  - .claude/rules/DEFINITION-OF-READY-DOTNET.md
+  deployed_file_hashes:
+    .claude/agents/brt-dn-backend-engineer.md: sha256:bdc83f1eb65af4b4a726639e4827c739f80bb543943787b5dd66fc412fb62db0
+    .claude/rules/DEFINITION-OF-READY-DOTNET.md: sha256:c5de8410f84c55fdd4255a29657a7bd7625fcdf9f3d991d71dbd602bb039ec88
+  content_hash: sha256:7adc07587c01dca36151ab2437b79dc9cd62cecf4f9862f9bb3acb134170f6c3
+  declared_license: MIT

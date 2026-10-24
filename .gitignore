@@ -367,3 +367,6 @@ FodyWeavers.xsd
 
 # Test coverage reports
 coverage-report/
+
+# APM
+apm_modules/
