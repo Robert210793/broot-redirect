@@ -1,0 +1,43 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "6e022031-685a-4ea9-97d5-adb09154a7e4",
+  "developer": {
+    "name": "Beetroot AG",
+    "websiteUrl": "https://www.beetroot.ag",
+    "privacyUrl": "https://www.beetroot.ag",
+    "termsOfUseUrl": "https://www.beetroot.ag"
+  },
+  "name": {
+    "short": "Weiterleitungen",
+    "full": "Broot Redirect – Weiterleitungsregeln"
+  },
+  "description": {
+    "short": "Weiterleitungsregeln für migrierte Dokumente verwalten",
+    "full": "Admin-Panel von Broot Redirect: Regeln für die Weiterleitung alter SharePoint-Links auf die neuen Dokument-URLs anlegen, bearbeiten, importieren und auswerten."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#1D4ED8",
+  "staticTabs": [
+    {
+      "entityId": "rules",
+      "name": "Regeln",
+      "contentUrl": "https://{{APP_HOST}}/rules",
+      "websiteUrl": "https://{{APP_HOST}}/rules",
+      "scopes": [
+        "personal"
+      ]
+    }
+  ],
+  "permissions": [
+    "identity"
+  ],
+  "validDomains": [
+    "{{APP_HOST}}"
+  ],
+  "showLoadingIndicator": false
+}

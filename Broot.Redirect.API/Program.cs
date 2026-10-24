@@ -45,14 +45,15 @@ builder.Services.AddSingleton<QmProApiKeyFilter>();
 
 builder.Services.AddDistributedMemoryCache();
 
+var allowTeamsEmbedding = builder.Configuration
+    .GetSection(BrootRedirectOptions.SectionName)
+    .GetValue<bool>("AllowTeamsEmbedding");
+
 builder.Services.AddSession(options =>
 {
     options.Cookie.Name = "admin_session";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = builder.Environment.IsProduction()
-        ? CookieSecurePolicy.Always
-        : CookieSecurePolicy.SameAsRequest;
+    TeamsEmbedding.ConfigureSessionCookie(options.Cookie, allowTeamsEmbedding, builder.Environment.IsProduction());
     options.Cookie.Path = "/";
     options.Cookie.IsEssential = true;
 
@@ -107,6 +108,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+if (allowTeamsEmbedding)
+{
+    Console.WriteLine("Teams embedding enabled: session cookie is SameSite=None; Secure; Partitioned and framing is limited to Microsoft Teams.");
+
+    app.Use(async (context, next) =>
+    {
+        TeamsEmbedding.ApplyFrameAncestors(context.Response.Headers);
+
+        await next();
+    });
+}
 
 var indexPath = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
 

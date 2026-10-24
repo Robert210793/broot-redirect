@@ -463,6 +463,7 @@ Responses tragen `X-RateLimit-Limit`, `-Remaining`, `-Reset`; bei `429` kommt `R
 
 - `UseForwardedHeaders` ist aktiviert, damit Client-IPs hinter dem Azure Ingress korrekt sind. **Achtung:** Rate Limiting und Brute-Force-Schutz verwenden `context.Connection.RemoteIpAddress`, nicht den weitergereichten Header.
 - Alle `/api/*`-Responses werden mit `Cache-Control: no-store` ausgeliefert.
+- **Einbettung in Microsoft Teams** (`SmartRedirect__AllowTeamsEmbedding=true`): Das Admin-Panel läuft dann als Teams-Tab im iframe. Das Session-Cookie wird `SameSite=None; Secure; Partitioned` ausgestellt, damit der Browser es im Drittanbieter-Kontext mitsendet, und jede Response trägt `Content-Security-Policy: frame-ancestors 'self'` plus die Teams-Domains. Der CSRF-Schutz bleibt unverändert wirksam, weil die API-Aufrufe aus dem eigenen Origin kommen. Erfordert HTTPS. Browser, die Drittanbieter-Cookies vollständig blockieren (z. B. Safari), können die Anmeldung im Teams-Web-Client trotzdem verhindern; der Teams-Desktop-Client ist davon nicht betroffen. Ohne die Einstellung bleibt das Cookie `SameSite=Lax` und es wird kein `frame-ancestors`-Header gesetzt.
 - Der Hinweistext der Info-Seite wird über [`LinkifyPipe`](Broot.Redirect.Client/src/app/shared/pipes/linkify.pipe.ts) gerendert. Diese maskiert *zuerst* den gesamten String als HTML und wandelt erst danach `http(s)`-URLs in Anker um, bevor sie Angulars Sanitizer umgeht. Diese Reihenfolge muss bei Änderungen erhalten bleiben.
 
 ---
@@ -720,6 +721,7 @@ Die Konfiguration folgt den ASP.NET-Core-Konventionen. Jeder Wert aus `appsettin
 | `SmartRedirect__SessionTimeoutDays` | Leerlauf-Timeout der Admin-Session in Tagen | `7` |
 | `SmartRedirect__TrackingRetentionDays` | Aufbewahrungsdauer der Tracking-Daten in Tagen | `30` |
 | `SmartRedirect__QmProApiKey` | API-Key der QM-Pro-Schnittstelle (Header `X-Api-Key`). Secret — mindestens 32 Zufallsbytes, nicht in `appsettings.json`. Ohne Wert sind die Endpunkte gesperrt. | — (nicht gesetzt) |
+| `SmartRedirect__AllowTeamsEmbedding` | Admin-Panel als Teams-Tab einbettbar: Session-Cookie `SameSite=None; Secure; Partitioned`, `frame-ancestors` auf Teams beschränkt. Erfordert HTTPS. | `false` |
 
 ### URL-Matching (`SmartRedirect__*`)
 
@@ -831,6 +833,17 @@ Das Dockerfile besteht aus drei Stufen: Node 22 baut die Angular-App, das .NET-8
    ```bash
    az webapp config appsettings set --name broot-redirect --resource-group broot-redirect-rg --settings ASPNETCORE_ENVIRONMENT=Production SmartRedirect__AdminPassword=<your-password> AzureTableStorage__ConnectionString=<connection-string> WEBSITES_PORT=8080
    ```
+
+### Admin-Panel als Teams-Tab
+
+1. Auf der Applikation `SmartRedirect__AllowTeamsEmbedding=true` setzen (HTTPS erforderlich) und neu starten.
+2. App-Paket mit dem Host der Applikation erzeugen:
+   ```powershell
+   .\teams\New-TeamsAppPackage.ps1 -AppHost "redirect.example.ch"
+   ```
+3. `broot-redirect-teams.zip` in Teams hochladen: *Apps → Apps verwalten → App hochladen* (eigene App, erfordert die Berechtigung zum Hochladen benutzerdefinierter Apps) oder über das Teams Admin Center für die ganze Organisation.
+
+Das Paket enthält einen persönlichen Tab «Regeln», der `https://<host>/rules` lädt. Die Anmeldung erfolgt im Tab mit dem Admin-Passwort.
 
 ### Checkliste für die Produktion
 

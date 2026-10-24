@@ -41,5 +41,7 @@
         public int LoginBlockDurationMinutes { get; set; } = 1440;
 
         public string? QmProApiKey { get; set; }
+
+        public bool AllowTeamsEmbedding { get; set; } = false;
     }
 }
