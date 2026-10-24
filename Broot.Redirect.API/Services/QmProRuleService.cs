@@ -75,9 +75,9 @@ namespace Broot.Redirect.API.Services
                 return new QmProPublishResult(QmProPublishStatus.ValidationFailed, Error: "Publikations-URL darf nicht leer sein");
             }
 
-            if (!TryParseAbsoluteHttpUrl(request.OldUrl, out var oldUri))
+            if (!TryBuildMatcher(request.OldUrl, out var matcher))
             {
-                return new QmProPublishResult(QmProPublishStatus.ValidationFailed, Error: "Alte URL muss eine gültige absolute URL sein (http:// oder https://)");
+                return new QmProPublishResult(QmProPublishStatus.ValidationFailed, Error: "Alte URL muss ein Pfad (beginnend mit /) oder eine gültige absolute URL sein (http:// oder https://)");
             }
 
             if (!TryParseAbsoluteHttpUrl(request.PublicationUrl, out _))
@@ -85,7 +85,6 @@ namespace Broot.Redirect.API.Services
                 return new QmProPublishResult(QmProPublishStatus.ValidationFailed, Error: "Publikations-URL muss eine gültige absolute URL sein (http:// oder https://)");
             }
 
-            var matcher = BuildMatcher(oldUri);
             var targetUrl = RuleImportExportService.PercentEncodePreservingSlashes(request.PublicationUrl.Trim());
 
             var validationErrors = _validationService.ValidateCreate(new CreateRuleRequest
@@ -251,6 +250,32 @@ namespace Broot.Redirect.API.Services
         public static string BuildMatcher(Uri oldUri)
         {
             return RuleImportExportService.CanonicalizeMatcher(oldUri.PathAndQuery);
+        }
+
+        public static bool TryBuildMatcher(string oldUrl, [NotNullWhen(true)] out string? matcher)
+        {
+            var value = oldUrl.Trim();
+
+            if (value.StartsWith('/') && !value.StartsWith("//", StringComparison.Ordinal))
+            {
+                var fragmentIndex = value.IndexOf('#');
+                var pathAndQuery = fragmentIndex >= 0 ? value[..fragmentIndex] : value;
+
+                matcher = RuleImportExportService.CanonicalizeMatcher(pathAndQuery);
+
+                return true;
+            }
+
+            if (TryParseAbsoluteHttpUrl(value, out var oldUri))
+            {
+                matcher = BuildMatcher(oldUri);
+
+                return true;
+            }
+
+            matcher = null;
+
+            return false;
         }
 
         private async Task PersistUpdateAsync(RedirectRule rule)

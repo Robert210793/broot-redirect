@@ -103,6 +103,24 @@ namespace Broot.Redirect.Tests.API.Services
             }
 
             [Fact]
+            public async Task Publish_OldUrlAsPath_UsesPathAsMatcher()
+            {
+                var result = await _sut.PublishAsync(PublishRequest(oldUrl: "/ims/Strategie/11%20IMS%20%28Integr.%20Mgmt.system%29/Merkblatt%20IMS.docx"));
+
+                result.Status.Should().Be(QmProPublishStatus.Created);
+                result.Rule!.Matcher.Should().Be(QmProRuleService.BuildMatcher(new Uri("https://h/ims/Strategie/11%20IMS%20%28Integr.%20Mgmt.system%29/Merkblatt%20IMS.docx")));
+            }
+
+            [Fact]
+            public async Task Publish_OldUrlAsPathAndAsAbsoluteUrl_ProduceSameMatcher()
+            {
+                var path = await _sut.PublishAsync(PublishRequest(documentId: "doc-path", oldUrl: "/ims/a b/c.docx?x=1#top"));
+
+                QmProRuleService.TryBuildMatcher("https://old-host/ims/a%20b/c.docx?x=1", out var fromAbsolute).Should().BeTrue();
+                path.Rule!.Matcher.Should().Be(fromAbsolute);
+            }
+
+            [Fact]
             public async Task Publish_EncodedAndRawOldUrl_ProduceSameMatcher()
             {
                 var raw = await _sut.PublishAsync(PublishRequest(documentId: "doc-raw", oldUrl: "https://h/a b/c.docx"));
@@ -232,7 +250,8 @@ namespace Broot.Redirect.Tests.API.Services
             [InlineData(DocumentId, null, PublicationUrl, "Alte URL")]
             [InlineData(DocumentId, "", PublicationUrl, "Alte URL")]
             [InlineData(DocumentId, OldUrl, null, "Publikations-URL")]
-            [InlineData(DocumentId, "/relative/path.docx", PublicationUrl, "Alte URL")]
+            [InlineData(DocumentId, "relative/path.docx", PublicationUrl, "Alte URL")]
+            [InlineData(DocumentId, "//host/path.docx", PublicationUrl, "Alte URL")]
             [InlineData(DocumentId, "ftp://host/file.docx", PublicationUrl, "Alte URL")]
             [InlineData(DocumentId, "not a url", PublicationUrl, "Alte URL")]
             [InlineData(DocumentId, OldUrl, "/sites/QM/Publikation/a.docx", "Publikations-URL")]

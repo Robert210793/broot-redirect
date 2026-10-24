@@ -509,10 +509,10 @@ Header `X-Api-Key` erforderlich, keine Admin-Session, kein `Origin`/`Referer` n�
 
 | Methode | Pfad | Beschreibung |
 |---|---|---|
-| `POST` | `/api/qm-pro/publish` | Body `{ documentId, oldUrl, publicationUrl }`. `201` `created`, `200` `updated` (auch Reaktivierung) oder `200` `unchanged`. |
+| `POST` | `/api/qm-pro/publish` | Body `{ documentId, oldUrl, publicationUrl }`. `oldUrl` ist ein Pfad ohne Host (`/ims/…`) oder eine absolute URL (Host wird verworfen). `201` `created`, `200` `updated` (auch Reaktivierung) oder `200` `unchanged`. |
 | `POST` | `/api/qm-pro/unpublish` | Body `{ documentId }`. Immer `200` mit `deactivated`, `alreadyInactive` oder `notFound`. |
 
-Erfolg: `{ ruleId, result }` (`ruleId` fehlt bei `notFound`). Fehler: `{ error, code }` — `400` `VALIDATION_ERROR` (fehlende Felder, keine absolute `http(s)`-URL, Regelvalidierung), `401` `UNAUTHORIZED`, `409` `MATCHER_DUPLICATE` (alte URL ist bereits gleichwertiger Matcher einer anderen Regel, auch einer deaktivierten) bzw. `409` `MATCHER_CONFLICT` (Überlappung mit einer `Partial`-Regel), jeweils mit `conflictingRule { id, matcher }`, `429` (Stufe `Integration`), `503` `CACHE_NOT_READY` mit `Retry-After`, solange der Cache nicht aufgewärmt ist. Wiederholungen bei `429`, `503` und `5xx` übernimmt QM Pro.
+Erfolg: `{ ruleId, result }` (`ruleId` fehlt bei `notFound`). Fehler: `{ error, code }` — `400` `VALIDATION_ERROR` (fehlende Felder, alte URL weder Pfad noch absolute URL, Publikations-URL keine absolute `http(s)`-URL, Regelvalidierung), `401` `UNAUTHORIZED`, `409` `MATCHER_DUPLICATE` (alte URL ist bereits gleichwertiger Matcher einer anderen Regel, auch einer deaktivierten) bzw. `409` `MATCHER_CONFLICT` (Überlappung mit einer `Partial`-Regel), jeweils mit `conflictingRule { id, matcher }`, `429` (Stufe `Integration`), `503` `CACHE_NOT_READY` mit `Retry-After`, solange der Cache nicht aufgewärmt ist. Wiederholungen bei `429`, `503` und `5xx` übernimmt QM Pro.
 
 ### Globale Regeln (Admin)
 
