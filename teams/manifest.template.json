@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "id": "6e022031-685a-4ea9-97d5-adb09154a7e4",
   "developer": {
     "name": "Beetroot AG",
@@ -10,8 +10,8 @@
     "termsOfUseUrl": "https://www.beetroot.ag"
   },
   "name": {
-    "short": "Weiterleitungen",
-    "full": "Broot Redirect – Weiterleitungsregeln"
+    "short": "Smart Redirect",
+    "full": "Smart Redirect – Weiterleitungsregeln"
   },
   "description": {
     "short": "Weiterleitungsregeln für migrierte Dokumente verwalten",
