@@ -156,7 +156,7 @@
                 </thead>
                 <tbody>
                     @for (rule of rules(); track rule.id) {
-                        <tr class="clickable" (click)="onRowClick(rule, $event)">
+                        <tr class="clickable" [class.row-inactive]="!rule.isActive" (click)="onRowClick(rule, $event)">
                             <td (click)="$event.stopPropagation()">
                                 <input
                                     type="checkbox"
@@ -190,6 +190,9 @@
                             </td>
                             <td>
                                 <span class="badge" [class]="'badge-source-' + rule.source">{{ sourceLabel(rule.source) }}</span>
+                                @if (!rule.isActive) {
+                                    <span class="badge badge-inactive">deaktiviert</span>
+                                }
                             </td>
                             <td>
                                 <span class="text-secondary" style="font-size: 0.8rem">{{ formatDate(rule.createdAt) }}</span>

@@ -12,11 +12,13 @@ export interface RedirectRule {
     staticQueryParams: StaticQueryParam[];
     searchAndReplace: SearchAndReplaceEntry[];
     createdAt: string;
+    isActive: boolean;
+    externalDocumentId?: string;
 }
 
 export type RedirectType = 'wildcard' | 'partial' | 'domain' | 'regex';
 
-export type RuleSource = 'manual' | 'import' | 'unknown';
+export type RuleSource = 'manual' | 'import' | 'unknown' | 'qmPro';
 
 export type MatchQualityLevel = 'red' | 'yellow' | 'green';
 

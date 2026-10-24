@@ -11,7 +11,10 @@ namespace Broot.Redirect.API.Middleware
         private readonly int _globalMax;
         private readonly int _trackingMax;
         private readonly int _adminMax;
+        private readonly int _integrationMax;
         private readonly TimeSpan _window;
+
+        private static readonly PathString IntegrationPathPrefix = new("/api/qm-pro");
 
         private static readonly ConcurrentDictionary<string, RateLimitEntry> Entries = new();
         private static Timer? _cleanupTimer;
@@ -26,6 +29,7 @@ namespace Broot.Redirect.API.Middleware
             _globalMax = options.Value.RateLimitGlobalMax;
             _trackingMax = options.Value.RateLimitTrackingMax;
             _adminMax = options.Value.RateLimitAdminMax;
+            _integrationMax = options.Value.RateLimitIntegrationMax;
             _window = TimeSpan.FromSeconds(options.Value.RateLimitWindowSeconds);
 
             _cleanupTimer ??= new Timer(
@@ -108,6 +112,11 @@ namespace Broot.Redirect.API.Middleware
 
         private RateLimitTier ClassifyRequest(string path, string method)
         {
+            if (new PathString(path).StartsWithSegments(IntegrationPathPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return RateLimitTier.Integration;
+            }
+
             if (string.Equals(method, "POST", StringComparison.OrdinalIgnoreCase))
             {
                 if (path.Equals("/api/track", StringComparison.OrdinalIgnoreCase) ||
@@ -139,6 +148,7 @@ namespace Broot.Redirect.API.Middleware
             {
                 RateLimitTier.Tracking => _trackingMax,
                 RateLimitTier.Admin => _adminMax,
+                RateLimitTier.Integration => _integrationMax,
                 _ => _globalMax
             };
         }
@@ -172,7 +182,8 @@ namespace Broot.Redirect.API.Middleware
         {
             Global,
             Tracking,
-            Admin
+            Admin,
+            Integration
         }
     }
 }

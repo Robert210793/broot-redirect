@@ -198,5 +198,42 @@ namespace Broot.Redirect.Tests.API.Middleware
 
             nextCalled.Should().BeTrue();
         }
+
+        [Theory]
+        [InlineData("/api/qm-pro/publish")]
+        [InlineData("/api/qm-pro/unpublish")]
+        [InlineData("/API/QM-PRO/publish")]
+        public async Task InvokeAsync_QmProIntegrationPath_WithoutOriginOrReferer_CallsNext(string path)
+        {
+            var (nextCalled, context) = await Invoke(path, "POST");
+
+            nextCalled.Should().BeTrue();
+            context.Response.StatusCode.Should().Be(200);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_QmProIntegrationPath_WithForeignOrigin_CallsNext()
+        {
+            var (nextCalled, _) = await Invoke(
+                "/api/qm-pro/publish",
+                "POST",
+                origin: "https://functions.example.net",
+                host: "localhost");
+
+            nextCalled.Should().BeTrue();
+        }
+
+        [Theory]
+        [InlineData("/api/qm-provider")]
+        [InlineData("/api/rules")]
+        [InlineData("/api/global-rules")]
+        [InlineData("/api/auth/logout")]
+        public async Task InvokeAsync_PathsOutsideQmProSegment_StillRequireOrigin(string path)
+        {
+            var (nextCalled, context) = await Invoke(path, "POST");
+
+            nextCalled.Should().BeFalse();
+            context.Response.StatusCode.Should().Be(403);
+        }
     }
 }

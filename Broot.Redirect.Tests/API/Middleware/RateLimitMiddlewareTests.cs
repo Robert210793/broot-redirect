@@ -27,13 +27,15 @@ namespace Broot.Redirect.Tests.API.Middleware
             int globalMax = 5,
             int trackingMax = 5,
             int adminMax = 3,
-            int windowSeconds = 60)
+            int windowSeconds = 60,
+            int integrationMax = 1200)
         {
             var options = Options.Create(new BrootRedirectOptions
             {
                 RateLimitGlobalMax = globalMax,
                 RateLimitTrackingMax = trackingMax,
                 RateLimitAdminMax = adminMax,
+                RateLimitIntegrationMax = integrationMax,
                 RateLimitWindowSeconds = windowSeconds
             });
 
@@ -444,6 +446,87 @@ namespace Broot.Redirect.Tests.API.Middleware
 
             // Should not throw
             cleanupMethod!.Invoke(null, new object?[] { null });
+        }
+
+        [Fact]
+        public async Task InvokeAsync_QmProPath_UsesIntegrationLimit()
+        {
+            var callCount = 0;
+            RequestDelegate next = _ => { callCount++; return Task.CompletedTask; };
+            var middleware = CreateMiddleware(next, globalMax: 2, integrationMax: 4);
+
+            var ip = UniqueIp();
+            var lastStatus = 0;
+
+            for (var i = 0; i < 5; i++)
+            {
+                var context = new DefaultHttpContext();
+                context.Request.Path = i % 2 == 0 ? "/api/qm-pro/publish" : "/api/qm-pro/unpublish";
+                context.Request.Method = "POST";
+                context.Connection.RemoteIpAddress = ip;
+
+                await middleware.InvokeAsync(context);
+
+                lastStatus = context.Response.StatusCode;
+
+                if (i == 0)
+                {
+                    context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("4");
+                }
+            }
+
+            callCount.Should().Be(4);
+            lastStatus.Should().Be(429);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_QmProRequests_DoNotConsumeGlobalQuota()
+        {
+            var callCount = 0;
+            RequestDelegate next = _ => { callCount++; return Task.CompletedTask; };
+            var middleware = CreateMiddleware(next, globalMax: 1, integrationMax: 10);
+
+            var ip = UniqueIp();
+
+            for (var i = 0; i < 5; i++)
+            {
+                var integrationContext = new DefaultHttpContext();
+                integrationContext.Request.Path = "/api/qm-pro/publish";
+                integrationContext.Request.Method = "POST";
+                integrationContext.Connection.RemoteIpAddress = ip;
+
+                await middleware.InvokeAsync(integrationContext);
+            }
+
+            var infoPageContext = new DefaultHttpContext();
+            infoPageContext.Request.Path = "/api/redirect/resolve";
+            infoPageContext.Connection.RemoteIpAddress = ip;
+
+            await middleware.InvokeAsync(infoPageContext);
+
+            infoPageContext.Response.StatusCode.Should().Be(200);
+            callCount.Should().Be(6);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_PathOnlyStartingWithQmProText_UsesGlobalTier()
+        {
+            RequestDelegate next = _ => Task.CompletedTask;
+            var middleware = CreateMiddleware(next, globalMax: 7, integrationMax: 50);
+
+            var context = new DefaultHttpContext();
+            context.Request.Path = "/api/qm-provider";
+            context.Connection.RemoteIpAddress = UniqueIp();
+
+            await middleware.InvokeAsync(context);
+
+            context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("7");
+        }
+
+        [Fact]
+        public void BrootRedirectOptions_DefaultIntegrationLimit_Is1200()
+        {
+            new BrootRedirectOptions().RateLimitIntegrationMax.Should().Be(1200);
         }
     }
 }

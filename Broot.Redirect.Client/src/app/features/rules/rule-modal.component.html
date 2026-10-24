@@ -14,23 +14,29 @@
                         (click)="onClose()"
                         [disabled]="isSaving()"
                     >
-                        Abbrechen
+                        {{ isReadOnly ? 'Schliessen' : 'Abbrechen' }}
                     </button>
-                    <button
-                        class="btn btn-primary"
-                        (click)="onSave()"
-                        [disabled]="isSaving()"
-                    >
-                        @if (isSaving()) {
-                            <span class="spinner"></span>
-                        }
-                        {{ isEditMode ? 'Aktualisieren' : 'Erstellen' }}
-                    </button>
+                    @if (!isReadOnly) {
+                        <button
+                            class="btn btn-primary"
+                            (click)="onSave()"
+                            [disabled]="isSaving()"
+                        >
+                            @if (isSaving()) {
+                                <span class="spinner"></span>
+                            }
+                            {{ isEditMode ? 'Aktualisieren' : 'Erstellen' }}
+                        </button>
+                    }
                 </div>
             </div>
 
             <!-- Scrollable body -->
-            <div class="rule-modal-body">
+            <fieldset class="rule-modal-body" [disabled]="isReadOnly">
+
+                @if (isReadOnly) {
+                    <div class="alert alert-info">Regel wird von QM Pro verwaltet und kann nicht bearbeitet werden.</div>
+                }
 
                 <!-- Core fields -->
                 <div class="form-row">
@@ -338,7 +344,7 @@
                         </table>
                     }
                 </div>
-            </div>
+            </fieldset>
         </div>
     </div>
 }

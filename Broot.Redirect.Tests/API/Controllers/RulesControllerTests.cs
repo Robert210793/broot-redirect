@@ -1631,5 +1631,234 @@ namespace Broot.Redirect.Tests.API.Controllers
                 updated.InfoText.Should().Be("updated info");
             }
         }
+
+        public class QmProRuleManagementTests : RulesControllerTests
+        {
+            private static RedirectRule CreateQmProRule(string matcher = "/sites/qm/a.docx", bool isActive = true)
+            {
+                var rule = CreateRule(matcher, RedirectType.Wildcard);
+                rule.TargetUrl = "https://tenant.sharepoint.com/sites/QM/Pub/a.docx";
+                rule.Source = RuleSource.QmPro;
+                rule.ExternalDocumentId = "doc-1";
+                rule.IsActive = isActive;
+
+                return rule;
+            }
+
+            private void SetJsonBody(IEnumerable<ImportRuleEntry> entries)
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(entries);
+                var httpContext = new DefaultHttpContext();
+                httpContext.Request.ContentType = "application/json";
+                httpContext.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+                _sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+            }
+
+            private async Task<ImportResponse> WaitForJob(IActionResult startResult)
+            {
+                var ok = startResult as OkObjectResult;
+                var jobId = ok!.Value!.GetType().GetProperty("jobId")!.GetValue(ok.Value)!.ToString()!;
+                ImportResponse? progress = null;
+
+                for (var attempt = 0; attempt < 300; attempt++)
+                {
+                    progress = (_sut.GetJobProgress(jobId) as OkObjectResult)?.Value as ImportResponse;
+
+                    if (progress?.IsComplete == true)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(10);
+                }
+
+                progress.Should().NotBeNull();
+                progress!.IsComplete.Should().BeTrue();
+
+                return progress;
+            }
+
+            [Fact]
+            public async Task Update_QmProRule_Returns409WithRuleManagedByQmProAndDoesNotWrite()
+            {
+                var rule = CreateQmProRule();
+                _cacheService.GetById(rule.Id).Returns(rule);
+
+                var result = await _sut.Update(rule.Id, new UpdateRuleRequest { TargetUrl = "https://other/" }) as ConflictObjectResult;
+
+                result.Should().NotBeNull();
+                var code = result!.Value!.GetType().GetProperty("code")!.GetValue(result.Value);
+                code.Should().Be("RULE_MANAGED_BY_QMPRO");
+                await _repository.DidNotReceive().UpdateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
+                _cacheService.DidNotReceive().UpdateRule(Arg.Any<RedirectRule>());
+            }
+
+            [Fact]
+            public async Task Update_ManualRule_PreservesStatusAndDocumentId()
+            {
+                var rule = CreateRule("/manual");
+                rule.Source = RuleSource.Manual;
+                rule.IsActive = false;
+                rule.ExternalDocumentId = "legacy-doc";
+                _cacheService.GetById(rule.Id).Returns(rule);
+
+                var result = await _sut.Update(rule.Id, new UpdateRuleRequest { InfoText = "x" }) as OkObjectResult;
+
+                var updated = result!.Value as RedirectRule;
+                updated!.IsActive.Should().BeFalse();
+                updated.ExternalDocumentId.Should().Be("legacy-doc");
+            }
+
+            [Fact]
+            public async Task Delete_QmProRule_IsAllowed()
+            {
+                var rule = CreateQmProRule();
+                _cacheService.GetById(rule.Id).Returns(rule);
+
+                var result = await _sut.Delete(rule.Id);
+
+                result.Should().BeOfType<NoContentResult>();
+                await _repository.Received(1).DeleteAsync(rule.Id, Arg.Any<CancellationToken>());
+                _cacheService.Received(1).RemoveRule(rule.Id);
+            }
+
+            [Fact]
+            public async Task BulkDelete_QmProRules_AreDeleted()
+            {
+                var active = CreateQmProRule("/a.docx");
+                var inactive = CreateQmProRule("/b.docx", isActive: false);
+                _cacheService.GetById(active.Id).Returns(active);
+                _cacheService.GetById(inactive.Id).Returns(inactive);
+
+                var result = await _sut.BulkDelete(new BulkDeleteRequest
+                {
+                    Ids = new List<string> { active.Id.ToString(), inactive.Id.ToString() }
+                }) as OkObjectResult;
+
+                (result!.Value as BulkDeleteResponse)!.Deleted.Should().Be(2);
+            }
+
+            [Fact]
+            public async Task DeleteAll_ReloadsCacheFromStorageAtJobEnd()
+            {
+                var existing = CreateQmProRule();
+                var createdDuringJob = CreateQmProRule("/created/during/job.docx");
+                _cacheService.GetAll().Returns(new List<RedirectRule> { existing });
+                _repository.BulkDeleteAsync(Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>()).Returns(1);
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule> { createdDuringJob });
+
+                var progress = await WaitForJob(_sut.DeleteAll());
+
+                progress.Error.Should().BeNull();
+                await _repository.Received(1).BulkDeleteAsync(
+                    Arg.Is<IReadOnlyList<Guid>>(ids => ids.Contains(existing.Id)),
+                    Arg.Any<CancellationToken>());
+                _cacheService.Received(1).ReplaceAll(Arg.Is<IReadOnlyList<RedirectRule>>(
+                    rules => rules.Count == 1 && rules[0].Id == createdDuringJob.Id));
+            }
+
+            [Fact]
+            public async Task ImportPreview_EntryWithQmProOrigin_IsInvalid()
+            {
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Matcher = "/new", TargetUrl = "/t", RedirectType = "partial", Origin = "QmPro" }
+                });
+
+                var response = (await _sut.ImportPreview() as OkObjectResult)!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
+                response.Counts.New.Should().Be(0);
+                response.Preview[0].Status.Should().Be("invalid");
+                response.Preview[0].Reason.Should().Be(RuleImportExportService.QmProOriginImportError);
+            }
+
+            [Fact]
+            public async Task ImportPreview_EntryMatchingQmProRuleByMatcher_IsInvalid()
+            {
+                var rule = CreateQmProRule();
+                _cacheService.GetAll().Returns(new List<RedirectRule> { rule });
+
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Matcher = rule.Matcher, TargetUrl = "/t", RedirectType = "partial" }
+                });
+
+                var response = (await _sut.ImportPreview() as OkObjectResult)!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
+                response.Counts.Update.Should().Be(0);
+                response.Preview[0].Reason.Should().Be(RuleImportExportService.QmProManagedImportError);
+            }
+
+            [Fact]
+            public async Task ImportPreview_EntryMatchingQmProRuleById_IsInvalid()
+            {
+                var rule = CreateQmProRule();
+                _cacheService.GetAll().Returns(new List<RedirectRule> { rule });
+                _cacheService.GetById(rule.Id).Returns(rule);
+
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Id = rule.Id.ToString(), Matcher = "/other", TargetUrl = "/t", RedirectType = "partial" }
+                });
+
+                var response = (await _sut.ImportPreview() as OkObjectResult)!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
+            }
+
+            [Fact]
+            public async Task Import_EntriesForQmProRules_AreSkippedAsErrorsAndRuleStaysUnchanged()
+            {
+                var rule = CreateQmProRule();
+                _cacheService.GetAll().Returns(new List<RedirectRule> { rule });
+                _cacheService.GetById(rule.Id).Returns(rule);
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule> { rule });
+
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Id = rule.Id.ToString(), Matcher = rule.Matcher, TargetUrl = "https://changed/", RedirectType = "wildcard" },
+                    new ImportRuleEntry { Matcher = rule.Matcher, TargetUrl = "https://changed/", RedirectType = "wildcard" },
+                    new ImportRuleEntry { Matcher = "/orphan", TargetUrl = "/t", RedirectType = "partial", Origin = "qmpro" }
+                });
+
+                var progress = await WaitForJob(await _sut.Import());
+
+                progress.Errors.Should().HaveCount(3);
+                progress.Errors.Should().OnlyContain(error =>
+                    error.Contains(RuleImportExportService.QmProManagedImportError)
+                    || error.Contains(RuleImportExportService.QmProOriginImportError));
+                progress.Imported.Should().Be(0);
+                progress.Updated.Should().Be(0);
+                await _repository.DidNotReceive().UpdateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
+                await _repository.DidNotReceive().CreateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
+            }
+
+            [Fact]
+            public async Task Import_UpdatingInactiveManualRule_KeepsStatusAndDocumentId()
+            {
+                var rule = CreateRule("/manual");
+                rule.Source = RuleSource.Manual;
+                rule.IsActive = false;
+                rule.ExternalDocumentId = "legacy-doc";
+                _cacheService.GetAll().Returns(new List<RedirectRule> { rule });
+                _cacheService.GetById(rule.Id).Returns(rule);
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule> { rule });
+                _repository.UpdateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>()).Returns(true);
+
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Id = rule.Id.ToString(), Matcher = "/manual", TargetUrl = "/changed", RedirectType = "partial" }
+                });
+
+                var progress = await WaitForJob(await _sut.Import());
+
+                progress.Updated.Should().Be(1);
+                await _repository.Received(1).UpdateAsync(
+                    Arg.Is<RedirectRule>(updated => !updated.IsActive && updated.ExternalDocumentId == "legacy-doc"),
+                    Arg.Any<CancellationToken>());
+            }
+        }
     }
 }

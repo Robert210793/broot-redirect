@@ -60,7 +60,9 @@ Die zentrale Entität ([`RedirectRule`](Broot.Redirect.Core/Models/RedirectRule.
 | `Matcher` | Das Muster, gegen das die eingehende URL geprüft wird. Entweder ein Pfad (beginnt mit `/`), eine reine Domain (`old.example.com`) oder ein Regex. |
 | `TargetUrl` | Wohin die URL zeigen soll. Die Interpretation hängt vom `RedirectType` ab. |
 | `RedirectType` | `Partial`, `Wildcard`, `Domain` oder `Regex` — siehe unten. |
-| `Source` | `Manual`, `Import` oder `Unknown` — woher die Regel stammt. Wird im Admin-UI angezeigt. |
+| `Source` | `Manual`, `Import`, `QmPro` oder `Unknown` — woher die Regel stammt. Wird im Admin-UI angezeigt. `QmPro` erhalten ausschliesslich Regeln, die über die QM-Pro-Schnittstelle angelegt werden. |
+| `ExternalDocumentId` | Optionale Dokument-ID aus QM Pro (`brtqmSourceId`). Ordnet eine Regel genau einem Dokument zu; nur bei Regeln mit Herkunft `QmPro` gesetzt. |
+| `IsActive` | Aktiv-Status, Standard `true`. Deaktivierte Regeln bleiben gespeichert, wirken aber weder bei der Weiterleitung noch auf der Info-Seite noch in der Validierung. |
 | `InfoText` | Regelspezifischer Hinweis auf der Info-Seite. Überschreibt den globalen Hinweistext. |
 | `AutoRedirect` | Wenn `true`, wird die Info-Seite übersprungen und direkt ein 302 gesendet. |
 | `DiscardQueryParams` | Verwirft die ursprüngliche Query. |
@@ -122,6 +124,14 @@ Greift keine Regel, entscheidet `AppSettings.NoMatchBehavior`:
 ### Tracking
 
 [`TrackingEntry`](Broot.Redirect.Core/Models/TrackingEntry.cs) — ein Datensatz pro Aufruf der Info-Seite bzw. pro Auto-Weiterleitung. Erfasst werden alte/neue URL, die getroffene Regel, die Match-Qualität, User Agent, Referrer, die verwendete Strategie (`rule`, `smart-search`, `domain-fallback`, `auto-redirect`) sowie optionales Benutzer-Feedback (`OK`/`NOK` plus eine vom Benutzer vorgeschlagene URL). Wird nach `TrackingRetentionDays` automatisch gelöscht.
+
+### QM-Pro-Integration
+
+QM Pro 365 schreibt beim Publizieren eines Dokuments die Weiterleitungsregel selbst und deaktiviert sie beim Zurückziehen (`POST /api/qm-pro/publish` bzw. `/unpublish`, siehe Kapitel 10). Die Regel ist über die Dokument-ID (`ExternalDocumentId`) genau einem Dokument zugeordnet:
+
+- **Publizieren:** Matcher ist Pfad und Query der alten On-Premises-URL (Host und Fragment werden verworfen, kanonisiert wie beim Import), Typ `Wildcard`, Ziel die Publikations-URL, `AutoRedirect` aus, Herkunft `QmPro`. Existiert zur Dokument-ID schon eine Regel, werden Matcher und Ziel überschrieben und die Regel aktiviert; ID, Erstelldatum und Herkunft bleiben. Ein Aufruf mit unveränderten Daten für eine aktive Regel schreibt nichts.
+- **Zurückziehen:** setzt `IsActive = false`. Bereits deaktivierte oder unbekannte Dokument-IDs sind kein Fehler.
+- **Admin-Panel:** QM-Pro-Regeln sind nicht bearbeitbar (`PUT` → 409 `RULE_MANAGED_BY_QMPRO`), lassen sich aber löschen. Der Import überspringt sie (Kapitel 12).
 
 ---
 
@@ -295,6 +305,16 @@ Beim Segmentvergleich wird der Query-String verworfen (`/a/b.aspx?x=1` zählt al
 
 Die API antwortet mit `409 Conflict`, `code: "MATCHER_CONFLICT"` und der konfliktierenden Regel; das Admin-UI zeigt dies in einem Dialog an. Exakte Duplikate ergeben `400`. Bei `PUT` wird der Typ aus dem Request berücksichtigt, sofern er mitgeändert wird.
 
+Die Überlappungsprüfung berücksichtigt auch deaktivierte Regeln.
+
+### Gleichwertige Matcher (QM-Pro-Schnittstelle)
+
+Die QM-Pro-Schnittstelle prüft vor der Überlappungsprüfung zusätzlich mit `RuleCacheService.FindEquivalentMatcher`, ob ein **gleichwertiger** Matcher bereits existiert — über alle Regeln ausser Regex, auch deaktivierte. Gleichwertig heisst: gleiche prozentdekodierte Pfadsegmente ohne Beachtung der Gross-/Kleinschreibung und gleiche Query als Menge von Schlüssel/Wert-Paaren (Reihenfolge egal). `/a b` und `/A%20B` sind gleichwertig, `/a?x=1` und `/a?x=2` nicht. Ein Treffer ergibt `409`, `code: "MATCHER_DUPLICATE"`. Die Admin-Endpunkte verwenden weiterhin den ordinalen Duplikatvergleich.
+
+### Deaktivierte Regeln
+
+Regeln mit `IsActive = false` werden beim Aufbau der Matching-Indexe (Wildcard-Index, Partial/Domain-Liste, Regex-Liste) ausgelassen. Damit wirken sie an einer einzigen Stelle weder bei der Weiterleitung noch auf der Info-Seite noch in der Validierung; die Matching-Logik selbst ist unverändert.
+
 ---
 
 ## 6. Die URL-Transformations-Pipeline
@@ -344,18 +364,22 @@ Die drei Schalter greifen wie folgt ineinander:
 
 **Alle Lesepfade laufen über den Arbeitsspeicher; Table Storage wird nur bei Schreibzugriffen und beim Start berührt.** Genau das macht den heissen Weiterleitungspfad schnell.
 
-[`RuleCacheService`](Broot.Redirect.Infrastructure/Cache/RuleCacheService.cs) unterhält vier Strukturen, die gemeinsam unter einem `ReaderWriterLockSlim` neu aufgebaut werden:
+[`RuleCacheService`](Broot.Redirect.Infrastructure/Cache/RuleCacheService.cs) unterhält sechs Strukturen, die gemeinsam unter einem `ReaderWriterLockSlim` neu aufgebaut werden:
 
 | Struktur | Zweck |
 |---|---|
-| `_rulesById` | `ConcurrentDictionary<Guid, RedirectRule>` — die Quelle der Wahrheit. |
-| `_wildcardIndex` | `Dictionary<string, List<RedirectRule>>` — O(1)-Zugriff, geschlüsselt auf den reinen Pfad. Regeln mit gleichem Pfad und unterschiedlicher Query landen in derselben Liste. |
-| `_partialAndDomainRules` | `List<RedirectRule>`, absteigend nach Matcher-Länge sortiert. |
-| `_regexRules` | Vorkompilierte `Regex`-/Regel-Paare. Ungültige Muster werden geloggt und übersprungen, nicht geworfen. |
+| `_rulesById` | `ConcurrentDictionary<Guid, RedirectRule>` — die Quelle der Wahrheit, inklusive deaktivierter Regeln. |
+| `_wildcardIndex` | `Dictionary<string, List<RedirectRule>>` — O(1)-Zugriff, geschlüsselt auf den reinen Pfad. Regeln mit gleichem Pfad und unterschiedlicher Query landen in derselben Liste. Nur aktive Regeln. |
+| `_partialAndDomainRules` | `List<RedirectRule>`, absteigend nach Matcher-Länge sortiert. Nur aktive Regeln. |
+| `_regexRules` | Vorkompilierte `Regex`-/Regel-Paare. Ungültige Muster werden geloggt und übersprungen, nicht geworfen. Nur aktive Regeln. |
+| `_matcherToId` | Matcher → Regel-ID für die ordinale Duplikatprüfung, inklusive deaktivierter Regeln. |
+| `_externalDocumentIndex` | Dokument-ID → Regel (ohne Beachtung der Gross-/Kleinschreibung) für den O(1)-Lookup der QM-Pro-Schnittstelle, inklusive deaktivierter Regeln. Doppelte Dokument-IDs werden beim Laden geloggt; bevorzugt wird die aktive, danach die älteste Regel. |
 
 Das Schreibmuster ist überall **zuerst Storage, dann Cache** — z. B. `await _repository.CreateAsync(rule); _cacheService.AddRule(rule);`. Wirft der Storage-Zugriff eine Exception, bleibt der Cache unberührt und damit konsistent.
 
-Der `CacheWarmupService` läuft beim Start: Er stellt sicher, dass alle vier Tabellen existieren, lädt die Regeln, legt Standard-`AppSettings` an, falls der Datensatz fehlt, und lädt die globalen Regeln. `IsWarmedUp` wird über `/api/health` nach aussen gegeben.
+Der `CacheWarmupService` läuft beim Start: Er stellt sicher, dass alle vier Tabellen existieren, lädt die Regeln, legt Standard-`AppSettings` an, falls der Datensatz fehlt, und lädt die globalen Regeln. `IsWarmedUp` wird über `/api/health` nach aussen gegeben. Die QM-Pro-Endpunkte antworten vor dem Warmup mit `503` und `Retry-After`, damit bei leerem Cache keine doppelten Regeln entstehen.
+
+Publizieren und Zurückziehen über die QM-Pro-Schnittstelle werden im `QmProRuleService` prozessweit über eine `SemaphoreSlim(1,1)` serialisiert (kein Distributed Lock, Single-Instance). Parallele Admin-Schreibvorgänge und Import-Jobs sind darin nicht einbezogen. «Alle Regeln löschen» lädt den Cache am Jobende aus dem Storage neu, statt ihn zu leeren — so gehen während des Jobs angelegte Regeln im Cache nicht verloren.
 
 > **Einschränkung bei der Skalierung:** Der Cache ist instanzlokal und es gibt keinen Invalidierungskanal zwischen Instanzen. Bei **mehr als einer Replica** landet die Regeländerung eines Admins nur in derjenigen Instanz, die den Request bedient hat; die übrigen liefern weiterhin veraltete Regeln aus, bis sie neu starten. Die Applikation ist als **Single-Instance** zu betreiben, solange kein Invalidierungsmechanismus ergänzt wird.
 
@@ -367,7 +391,7 @@ Azure Table Storage, vier Tabellen. Nur der Name der Regeltabelle ist konfigurie
 
 | Tabelle | PartitionKey | RowKey | Anmerkungen |
 |---|---|---|---|
-| `RedirectRules` (konfigurierbar über `AzureTableStorage__TableName`) | `"rule"` — konstant | Regel-GUID (Format `N`) | Einzelne Partition. Komplexe Felder (`KeptQueryParams`, `StaticQueryParams`, `SearchAndReplace`) werden als JSON-Strings abgelegt. |
+| `RedirectRules` (konfigurierbar über `AzureTableStorage__TableName`) | `"rule"` — konstant | Regel-GUID (Format `N`) | Einzelne Partition. Komplexe Felder (`KeptQueryParams`, `StaticQueryParams`, `SearchAndReplace`) werden als JSON-Strings abgelegt. `Source` als `manual`/`import`/`qmpro`, fehlend = `unknown`. `ExternalDocumentId` (String) und `IsActive` (`bool?`, fehlend = aktiv, beim Schreiben immer gesetzt) sind optional. |
 | `AppSettings` | `"Settings"` | `"default"` | Ein einziger Datensatz. Wird beim ersten Start mit Standardwerten angelegt. |
 | `GlobalRules` | konstant | Regel-GUID | Kleine Tabelle, vollständig gecacht. |
 | `Tracking` | `yyyy-MM-dd` (Datum des Eintrags) | Eintrags-GUID | Nach Datum partitioniert, für effiziente Bereichsabfragen und günstiges Löschen abgelaufener Daten. Kein Cache — schreiblastig, wird selten gelesen. |
@@ -375,6 +399,8 @@ Azure Table Storage, vier Tabellen. Nur der Name der Regeltabelle ist konfigurie
 Das Mapping zwischen Entity und Domain-Modell liegt in den `*Entity.cs`-Klassen (`FromDomainModel` / `ToDomainModel`) und ist durch [`EntityMappingTests`](Broot.Redirect.Tests/Infrastructure/Persistence/EntityMappingTests.cs) abgedeckt.
 
 Die Einzel-Partition für Regeln ist Absicht — die ganze Tabelle wird beim Start einmal geladen, Parallelität über Partitionen bringt also nichts, und eine einzelne Partition macht `GetAllAsync` zu einem sauberen Scan. Sie begrenzt den Schreibdurchsatz, was bei einem von Hand gepflegten Regelwerk unproblematisch ist.
+
+Regeln tragen optional eine externe Dokument-ID und einen Aktiv-Status; deaktivierte Regeln bleiben gespeichert, fehlen aber in den Matching-Indexen. Bestehende Zeilen ohne die neuen Spalten gelten als aktiv; eine Migration ist nicht nötig. Siehe [ADR-002](docs/technical/adr/ADR-002-aktiv-status-und-dokument-id-auf-regeln.md).
 
 Tracking-Abfragen filtern über einen PartitionKey-Bereich (`PartitionKey ge '<from>' and le '<to>'`) und erledigen die restliche Filterung, Sortierung und Paginierung im Arbeitsspeicher. Für die Datenmengen, auf die diese Applikation ausgelegt ist, ist das vertretbar — es ist aber der erste Punkt, der wehtut, wenn das Tracking-Volumen deutlich wächst.
 
@@ -385,6 +411,10 @@ Tracking-Abfragen filtern über einen PartitionKey-Bereich (`PartitionKey ge '<f
 ### Authentifizierung
 
 Ein einziges gemeinsames Admin-Passwort, keine Benutzerkonten. `POST /api/auth/login` vergleicht SHA-256-Hashes mittels `CryptographicOperations.FixedTimeEquals` (laufzeitkonstant). Bei Erfolg wird ein ASP.NET-Core-Session-Cookie `admin_session` ausgestellt — `HttpOnly`, `SameSite=Lax`, in Produktion `Secure`, Leerlauf-Timeout `SessionTimeoutDays` (Standard 7).
+
+QM Pro 365 authentifiziert sich an eigenen Integrations-Endpunkten mit einem API-Key im Request-Header statt mit der Admin-Session. Siehe [ADR-001](docs/technical/adr/ADR-001-api-key-integrationsschnittstelle-qm-pro.md).
+
+[`QmProApiKeyFilter`](Broot.Redirect.API/Filters/QmProApiKeyFilter.cs) sitzt als Autorisierungsfilter am `QmProController` und prüft den Header `X-Api-Key` gegen `SmartRedirect__QmProApiKey` — ebenfalls über SHA-256-Hashes und `FixedTimeEquals`. Fehlender, falscher oder nicht konfigurierter Key ergibt `401` ohne Unterscheidung der Ursache und ohne Schreibzugriff; ohne konfigurierten Key sind die Endpunkte gesperrt (Startwarnung im Log). Der Key wird nie geloggt. Eine Admin-Session ersetzt den Key nicht. Empfehlung: mindestens 32 Zufallsbytes, z. B. `openssl rand -base64 32`, als Container-App-Secret oder im Key Vault; die Rotation ist mit QM Pro abzustimmen.
 
 > Verglichen wird der Hash eines Klartextwerts aus der Konfiguration — das ist kein Passwort-*Hashing* im Sinne sicherer Speicherung (kein Salt, keine KDF). Für ein geteiltes Betriebspasswort aus einer Umgebungsvariable bzw. dem Key Vault ist das angemessen; es ist aber nicht mit dem Umgang mit Benutzer-Credentials zu verwechseln.
 
@@ -398,8 +428,9 @@ Ein einziges gemeinsames Admin-Passwort, keine Benutzerkonten. `POST /api/auth/l
 | `/api/settings` | Nur `PUT` — `GET` ist öffentlich (die Info-Seite braucht die Texte) |
 | `/api/auth/status`, `/api/auth/logout`, `/api/auth/blocked-ips*` | Ja |
 | `/api/auth/login`, `/api/track`, `/api/feedback`, `/api/redirect/resolve`, `/api/health` | Öffentlich |
+| `/api/qm-pro/*` | Nicht über die Session — geschützt durch den API-Key-Filter am Controller |
 
-Es handelt sich um eine Positivliste von Pfaden, nicht um attributbasierte Autorisierung. **Neue Admin-Endpunkte sind standardmässig öffentlich** — beim Anlegen eines Controllers ist dessen Präfix in `RequiresAuthentication` zu ergänzen.
+Es handelt sich um eine Positivliste von Pfaden, nicht um attributbasierte Autorisierung. **Neue Admin-Endpunkte sind standardmässig öffentlich** — beim Anlegen eines Controllers ist dessen Präfix in `RequiresAuthentication` zu ergänzen. `/api/qm-pro` ist bewusst nicht in dieser Liste.
 
 ### CSRF
 
@@ -407,15 +438,20 @@ Es handelt sich um eine Positivliste von Pfaden, nicht um attributbasierte Autor
 
 Das bedeutet: **Nicht-Browser-Clients (curl, Postman, Skripte) müssen einen zum Host passenden `Origin`-Header senden**, sonst scheitert jedes POST/PUT/DELETE mit 403.
 
+Ausgenommen ist das Pfadsegment `/api/qm-pro` (Server-zu-Server-Aufrufe von QM Pro ohne Origin/Referer). CSRF betrifft nur automatisch mitgesendete Cookies; der dort verlangte Header `X-Api-Key` wird vom Browser nicht automatisch gesendet.
+
 ### Rate Limiting
 
-[`RateLimitMiddleware`](Broot.Redirect.API/Middleware/RateLimitingMiddleware.cs) — festes Zeitfenster, pro IP, im Arbeitsspeicher, drei Stufen:
+[`RateLimitMiddleware`](Broot.Redirect.API/Middleware/RateLimitingMiddleware.cs) — festes Zeitfenster, pro IP, im Arbeitsspeicher, vier Stufen:
 
 | Stufe | Pfade | Standard |
 |---|---|---|
+| Integration | `/api/qm-pro/*` | 1200 / min |
 | Tracking | `POST /api/track`, `POST /api/feedback` | 300 / min |
 | Admin | `/api/rules*`, `/api/global-rules*`, `/api/stats*`, `PUT /api/settings` | 60 / min |
 | Global | alles Übrige unter `/api/` | 300 / min |
+
+Die Stufe `Integration` trennt ein Massen-Publizieren aus QM Pro (`brtqmDocumentPublishAll`, über 1000 Dokumente) vom Kontingent der Info-Seite, auch wenn sich hinter dem Ingress alle Clients eine IP teilen.
 
 Responses tragen `X-RateLimit-Limit`, `-Remaining`, `-Reset`; bei `429` kommt `Retry-After` dazu. Die Zähler sind statisch und prozesslokal, werden also bei einem Neustart zurückgesetzt und nicht über Instanzen hinweg geteilt.
 
@@ -453,17 +489,30 @@ Alle Endpunkte liefern camelCase-JSON. Enums werden als camelCase-Strings serial
 | `GET` | `/api/rules?page=&limit=&search=&sortBy=&sortOrder=` | Paginierte Liste. `limit` maximal 500, Standard 50. Wird aus dem Cache bedient. |
 | `GET` | `/api/rules/{id}` | Einzelne Regel. |
 | `POST` | `/api/rules` | Anlegen. `400` bei doppeltem Matcher, `409` `MATCHER_CONFLICT` bei hierarchischer Überlappung mit einer `Partial`-Regel. |
-| `PUT` | `/api/rules/{id}` | Teilaktualisierung — Felder mit `null` behalten ihren bisherigen Wert. `Source` bleibt erhalten; `RedirectType` ändert sich nur bei expliziter Angabe. |
-| `DELETE` | `/api/rules/{id}` | Löscht eine Regel. |
+| `PUT` | `/api/rules/{id}` | Teilaktualisierung — Felder mit `null` behalten ihren bisherigen Wert. `Source`, `IsActive` und `ExternalDocumentId` bleiben erhalten; `RedirectType` ändert sich nur bei expliziter Angabe. Regeln mit Herkunft `qmPro` → `409` `RULE_MANAGED_BY_QMPRO` (409 statt 403, weil der Client 403 als fehlende Anmeldung behandelt). |
+| `DELETE` | `/api/rules/{id}` | Löscht eine Regel (auch QM-Pro-Regeln). |
 | `DELETE` | `/api/rules/bulk` | Body `{ ids: [...] }`. Liefert `{ deleted, notFound }`. |
-| `DELETE` | `/api/rules/all` | Startet einen asynchronen Job. Liefert `{ jobId, total }`. |
+| `DELETE` | `/api/rules/all` | Startet einen asynchronen Job. Liefert `{ jobId, total }`. Lädt den Cache am Jobende aus dem Storage neu. |
 | `GET` | `/api/rules/jobs/{jobId}` | Fortschritt eines Jobs abfragen. Jobs verfallen 5 Minuten nach Abschluss. |
 | `POST` | `/api/rules/import/preview` | Parst einen Upload und klassifiziert jeden Eintrag als `new` / `update` / `unchanged` / `invalid`. Vorschau auf 1000 Einträge begrenzt. |
 | `POST` | `/api/rules/import` | Startet einen asynchronen Import-Job. Liefert `{ jobId, total }`. |
 | `GET` | `/api/rules/export?format=json\|csv\|xlsx` | Datei-Download. |
 | `POST` | `/api/rules/validate` | Body `{ urls: [...] }`, maximal 500. Liefert pro URL das Match-Resultat plus einen vollständigen Transformations-Trace. |
 
+Das Regel-JSON enthält neben den bisherigen Feldern `source` (`manual`, `import`, `qmPro`, `unknown`), `isActive` und — nur wenn gesetzt — `externalDocumentId`.
+
 Lang laufende Operationen (Import, Alles löschen) verwenden das Muster **Fire-and-Forget-Job plus Polling**: Der Endpunkt liefert sofort eine `jobId`, die Arbeit läuft in einem Background Task weiter, und der Client fragt `/api/rules/jobs/{jobId}` ab. Der Job-Zustand liegt in einem statischen In-Memory-Dictionary und überlebt keinen Neustart.
+
+### QM Pro (Integration, API-Key)
+
+Header `X-Api-Key` erforderlich, keine Admin-Session, kein `Origin`/`Referer` nötig. Die Dokument-ID (`brtqmSourceId`, enthält `/` und `|`) steht immer im JSON-Body.
+
+| Methode | Pfad | Beschreibung |
+|---|---|---|
+| `POST` | `/api/qm-pro/publish` | Body `{ documentId, oldUrl, publicationUrl }`. `201` `created`, `200` `updated` (auch Reaktivierung) oder `200` `unchanged`. |
+| `POST` | `/api/qm-pro/unpublish` | Body `{ documentId }`. Immer `200` mit `deactivated`, `alreadyInactive` oder `notFound`. |
+
+Erfolg: `{ ruleId, result }` (`ruleId` fehlt bei `notFound`). Fehler: `{ error, code }` — `400` `VALIDATION_ERROR` (fehlende Felder, keine absolute `http(s)`-URL, Regelvalidierung), `401` `UNAUTHORIZED`, `409` `MATCHER_DUPLICATE` (alte URL ist bereits gleichwertiger Matcher einer anderen Regel, auch einer deaktivierten) bzw. `409` `MATCHER_CONFLICT` (Überlappung mit einer `Partial`-Regel), jeweils mit `conflictingRule { id, matcher }`, `429` (Stufe `Integration`), `503` `CACHE_NOT_READY` mit `Retry-After`, solange der Cache nicht aufgewärmt ist. Wiederholungen bei `429`, `503` und `5xx` übernimmt QM Pro.
 
 ### Globale Regeln (Admin)
 
@@ -557,9 +606,12 @@ Ein dezentes Zahnrad-Symbol prüft den Auth-Status und öffnet entweder das Admi
 | Typ | `Type`, `redirectType`, `RedirectType`, `Typ` |
 | Info | `Info`, `infoText`, `InfoText`, `Beschreibung` |
 | Auto Redirect | `Auto Redirect`, `autoRedirect`, `AutoRedirect`, `Automatisch` |
+| Herkunft | `Origin`, `origin`, `Herkunft` (JSON: Eigenschaft `source`) — `Source` ist bereits dem Matcher zugeordnet |
 | … | (vollständige Liste siehe `ColumnMapping`) |
 
 Die Listenfelder (`KeptQueryParams`, `StaticQueryParams`, `SearchAndReplace`) werden als **JSON-String in einer einzelnen Zelle** hin- und zurückgeschrieben.
+
+Der Export enthält in allen Formaten Herkunft und Status jeder Regel: CSV und XLSX mit den zusätzlichen Spalten `Origin` (`manual|import|unknown|qmpro`) und `Status` (`active|inactive`) am Ende, JSON mit `source`, `isActive` und `externalDocumentId`. `Status` wird beim Import ignoriert.
 
 Verhalten beim Import:
 
@@ -570,6 +622,7 @@ Verhalten beim Import:
 - Existiert die Regel bereits, gewinnt deren ID — eine abweichende `Id` in der Importdatei wird dann ignoriert.
 - Matcher werden normalisiert (getrimmt, abschliessender Slash entfernt, ausser der Matcher endet auf `*`), und Pfadsegmente werden prozentkodiert, unter Erhalt der Struktur.
 - Jeder Eintrag wird einzeln validiert; Fehlschläge landen in der `Errors`-Liste des Jobs, die übrigen Einträge werden dennoch importiert.
+- **QM-Pro-Regeln sind vom Import ausgenommen:** Ein Eintrag, der über ID oder kanonischen Matcher einer Regel mit Herkunft `qmpro` zugeordnet wird oder selbst die Herkunft `qmpro` trägt, wird übersprungen und als Fehler gemeldet (Vorschau: `invalid`); die Regel bleibt unverändert. Ein Restore nach «Alle Regeln löschen» erzeugt so keine verwaisten Regeln — der Neuaufbau erfolgt über `brtqmDocumentPublishAll`. `IsActive` und `ExternalDocumentId` einer aktualisierten Regel bleiben erhalten; neue Regeln sind aktiv.
 - CSV-Werte werden beim Export gegen Formel-Injection abgesichert und beim Import wieder zurückgewandelt.
 
 ---
@@ -666,6 +719,7 @@ Die Konfiguration folgt den ASP.NET-Core-Konventionen. Jeder Wert aus `appsettin
 | `SmartRedirect__AdminPassword` | Passwort für das Admin-Panel (Vergleich über SHA256) | `Password1` |
 | `SmartRedirect__SessionTimeoutDays` | Leerlauf-Timeout der Admin-Session in Tagen | `7` |
 | `SmartRedirect__TrackingRetentionDays` | Aufbewahrungsdauer der Tracking-Daten in Tagen | `30` |
+| `SmartRedirect__QmProApiKey` | API-Key der QM-Pro-Schnittstelle (Header `X-Api-Key`). Secret — mindestens 32 Zufallsbytes, nicht in `appsettings.json`. Ohne Wert sind die Endpunkte gesperrt. | — (nicht gesetzt) |
 
 ### URL-Matching (`SmartRedirect__*`)
 
@@ -692,6 +746,7 @@ Die Konfiguration folgt den ASP.NET-Core-Konventionen. Jeder Wert aus `appsettin
 | `SmartRedirect__RateLimitGlobalMax` | Maximale Requests pro Zeitfenster (allgemein) | `300` |
 | `SmartRedirect__RateLimitTrackingMax` | Maximale Requests pro Zeitfenster (Tracking-Endpunkte) | `300` |
 | `SmartRedirect__RateLimitAdminMax` | Maximale Requests pro Zeitfenster (Admin-Endpunkte) | `60` |
+| `SmartRedirect__RateLimitIntegrationMax` | Maximale Requests pro Zeitfenster (QM-Pro-Endpunkte `/api/qm-pro/*`) | `1200` |
 | `SmartRedirect__RateLimitWindowSeconds` | Länge des Zeitfensters in Sekunden | `60` |
 
 ### Brute-Force-Schutz (`SmartRedirect__*`)

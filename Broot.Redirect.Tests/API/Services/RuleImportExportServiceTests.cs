@@ -1106,5 +1106,207 @@ namespace Broot.Redirect.Tests.API.Services
                 RuleImportExportService.NormalizeMatcher(input).Should().Be(expected);
             }
         }
+
+        public class QmProExportTests
+        {
+            private static RedirectRule QmProRule(bool isActive)
+            {
+                var rule = CreateRule("/sites/qm/a.docx");
+                rule.Source = RuleSource.QmPro;
+                rule.IsActive = isActive;
+                rule.ExternalDocumentId = "https://tenant.sharepoint.com/sites/QM|list|item";
+
+                return rule;
+            }
+
+            private static List<string[]> ReadCsvRows(byte[] bytes)
+            {
+                using var reader = new StreamReader(new MemoryStream(bytes), Encoding.UTF8);
+                using var csv = new CsvHelper.CsvReader(reader, System.Globalization.CultureInfo.InvariantCulture);
+
+                var rows = new List<string[]>();
+
+                while (csv.Read())
+                {
+                    rows.Add(csv.Parser.Record!);
+                }
+
+                return rows;
+            }
+
+            [Fact]
+            public void GenerateCsv_ContainsOriginAndStatusColumns()
+            {
+                var manual = CreateRule("/manual");
+                manual.Source = RuleSource.Manual;
+
+                var rows = ReadCsvRows(RuleImportExportService.GenerateCsv(new List<RedirectRule> { manual, QmProRule(isActive: false) }));
+
+                var header = rows[0].ToList();
+                var originIndex = header.IndexOf("Origin");
+                var statusIndex = header.IndexOf("Status");
+
+                originIndex.Should().BeGreaterThanOrEqualTo(0);
+                statusIndex.Should().BeGreaterThanOrEqualTo(0);
+                rows[1][originIndex].Should().Be("manual");
+                rows[1][statusIndex].Should().Be("active");
+                rows[2][originIndex].Should().Be("qmpro");
+                rows[2][statusIndex].Should().Be("inactive");
+            }
+
+            [Fact]
+            public void GenerateXlsx_ContainsOriginAndStatusColumns()
+            {
+                var unknown = CreateRule("/unknown");
+
+                var bytes = RuleImportExportService.GenerateXlsx(new List<RedirectRule> { unknown, QmProRule(isActive: true) });
+
+                using var workbook = new XLWorkbook(new MemoryStream(bytes));
+                var worksheet = workbook.Worksheets.First();
+
+                worksheet.Cell(1, 13).GetString().Should().Be("Origin");
+                worksheet.Cell(1, 14).GetString().Should().Be("Status");
+                worksheet.Cell(2, 13).GetString().Should().Be("unknown");
+                worksheet.Cell(2, 14).GetString().Should().Be("active");
+                worksheet.Cell(3, 13).GetString().Should().Be("qmpro");
+                worksheet.Cell(3, 14).GetString().Should().Be("active");
+            }
+
+            [Theory]
+            [InlineData(RuleSource.Unknown, "unknown")]
+            [InlineData(RuleSource.Manual, "manual")]
+            [InlineData(RuleSource.Import, "import")]
+            [InlineData(RuleSource.QmPro, "qmpro")]
+            public void FormatOrigin_UsesLowercaseValues(RuleSource source, string expected)
+            {
+                RuleImportExportService.FormatOrigin(source).Should().Be(expected);
+            }
+
+            [Fact]
+            public void ParseCsv_OriginColumn_IsMappedAndStatusIgnored()
+            {
+                var csv = "Matcher,Target URL,Type,Origin,Status\n/a,https://x.example.com/a,wildcard,qmpro,inactive\n";
+
+                var entries = RuleImportExportService.ParseCsv(new MemoryStream(Encoding.UTF8.GetBytes(csv)));
+
+                entries.Should().ContainSingle();
+                entries[0].Origin.Should().Be("qmpro");
+                entries[0].Matcher.Should().Be("/a");
+            }
+
+            [Fact]
+            public void ParseCsv_GermanOriginAlias_IsMapped()
+            {
+                var csv = "Quelle,Ziel,Herkunft\n/a,/b,QM Pro\n";
+
+                var entries = RuleImportExportService.ParseCsv(new MemoryStream(Encoding.UTF8.GetBytes(csv)));
+
+                entries[0].Matcher.Should().Be("/a");
+                entries[0].Origin.Should().Be("QM Pro");
+            }
+
+            [Fact]
+            public void ParseXlsx_ExportedQmProRule_RoundTripsOrigin()
+            {
+                var bytes = RuleImportExportService.GenerateXlsx(new List<RedirectRule> { QmProRule(isActive: false) });
+
+                var entries = RuleImportExportService.ParseXlsx(new MemoryStream(bytes));
+
+                entries.Should().ContainSingle();
+                entries[0].Origin.Should().Be("qmpro");
+            }
+
+            [Fact]
+            public async Task ParseJson_ExportedSourceProperty_IsMappedToOrigin()
+            {
+                var exported = JsonSerializer.Serialize(
+                    new List<RedirectRule> { QmProRule(isActive: false) },
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+                var entries = await RuleImportExportService.ParseJsonFromStreamAsync(
+                    new MemoryStream(Encoding.UTF8.GetBytes(exported)));
+
+                exported.Should().Contain("\"source\":\"QmPro\"");
+                exported.Should().Contain("\"isActive\":false");
+                exported.Should().Contain("\"externalDocumentId\":\"https://tenant.sharepoint.com/sites/QM|list|item\"");
+                entries.Should().ContainSingle();
+                entries[0].Origin.Should().Be("QmPro");
+            }
+
+            [Theory]
+            [InlineData("qmpro", true)]
+            [InlineData("QmPro", true)]
+            [InlineData("qmPro", true)]
+            [InlineData("QM Pro", true)]
+            [InlineData("qm-pro", true)]
+            [InlineData("manual", false)]
+            [InlineData("import", false)]
+            [InlineData("", false)]
+            [InlineData(null, false)]
+            public void IsQmProOrigin_RecognizesSpellings(string? origin, bool expected)
+            {
+                RuleImportExportService.IsQmProOrigin(origin).Should().Be(expected);
+            }
+        }
+
+        public class QmProImportErrorTests
+        {
+            private readonly IRuleCacheService _cacheService = Substitute.For<IRuleCacheService>();
+
+            private static RedirectRule QmProRule()
+            {
+                var rule = CreateRule("/sites/qm/A%20B.docx");
+                rule.Source = RuleSource.QmPro;
+                rule.ExternalDocumentId = "doc-1";
+
+                return rule;
+            }
+
+            [Fact]
+            public void GetQmProImportError_EntryWithQmProOrigin_ReturnsError_EvenWithoutMatchingRule()
+            {
+                var entry = new ImportRuleEntry { Matcher = "/new", Origin = "qmpro" };
+
+                var error = RuleImportExportService.GetQmProImportError(entry, _cacheService, new Dictionary<string, RedirectRule>());
+
+                error.Should().Be(RuleImportExportService.QmProOriginImportError);
+            }
+
+            [Fact]
+            public void GetQmProImportError_EntryMatchingQmProRuleById_ReturnsError()
+            {
+                var rule = QmProRule();
+                _cacheService.GetById(rule.Id).Returns(rule);
+                var entry = new ImportRuleEntry { Id = rule.Id.ToString(), Matcher = "/other", Origin = "manual" };
+
+                var error = RuleImportExportService.GetQmProImportError(entry, _cacheService, new Dictionary<string, RedirectRule>());
+
+                error.Should().Be(RuleImportExportService.QmProManagedImportError);
+            }
+
+            [Fact]
+            public void GetQmProImportError_EntryMatchingQmProRuleByCanonicalMatcher_ReturnsError()
+            {
+                var rule = QmProRule();
+                var lookup = RuleImportExportService.BuildMatcherLookup(new List<RedirectRule> { rule });
+                var entry = new ImportRuleEntry { Matcher = "/SITES/qm/a b.docx" };
+
+                var error = RuleImportExportService.GetQmProImportError(entry, _cacheService, lookup);
+
+                error.Should().Be(RuleImportExportService.QmProManagedImportError);
+            }
+
+            [Fact]
+            public void GetQmProImportError_EntryMatchingManualRule_ReturnsNull()
+            {
+                var manual = CreateRule("/manual");
+                manual.Source = RuleSource.Manual;
+                _cacheService.GetById(manual.Id).Returns(manual);
+                var lookup = RuleImportExportService.BuildMatcherLookup(new List<RedirectRule> { manual });
+                var entry = new ImportRuleEntry { Id = manual.Id.ToString(), Matcher = "/manual", Origin = "manual" };
+
+                RuleImportExportService.GetQmProImportError(entry, _cacheService, lookup).Should().BeNull();
+            }
+        }
     }
 }

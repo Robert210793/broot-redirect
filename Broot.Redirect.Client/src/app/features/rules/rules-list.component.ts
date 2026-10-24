@@ -321,6 +321,8 @@ export class RulesListComponent implements OnInit, OnDestroy {
                 return 'Manuell';
             case 'import':
                 return 'Importiert';
+            case 'qmPro':
+                return 'QM Pro';
             default:
                 return 'Unbekannt';
         }

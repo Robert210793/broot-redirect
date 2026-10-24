@@ -33,5 +33,9 @@ namespace Broot.Redirect.Core.Models
         public List<SearchAndReplaceEntry> SearchAndReplace { get; set; } = new();
 
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+        public string? ExternalDocumentId { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 }

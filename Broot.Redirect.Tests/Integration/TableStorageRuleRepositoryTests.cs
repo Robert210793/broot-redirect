@@ -1,3 +1,4 @@
+using Azure.Data.Tables;
 using Broot.Redirect.Core.Models;
 using Broot.Redirect.Infrastructure.Persistence;
 using FluentAssertions;
@@ -265,6 +266,70 @@ namespace Broot.Redirect.Tests.Integration
             fetched.StaticQueryParams.Should().HaveCount(1);
             fetched.SearchAndReplace.Should().HaveCount(1);
             fetched.SearchAndReplace[0].CaseSensitive.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task GetAllAsync_LegacyRowWithoutNewColumns_IsActiveWithUnknownSource()
+        {
+            var id = Guid.NewGuid();
+            var tableClient = _fixture.ServiceClient.GetTableClient(_tableName);
+
+            var legacyRow = new TableEntity("rule", id.ToString("N"))
+            {
+                ["Matcher"] = "/legacy/path",
+                ["TargetUrl"] = "/target",
+                ["RedirectType"] = "partial",
+                ["AutoRedirect"] = false,
+                ["DiscardQueryParams"] = false,
+                ["ForwardQueryParams"] = false,
+                ["CreatedAt"] = DateTimeOffset.UtcNow
+            };
+
+            await tableClient.AddEntityAsync(legacyRow);
+
+            var all = await _sut.GetAllAsync();
+
+            var rule = all.Should().ContainSingle().Subject;
+            rule.Id.Should().Be(id);
+            rule.IsActive.Should().BeTrue();
+            rule.Source.Should().Be(RuleSource.Unknown);
+            rule.ExternalDocumentId.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task CreateAndUpdate_QmProRule_RoundTripsSourceStatusAndDocumentId()
+        {
+            var rule = new RedirectRule
+            {
+                Id = Guid.NewGuid(),
+                Matcher = "/sites/qm/a.docx",
+                TargetUrl = "https://tenant.sharepoint.com/sites/QM/Pub/a.docx",
+                RedirectType = RedirectType.Wildcard,
+                Source = RuleSource.QmPro,
+                ExternalDocumentId = "https://tenant.sharepoint.com/sites/QM|list|item",
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            await _sut.CreateAsync(rule);
+
+            var created = await _sut.GetByIdAsync(rule.Id);
+
+            created!.Source.Should().Be(RuleSource.QmPro);
+            created.IsActive.Should().BeTrue();
+            created.ExternalDocumentId.Should().Be(rule.ExternalDocumentId);
+
+            rule.IsActive = false;
+
+            await _sut.UpdateAsync(rule);
+
+            var tableClient = _fixture.ServiceClient.GetTableClient(_tableName);
+            var storedRow = await tableClient.GetEntityAsync<TableEntity>("rule", rule.Id.ToString("N"));
+            var updated = await _sut.GetByIdAsync(rule.Id);
+
+            storedRow.Value.GetBoolean("IsActive").Should().BeFalse();
+            storedRow.Value.GetString("Source").Should().Be("qmpro");
+            updated!.IsActive.Should().BeFalse();
+            updated.ExternalDocumentId.Should().Be(rule.ExternalDocumentId);
         }
     }
 }

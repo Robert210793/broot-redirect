@@ -420,6 +420,10 @@ body {
   cursor: pointer;
 }
 
+.data-table tbody tr.row-inactive td {
+  opacity: 0.55;
+}
+
 /* Cell truncation */
 .cell-truncate {
   display: block;
@@ -483,6 +487,16 @@ body {
 .badge-source-unknown {
   background: var(--color-surface-hover);
   color: var(--color-text-tertiary);
+}
+
+.badge-source-qmPro {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.badge-inactive {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
 }
 
 .badge-new {

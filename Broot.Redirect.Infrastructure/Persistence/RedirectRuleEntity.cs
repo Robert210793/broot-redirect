@@ -50,6 +50,10 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public string? SearchAndReplaceJson { get; set; }
 
+        public string? ExternalDocumentId { get; set; }
+
+        public bool? IsActive { get; set; }
+
         public static RedirectRuleEntity FromDomainModel(RedirectRule rule)
         {
             var entity = new RedirectRuleEntity
@@ -64,7 +68,9 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 AutoRedirect = rule.AutoRedirect,
                 DiscardQueryParams = rule.DiscardQueryParams,
                 ForwardQueryParams = rule.ForwardQueryParams,
-                CreatedAt = rule.CreatedAt
+                CreatedAt = rule.CreatedAt,
+                ExternalDocumentId = rule.ExternalDocumentId,
+                IsActive = rule.IsActive
             };
 
             if (rule.KeptQueryParams.Count > 0)
@@ -98,7 +104,9 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 AutoRedirect = AutoRedirect,
                 DiscardQueryParams = DiscardQueryParams,
                 ForwardQueryParams = ForwardQueryParams,
-                CreatedAt = CreatedAt
+                CreatedAt = CreatedAt,
+                ExternalDocumentId = string.IsNullOrWhiteSpace(ExternalDocumentId) ? null : ExternalDocumentId,
+                IsActive = IsActive ?? true
             };
 
             if (!string.IsNullOrEmpty(KeptQueryParamsJson))
@@ -152,6 +160,7 @@ namespace Broot.Redirect.Infrastructure.Persistence
             {
                 "manual" => Core.Models.RuleSource.Manual,
                 "import" => Core.Models.RuleSource.Import,
+                "qmpro" => Core.Models.RuleSource.QmPro,
                 _ => Core.Models.RuleSource.Unknown
             };
         }

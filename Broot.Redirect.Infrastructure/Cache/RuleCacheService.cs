@@ -36,6 +36,8 @@ namespace Broot.Redirect.Infrastructure.Cache
 
         private Dictionary<string, Guid> _matcherToId = new();
 
+        private Dictionary<string, RedirectRule> _externalDocumentIndex = new(StringComparer.OrdinalIgnoreCase);
+
         private readonly ReaderWriterLockSlim _indexLock = new();
 
         private volatile bool _isWarmedUp;
@@ -132,6 +134,65 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
         }
 
+        public RedirectRule? GetByExternalDocumentId(string externalDocumentId)
+        {
+            if (string.IsNullOrWhiteSpace(externalDocumentId))
+            {
+                return null;
+            }
+
+            _indexLock.EnterReadLock();
+
+            try
+            {
+                return _externalDocumentIndex.TryGetValue(externalDocumentId.Trim(), out var rule)
+                    ? rule
+                    : null;
+            }
+            finally
+            {
+                _indexLock.ExitReadLock();
+            }
+        }
+
+        public RedirectRule? FindEquivalentMatcher(string matcher, Guid? excludeRuleId = null)
+        {
+            if (string.IsNullOrWhiteSpace(matcher))
+            {
+                return null;
+            }
+
+            var inputSegments = NormalizeAndSplitSegments(matcher);
+            var inputQuery = ParseQueryPairs(matcher);
+
+            foreach (var rule in _rulesById.Values)
+            {
+                if (rule.RedirectType == RedirectType.Regex)
+                {
+                    continue;
+                }
+
+                if (excludeRuleId.HasValue && rule.Id == excludeRuleId.Value)
+                {
+                    continue;
+                }
+
+                var existingSegments = NormalizeAndSplitSegments(rule.Matcher);
+
+                if (!existingSegments.SequenceEqual(inputSegments, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (ParseQueryPairs(rule.Matcher).SetEquals(inputQuery))
+                {
+                    return rule;
+                }
+            }
+
+            return null;
+        }
+
         public RedirectRule? FindOverlappingMatcher(
             string matcher,
             RedirectType redirectType,
@@ -220,7 +281,7 @@ namespace Broot.Redirect.Infrastructure.Cache
                 _rulesById[rule.Id] = rule;
             }
 
-            RebuildIndexes();
+            RebuildIndexes(logDuplicateDocumentIds: true);
 
             _isWarmedUp = true;
 
@@ -280,12 +341,12 @@ namespace Broot.Redirect.Infrastructure.Cache
                 _rulesById[rule.Id] = rule;
             }
 
-            RebuildIndexes();
+            RebuildIndexes(logDuplicateDocumentIds: true);
 
             _logger.LogInformation("Cache replaced with {RuleCount} rules.", rules.Count);
         }
 
-        private void RebuildIndexes()
+        private void RebuildIndexes(bool logDuplicateDocumentIds = false)
         {
             var wildcardIndex = new Dictionary<string, List<RedirectRule>>(
                 _options.CaseSensitiveMatching ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
@@ -296,9 +357,16 @@ namespace Broot.Redirect.Infrastructure.Cache
 
             var matcherToId = new Dictionary<string, Guid>(StringComparer.Ordinal);
 
+            var externalDocumentIndex = BuildExternalDocumentIndex(logDuplicateDocumentIds);
+
             foreach (var rule in _rulesById.Values)
             {
                 matcherToId[rule.Matcher] = rule.Id;
+
+                if (!rule.IsActive)
+                {
+                    continue;
+                }
 
                 switch (rule.RedirectType)
                 {
@@ -360,11 +428,82 @@ namespace Broot.Redirect.Infrastructure.Cache
                 _partialAndDomainRules = partialAndDomainRules;
                 _regexRules = regexRules;
                 _matcherToId = matcherToId;
+                _externalDocumentIndex = externalDocumentIndex;
             }
             finally
             {
                 _indexLock.ExitWriteLock();
             }
+        }
+
+        private Dictionary<string, RedirectRule> BuildExternalDocumentIndex(bool logDuplicates)
+        {
+            var groups = _rulesById.Values
+                .Where(rule => !string.IsNullOrWhiteSpace(rule.ExternalDocumentId))
+                .GroupBy(rule => rule.ExternalDocumentId!.Trim(), StringComparer.OrdinalIgnoreCase);
+
+            var index = new Dictionary<string, RedirectRule>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var group in groups)
+            {
+                var ordered = group
+                    .OrderByDescending(rule => rule.IsActive)
+                    .ThenBy(rule => rule.CreatedAt)
+                    .ThenBy(rule => rule.Id)
+                    .ToList();
+
+                index[group.Key] = ordered[0];
+
+                if (logDuplicates && ordered.Count > 1)
+                {
+                    _logger.LogWarning(
+                        "Document ID '{ExternalDocumentId}' is assigned to {RuleCount} rules ({RuleIds}). Using rule {SelectedRuleId}.",
+                        group.Key,
+                        ordered.Count,
+                        string.Join(", ", ordered.Select(rule => rule.Id)),
+                        ordered[0].Id);
+                }
+            }
+
+            return index;
+        }
+
+        private static HashSet<(string Key, string Value)> ParseQueryPairs(string matcher)
+        {
+            var pairs = new HashSet<(string Key, string Value)>();
+            var queryIndex = matcher.IndexOf('?');
+
+            if (queryIndex < 0)
+            {
+                return pairs;
+            }
+
+            var query = matcher[(queryIndex + 1)..];
+            var fragmentIndex = query.IndexOf('#');
+
+            if (fragmentIndex >= 0)
+            {
+                query = query[..fragmentIndex];
+            }
+
+            foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var separatorIndex = part.IndexOf('=');
+                var key = separatorIndex >= 0 ? part[..separatorIndex] : part;
+                var value = separatorIndex >= 0 ? part[(separatorIndex + 1)..] : string.Empty;
+
+                pairs.Add((DecodeAndLower(key), DecodeAndLower(value)));
+            }
+
+            return pairs;
+        }
+
+        private static string DecodeAndLower(string value)
+        {
+            try { value = Uri.UnescapeDataString(value); }
+            catch (UriFormatException) { }
+
+            return value.ToLowerInvariant();
         }
 
         private string NormalizeMatcherPath(string matcher)

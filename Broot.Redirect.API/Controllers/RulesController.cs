@@ -171,6 +171,15 @@ namespace Broot.Redirect.API.Controllers
                 return NotFound(new { error = "Rule not found" });
             }
 
+            if (existingRule.Source == RuleSource.QmPro)
+            {
+                return Conflict(new
+                {
+                    error = "Regel wird von QM Pro verwaltet und kann nicht bearbeitet werden",
+                    code = "RULE_MANAGED_BY_QMPRO"
+                });
+            }
+
             if (request.Matcher != null)
             {
                 request.Matcher = RuleImportExportService.NormalizeMatcher(request.Matcher);
@@ -229,7 +238,9 @@ namespace Broot.Redirect.API.Controllers
                 KeptQueryParams = request.KeptQueryParams ?? existingRule.KeptQueryParams,
                 StaticQueryParams = request.StaticQueryParams ?? existingRule.StaticQueryParams,
                 SearchAndReplace = request.SearchAndReplace ?? existingRule.SearchAndReplace,
-                CreatedAt = existingRule.CreatedAt
+                CreatedAt = existingRule.CreatedAt,
+                ExternalDocumentId = existingRule.ExternalDocumentId,
+                IsActive = existingRule.IsActive
             };
 
             if (request.RedirectType != null)
@@ -297,7 +308,9 @@ namespace Broot.Redirect.API.Controllers
                         progress.Processed += batchDeleted;
                     }
 
-                    _cacheService.ReplaceAll(new List<RedirectRule>());
+                    var remainingRules = await _repository.GetAllAsync();
+
+                    _cacheService.ReplaceAll(remainingRules);
 
                     progress.IsComplete = true;
 
@@ -440,6 +453,19 @@ namespace Broot.Redirect.API.Controllers
                     continue;
                 }
 
+                var qmProError = RuleImportExportService.GetQmProImportError(entry, _cacheService, matcherLookup);
+
+                if (qmProError != null)
+                {
+                    previewEntry.Status = "invalid";
+                    previewEntry.Reason = qmProError;
+                    counts.Invalid++;
+
+                    previewEntries.Add(previewEntry);
+
+                    continue;
+                }
+
                 var existingRule = RuleImportExportService.ResolveExistingRule(entry, _cacheService, matcherLookup);
 
                 if (existingRule != null)
@@ -532,6 +558,16 @@ namespace Broot.Redirect.API.Controllers
                             if (validationError != null)
                             {
                                 progress.Errors.Add($"Entry {index}: {validationError}");
+                                progress.Processed++;
+
+                                continue;
+                            }
+
+                            var qmProError = RuleImportExportService.GetQmProImportError(entry, cacheService, matcherLookup);
+
+                            if (qmProError != null)
+                            {
+                                progress.Errors.Add($"Entry {index}: {qmProError}");
                                 progress.Processed++;
 
                                 continue;
@@ -638,7 +674,9 @@ namespace Broot.Redirect.API.Controllers
                 KeptQueryParams = mappedRequest.KeptQueryParams,
                 StaticQueryParams = mappedRequest.StaticQueryParams,
                 SearchAndReplace = mappedRequest.SearchAndReplace,
-                CreatedAt = existingRule?.CreatedAt ?? createdAt
+                CreatedAt = existingRule?.CreatedAt ?? createdAt,
+                ExternalDocumentId = existingRule?.ExternalDocumentId,
+                IsActive = existingRule?.IsActive ?? true
             };
         }
 

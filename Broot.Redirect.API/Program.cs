@@ -1,4 +1,5 @@
 using Broot.Redirect.API.Configuration;
+using Broot.Redirect.API.Filters;
 using Broot.Redirect.API.Middleware;
 using Broot.Redirect.API.Services;
 using Broot.Redirect.Core.Interfaces;
@@ -39,6 +40,8 @@ builder.Services.AddSingleton<IUrlTransformService, UrlTransformService>();
 builder.Services.AddSingleton<ISmartSearchService, SmartSearchService>();
 builder.Services.AddSingleton<BruteForceProtectionService>();
 builder.Services.AddSingleton<RuleValidationService>();
+builder.Services.AddSingleton<QmProRuleService>();
+builder.Services.AddSingleton<QmProApiKeyFilter>();
 
 builder.Services.AddDistributedMemoryCache();
 
@@ -79,6 +82,15 @@ var adminPassword = builder.Configuration
 if (adminPassword == "Password1")
 {
     Console.WriteLine("WARNING: Using default password 'Password1'. Set SmartRedirect__AdminPassword environment variable.");
+}
+
+var qmProApiKey = builder.Configuration
+    .GetSection(BrootRedirectOptions.SectionName)
+    .GetValue<string>("QmProApiKey");
+
+if (string.IsNullOrWhiteSpace(qmProApiKey))
+{
+    Console.WriteLine("WARNING: No QM Pro API key configured. All requests to /api/qm-pro are rejected. Set SmartRedirect__QmProApiKey environment variable.");
 }
 
 var app = builder.Build();

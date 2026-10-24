@@ -18,6 +18,8 @@ namespace Broot.Redirect.Core.Models
         /// <summary>
         /// Rule was created or updated via a file import.
         /// </summary>
-        Import
+        Import,
+
+        QmPro
     }
 }

@@ -243,6 +243,8 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
         [InlineData("manual", RuleSource.Manual)]
         [InlineData("import", RuleSource.Import)]
         [InlineData("unknown", RuleSource.Unknown)]
+        [InlineData("qmpro", RuleSource.QmPro)]
+        [InlineData("QmPro", RuleSource.QmPro)]
         public void ToDomainModel_ParsesRuleSource(string sourceString, RuleSource expected)
         {
             var entity = new RedirectRuleEntity
@@ -286,6 +288,78 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
             entity.KeptQueryParamsJson.Should().BeNull();
             entity.StaticQueryParamsJson.Should().BeNull();
             entity.SearchAndReplaceJson.Should().BeNull();
+        }
+
+        [Fact]
+        public void ToDomainModel_LegacyRowWithoutNewColumns_IsActiveWithUnknownSourceAndNoDocumentId()
+        {
+            var entity = new RedirectRuleEntity
+            {
+                RowKey = Guid.NewGuid().ToString("N"),
+                Matcher = "/legacy",
+                Source = null,
+                IsActive = null,
+                ExternalDocumentId = null
+            };
+
+            var rule = entity.ToDomainModel();
+
+            rule.IsActive.Should().BeTrue();
+            rule.Source.Should().Be(RuleSource.Unknown);
+            rule.ExternalDocumentId.Should().BeNull();
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void FromDomainModel_AlwaysWritesIsActive(bool isActive)
+        {
+            var rule = new RedirectRule
+            {
+                Id = Guid.NewGuid(),
+                Matcher = "/path",
+                IsActive = isActive
+            };
+
+            var entity = RedirectRuleEntity.FromDomainModel(rule);
+
+            entity.IsActive.Should().Be(isActive);
+        }
+
+        [Fact]
+        public void QmProRule_RoundTrip_PreservesSourceStatusAndDocumentId()
+        {
+            var original = new RedirectRule
+            {
+                Id = Guid.NewGuid(),
+                Matcher = "/sites/qm/a.docx",
+                TargetUrl = "https://tenant.sharepoint.com/a.docx",
+                RedirectType = RedirectType.Wildcard,
+                Source = RuleSource.QmPro,
+                ExternalDocumentId = "https://tenant.sharepoint.com/sites/QM|list|item",
+                IsActive = false
+            };
+
+            var entity = RedirectRuleEntity.FromDomainModel(original);
+            var restored = entity.ToDomainModel();
+
+            entity.Source.Should().Be("qmpro");
+            restored.Source.Should().Be(RuleSource.QmPro);
+            restored.IsActive.Should().BeFalse();
+            restored.ExternalDocumentId.Should().Be(original.ExternalDocumentId);
+        }
+
+        [Fact]
+        public void ToDomainModel_BlankDocumentId_MapsToNull()
+        {
+            var entity = new RedirectRuleEntity
+            {
+                RowKey = Guid.NewGuid().ToString("N"),
+                Matcher = "/path",
+                ExternalDocumentId = "  "
+            };
+
+            entity.ToDomainModel().ExternalDocumentId.Should().BeNull();
         }
     }
 

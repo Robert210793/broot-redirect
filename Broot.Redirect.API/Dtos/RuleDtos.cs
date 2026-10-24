@@ -1,5 +1,6 @@
 ﻿using Broot.Redirect.Core.Models;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Broot.Redirect.API.Dtos
 {
@@ -103,6 +104,9 @@ namespace Broot.Redirect.API.Dtos
         public List<SearchAndReplaceEntry>? SearchAndReplace { get; set; }
 
         public string? CreatedAt { get; set; }
+
+        [JsonPropertyName("source")]
+        public string? Origin { get; set; }
     }
 
     public class ImportResponse

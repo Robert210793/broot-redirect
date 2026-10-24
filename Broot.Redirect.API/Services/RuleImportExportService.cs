@@ -32,8 +32,13 @@ namespace Broot.Redirect.API.Services
             ["KeptQueryParams"] = new[] { "Kept Query Params", "keptQueryParams", "KeptQueryParams", "Parameter Ausnahmen" },
             ["StaticQueryParams"] = new[] { "Static Query Params", "staticQueryParams", "StaticQueryParams", "Statische Parameter" },
             ["SearchAndReplace"] = new[] { "Search Replace", "searchAndReplace", "SearchAndReplace", "Suchen Ersetzen" },
-            ["CreatedAt"] = new[] { "CreatedAt", "createdAt", "Created At", "Erstellt" }
+            ["CreatedAt"] = new[] { "CreatedAt", "createdAt", "Created At", "Erstellt" },
+            ["Origin"] = new[] { "Origin", "origin", "Herkunft" }
         };
+
+        public const string QmProOriginImportError = "Einträge mit Herkunft «QM Pro» werden nicht importiert";
+
+        public const string QmProManagedImportError = "Die zugeordnete Regel wird von QM Pro verwaltet und kann nicht importiert werden";
 
         public static byte[] GenerateCsv(IReadOnlyList<RedirectRule> rules)
         {
@@ -56,6 +61,8 @@ namespace Broot.Redirect.API.Services
             csv.WriteField("Static Query Params");
             csv.WriteField("Search Replace");
             csv.WriteField("CreatedAt");
+            csv.WriteField("Origin");
+            csv.WriteField("Status");
 
             csv.NextRecord();
 
@@ -73,6 +80,8 @@ namespace Broot.Redirect.API.Services
                 csv.WriteField(SerializeCollection(rule.StaticQueryParams));
                 csv.WriteField(SerializeCollection(rule.SearchAndReplace));
                 csv.WriteField(rule.CreatedAt.ToString("o"));
+                csv.WriteField(FormatOrigin(rule.Source));
+                csv.WriteField(FormatStatus(rule.IsActive));
 
                 csv.NextRecord();
             }
@@ -92,7 +101,8 @@ namespace Broot.Redirect.API.Services
             {
                 "ID", "Matcher", "Target URL", "Type", "Info",
                 "Auto Redirect", "Discard Query Params", "Keep Query Params",
-                "Kept Query Params", "Static Query Params", "Search Replace", "CreatedAt"
+                "Kept Query Params", "Static Query Params", "Search Replace", "CreatedAt",
+                "Origin", "Status"
             };
 
             for (var column = 0; column < headers.Length; column++)
@@ -120,6 +130,8 @@ namespace Broot.Redirect.API.Services
                 worksheet.Cell(row, 10).Value = SerializeCollection(rule.StaticQueryParams);
                 worksheet.Cell(row, 11).Value = SerializeCollection(rule.SearchAndReplace);
                 worksheet.Cell(row, 12).Value = rule.CreatedAt.ToString("o");
+                worksheet.Cell(row, 13).Value = FormatOrigin(rule.Source);
+                worksheet.Cell(row, 14).Value = FormatStatus(rule.IsActive);
             }
 
             worksheet.Columns().AdjustToContents(1, Math.Min(rules.Count + 1, 100));
@@ -220,6 +232,7 @@ namespace Broot.Redirect.API.Services
             entry.RedirectType = NormalizeRedirectType(getValue("RedirectType"));
             entry.InfoText = UnsanitizeCsvValue(getValue("InfoText"));
             entry.CreatedAt = getValue("CreatedAt");
+            entry.Origin = getValue("Origin");
 
             entry.AutoRedirect = ParseBool(getValue("AutoRedirect"));
             entry.DiscardQueryParams = ParseBool(getValue("DiscardQueryParams"));
@@ -527,6 +540,55 @@ namespace Broot.Redirect.API.Services
             matcherLookup.TryGetValue(CanonicalizeMatcher(entry.Matcher), out var byMatcher);
 
             return byMatcher;
+        }
+
+        public static string? GetQmProImportError(
+            ImportRuleEntry entry,
+            IRuleCacheService cacheService,
+            Dictionary<string, RedirectRule> matcherLookup)
+        {
+            if (IsQmProOrigin(entry.Origin))
+            {
+                return QmProOriginImportError;
+            }
+
+            if (!string.IsNullOrEmpty(entry.Id)
+                && Guid.TryParse(entry.Id, out var parsedId)
+                && cacheService.GetById(parsedId)?.Source == RuleSource.QmPro)
+            {
+                return QmProManagedImportError;
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Matcher)
+                && matcherLookup.TryGetValue(CanonicalizeMatcher(entry.Matcher), out var byMatcher)
+                && byMatcher.Source == RuleSource.QmPro)
+            {
+                return QmProManagedImportError;
+            }
+
+            return null;
+        }
+
+        public static bool IsQmProOrigin(string? origin)
+        {
+            if (string.IsNullOrWhiteSpace(origin))
+            {
+                return false;
+            }
+
+            var compact = new string(origin.Where(char.IsLetterOrDigit).ToArray());
+
+            return string.Equals(compact, "qmpro", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string FormatOrigin(RuleSource source)
+        {
+            return source.ToString().ToLowerInvariant();
+        }
+
+        public static string FormatStatus(bool isActive)
+        {
+            return isActive ? "active" : "inactive";
         }
 
         public static Dictionary<string, RedirectRule> BuildMatcherLookup(IReadOnlyList<RedirectRule> rules)

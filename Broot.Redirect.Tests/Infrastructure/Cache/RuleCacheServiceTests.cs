@@ -1,4 +1,5 @@
 using Broot.Redirect.Core.Models;
+using Broot.Redirect.Core.Services;
 using Broot.Redirect.Infrastructure.Cache;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -630,6 +631,299 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 all.Should().HaveCount(2);
                 all.Should().Contain(rule1);
                 all.Should().Contain(rule2);
+            }
+        }
+
+        public class InactiveRuleTests
+        {
+            [Fact]
+            public void Initialize_InactiveRules_AreExcludedFromMatchingIndexes()
+            {
+                var sut = CreateService();
+                var wildcard = CreateRule("/inactive/file.docx", RedirectType.Wildcard);
+                var partial = CreateRule("/inactive-folder", RedirectType.Partial);
+                var domain = CreateRule("inactive.example.com", RedirectType.Domain);
+                var regex = CreateRule(@"^/inactive/\d+$", RedirectType.Regex);
+
+                foreach (var rule in new[] { wildcard, partial, domain, regex })
+                {
+                    rule.IsActive = false;
+                }
+
+                sut.Initialize(new[] { wildcard, partial, domain, regex });
+
+                sut.LookupWildcardCandidates("/inactive/file.docx").Should().BeEmpty();
+                sut.GetPartialAndDomainRules().Should().BeEmpty();
+                sut.GetRegexRules().Should().BeEmpty();
+            }
+
+            [Fact]
+            public void Initialize_InactiveRules_RemainInRuleListAndMatcherIndex()
+            {
+                var sut = CreateService();
+                var inactive = CreateRule("/inactive/file.docx", RedirectType.Wildcard);
+                inactive.IsActive = false;
+
+                sut.Initialize(new[] { inactive });
+
+                sut.RuleCount.Should().Be(1);
+                sut.GetAll().Should().ContainSingle().Which.Should().BeSameAs(inactive);
+                sut.GetById(inactive.Id).Should().BeSameAs(inactive);
+                sut.MatcherExists("/inactive/file.docx").Should().BeTrue();
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_ConsidersInactivePartialRule()
+            {
+                var sut = CreateService();
+                var inactivePartial = CreateRule("/folder", RedirectType.Partial);
+                inactivePartial.IsActive = false;
+
+                sut.Initialize(new[] { inactivePartial });
+
+                sut.FindOverlappingMatcher("/folder/file.docx", RedirectType.Wildcard)
+                    .Should().BeSameAs(inactivePartial);
+            }
+
+            [Fact]
+            public void UpdateRule_Deactivation_RemovesRuleFromMatchingIndex_AndReactivationRestoresIt()
+            {
+                var sut = CreateService();
+                var rule = CreateRule("/doc.docx", RedirectType.Wildcard);
+                sut.Initialize(new[] { rule });
+
+                var deactivated = CreateRule("/doc.docx", RedirectType.Wildcard, id: rule.Id);
+                deactivated.IsActive = false;
+                sut.UpdateRule(deactivated);
+
+                sut.LookupWildcardCandidates("/doc.docx").Should().BeEmpty();
+
+                var reactivated = CreateRule("/doc.docx", RedirectType.Wildcard, id: rule.Id);
+                sut.UpdateRule(reactivated);
+
+                sut.LookupWildcardCandidates("/doc.docx").Should().ContainSingle().Which.Should().BeSameAs(reactivated);
+            }
+        }
+
+        public class InactiveRuleMatchingTests
+        {
+            private static readonly RuleMatchingConfig Config = new()
+            {
+                WeightPathSegment = 10,
+                WeightQueryPair = 5,
+                PenaltyWildcard = 1,
+                BonusExactMatch = 50,
+                TrailingSlashPolicy = TrailingSlashPolicy.Ignore,
+                CaseSensitivePath = false,
+                CaseSensitiveQuery = false
+            };
+
+            [Fact]
+            public void ResolveMatch_InactiveWildcardRule_ReturnsNoMatch()
+            {
+                var cache = CreateService();
+                var rule = CreateRule("/sites/qm/doc.docx", RedirectType.Wildcard, "https://new.example.com/doc.docx");
+                rule.IsActive = false;
+                cache.Initialize(new[] { rule });
+
+                var result = new RuleMatchingService(cache).ResolveMatch("/sites/qm/doc.docx", Config);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void ResolveMatch_InactivePartialRule_ReturnsNoMatch()
+            {
+                var cache = CreateService();
+                var rule = CreateRule("/sites/qm", RedirectType.Partial, "/new");
+                rule.IsActive = false;
+                cache.Initialize(new[] { rule });
+
+                var result = new RuleMatchingService(cache).ResolveMatch("/sites/qm/doc.docx", Config);
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void ResolveMatch_InactiveWildcardBesideActivePartial_FallsBackToPartial()
+            {
+                var cache = CreateService();
+                var inactive = CreateRule("/sites/qm/doc.docx", RedirectType.Wildcard, "https://new.example.com/doc.docx");
+                inactive.IsActive = false;
+                var partial = CreateRule("/sites/qm", RedirectType.Partial, "/new");
+                cache.Initialize(new[] { inactive, partial });
+
+                var result = new RuleMatchingService(cache).ResolveMatch("/sites/qm/doc.docx", Config);
+
+                result.Should().NotBeNull();
+                result!.Rule.Id.Should().Be(partial.Id);
+            }
+        }
+
+        public class ExternalDocumentIdTests
+        {
+            private static RedirectRule CreateDocumentRule(
+                string matcher,
+                string? documentId,
+                bool isActive = true,
+                DateTimeOffset? createdAt = null)
+            {
+                var rule = CreateRule(matcher, RedirectType.Wildcard);
+                rule.ExternalDocumentId = documentId;
+                rule.Source = RuleSource.QmPro;
+                rule.IsActive = isActive;
+                rule.CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
+
+                return rule;
+            }
+
+            [Fact]
+            public void GetByExternalDocumentId_IsCaseInsensitive()
+            {
+                var sut = CreateService();
+                var rule = CreateDocumentRule("/a.docx", "https://Tenant/sites/QM|ABC|Def");
+
+                sut.Initialize(new[] { rule });
+
+                sut.GetByExternalDocumentId("https://tenant/sites/qm|abc|DEF").Should().BeSameAs(rule);
+            }
+
+            [Fact]
+            public void GetByExternalDocumentId_FindsInactiveRules()
+            {
+                var sut = CreateService();
+                var rule = CreateDocumentRule("/a.docx", "doc-1", isActive: false);
+
+                sut.Initialize(new[] { rule });
+
+                sut.GetByExternalDocumentId("doc-1").Should().BeSameAs(rule);
+            }
+
+            [Theory]
+            [InlineData("unknown")]
+            [InlineData("")]
+            [InlineData("  ")]
+            public void GetByExternalDocumentId_UnknownOrEmpty_ReturnsNull(string documentId)
+            {
+                var sut = CreateService();
+                sut.Initialize(new[] { CreateDocumentRule("/a.docx", "doc-1"), CreateRule("/b", RedirectType.Partial) });
+
+                sut.GetByExternalDocumentId(documentId).Should().BeNull();
+            }
+
+            [Fact]
+            public void GetByExternalDocumentId_FollowsMutations()
+            {
+                var sut = CreateService();
+                sut.Initialize(new List<RedirectRule>());
+
+                var rule = CreateDocumentRule("/a.docx", "doc-1");
+                sut.AddRule(rule);
+
+                sut.GetByExternalDocumentId("doc-1").Should().BeSameAs(rule);
+
+                sut.RemoveRule(rule.Id);
+
+                sut.GetByExternalDocumentId("doc-1").Should().BeNull();
+            }
+
+            [Fact]
+            public void Initialize_DuplicateDocumentIds_LogsWarningAndPrefersActiveRule()
+            {
+                var logger = Substitute.For<ILogger<RuleCacheService>>();
+                var sut = new RuleCacheService(Options.Create(new CacheOptions()), logger);
+                var olderInactive = CreateDocumentRule("/a.docx", "doc-1", isActive: false, createdAt: DateTimeOffset.UtcNow.AddDays(-2));
+                var newerActive = CreateDocumentRule("/b.docx", "DOC-1", createdAt: DateTimeOffset.UtcNow);
+
+                sut.Initialize(new[] { olderInactive, newerActive });
+
+                sut.GetByExternalDocumentId("doc-1").Should().BeSameAs(newerActive);
+                logger.ReceivedCalls()
+                    .Where(call => call.GetMethodInfo().Name == nameof(ILogger.Log))
+                    .Select(call => call.GetArguments())
+                    .Should().Contain(arguments =>
+                        (LogLevel)arguments[0]! == LogLevel.Warning
+                        && arguments[2]!.ToString()!.Contains("doc-1", StringComparison.OrdinalIgnoreCase)
+                        && arguments[2]!.ToString()!.Contains(olderInactive.Id.ToString()));
+            }
+
+            [Fact]
+            public void Initialize_DuplicateDocumentIds_BothActive_PrefersOldestRule()
+            {
+                var sut = CreateService();
+                var older = CreateDocumentRule("/a.docx", "doc-1", createdAt: DateTimeOffset.UtcNow.AddDays(-2));
+                var newer = CreateDocumentRule("/b.docx", "doc-1", createdAt: DateTimeOffset.UtcNow);
+
+                sut.Initialize(new[] { newer, older });
+
+                sut.GetByExternalDocumentId("doc-1").Should().BeSameAs(older);
+            }
+        }
+
+        public class FindEquivalentMatcherTests
+        {
+            [Theory]
+            [InlineData("/docs/a.docx", "/docs/a.docx")]
+            [InlineData("/Docs/A.docx", "/docs/a.docx")]
+            [InlineData("/docs/a b.docx", "/docs/a%20b.docx")]
+            [InlineData("/docs/a%20b.docx", "/DOCS/A B.docx")]
+            [InlineData("/docs/a.docx/", "/docs/a.docx")]
+            [InlineData("/docs/a.docx?x=1&y=2", "/docs/a.docx?y=2&x=1")]
+            [InlineData("/docs/a.docx?RootFolder=%2Fims%2FA", "/docs/a.docx?rootfolder=/ims/a")]
+            [InlineData("/docs/a.docx?", "/docs/a.docx")]
+            public void FindEquivalentMatcher_EquivalentSpellings_ReturnsRule(string existingMatcher, string inputMatcher)
+            {
+                var sut = CreateService();
+                var rule = CreateRule(existingMatcher, RedirectType.Wildcard);
+                sut.Initialize(new[] { rule });
+
+                sut.FindEquivalentMatcher(inputMatcher).Should().BeSameAs(rule);
+            }
+
+            [Theory]
+            [InlineData("/docs/a.docx?x=1", "/docs/a.docx?x=2")]
+            [InlineData("/docs/a.docx?x=1", "/docs/a.docx")]
+            [InlineData("/docs/a.docx", "/docs/b.docx")]
+            [InlineData("/docs", "/docs/a.docx")]
+            public void FindEquivalentMatcher_DifferentMatchers_ReturnsNull(string existingMatcher, string inputMatcher)
+            {
+                var sut = CreateService();
+                sut.Initialize(new[] { CreateRule(existingMatcher, RedirectType.Wildcard) });
+
+                sut.FindEquivalentMatcher(inputMatcher).Should().BeNull();
+            }
+
+            [Fact]
+            public void FindEquivalentMatcher_ConsidersInactiveAndPartialRules()
+            {
+                var sut = CreateService();
+                var inactive = CreateRule("/inactive.docx", RedirectType.Wildcard);
+                inactive.IsActive = false;
+                var partial = CreateRule("/folder", RedirectType.Partial);
+
+                sut.Initialize(new[] { inactive, partial });
+
+                sut.FindEquivalentMatcher("/inactive.docx").Should().BeSameAs(inactive);
+                sut.FindEquivalentMatcher("/folder").Should().BeSameAs(partial);
+            }
+
+            [Fact]
+            public void FindEquivalentMatcher_ExcludedRule_IsIgnored()
+            {
+                var sut = CreateService();
+                var rule = CreateRule("/docs/a.docx", RedirectType.Wildcard);
+                sut.Initialize(new[] { rule });
+
+                sut.FindEquivalentMatcher("/docs/a.docx", rule.Id).Should().BeNull();
+            }
+
+            [Fact]
+            public void FindEquivalentMatcher_RegexRules_AreSkipped()
+            {
+                var sut = CreateService();
+                sut.Initialize(new[] { CreateRule("/docs/a.docx", RedirectType.Regex) });
+
+                sut.FindEquivalentMatcher("/docs/a.docx").Should().BeNull();
             }
         }
     }

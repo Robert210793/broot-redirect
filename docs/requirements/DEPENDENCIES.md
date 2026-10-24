@@ -12,7 +12,8 @@ Epic 11 — Admin-Zugang & Sicherheit
 │   │   └─► Epic 01 — Weiterleitung alter Links (nutzt Epic 04, 09, 10)
 │   │       ├─► Epic 09 — Tracking & Statistiken (nutzt Epic 01)
 │   │       └─► Epic 02 — Info-Seite (nutzt Epic 03, 05, 09, 10, 11)
-│   └─► Epic 07 — Import & Export
+│   ├─► Epic 07 — Import & Export
+│   └─► Epic 13 — QM-Pro-Integration (nutzt Epic 01, 03)
 └─► Epic 10 — Laufzeit-Einstellungen (nutzt Epic 12)
 
 Epic 12 — Betrieb
@@ -38,6 +39,7 @@ Epic 01 und Epic 09 hängen gegenseitig voneinander ab: Die automatische Weiterl
 | 10 – Laufzeit-Einstellungen | 11, 12 | — |
 | 11 – Admin-Zugang & Sicherheit | — | — |
 | 12 – Betrieb | — | — |
+| 13 – QM-Pro-Integration | 01, 03, 05, 11 | 07 |
 
 ---
 
@@ -101,6 +103,7 @@ Epic 01 und Epic 09 hängen gegenseitig voneinander ab: Die automatische Weiterl
 | US-12.001 | Betriebszustand über einen Health-Endpunkt melden | US-12.002 |
 | US-12.002 | Daten beim Start in den Cache laden | — |
 | US-12.003 | Installierte Version anzeigen | US-12.001 |
+| US-13.001 | Regeln aus QM Pro schreiben und deaktivieren | US-01.002, US-03.002, US-05.001, US-05.002, US-05.003, US-05.004, US-05.005, US-05.006, US-07.002, US-07.003, US-07.005, US-08.001, US-11.005, US-11.006, US-11.007 |
 
 ---
 
@@ -173,3 +176,6 @@ Die Stories der Bestandsaufnahme sind bereits umgesetzt. Die Reihenfolge zeigt, 
 9. US-09.004 Tracking-Einträge filtern und exportieren
 10. US-09.005 Tracking-Daten löschen und automatisch aufräumen
 11. US-02.005 Feedback zur Weiterleitung geben
+
+### Phase 6 — Integrationen
+1. US-13.001 Regeln aus QM Pro beim Publizieren schreiben und beim Zurückziehen deaktivieren

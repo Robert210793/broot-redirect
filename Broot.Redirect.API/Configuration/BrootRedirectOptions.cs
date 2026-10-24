@@ -32,10 +32,14 @@
 
         public int RateLimitAdminMax { get; set; } = 60;
 
+        public int RateLimitIntegrationMax { get; set; } = 1200;
+
         public int RateLimitWindowSeconds { get; set; } = 60;
 
         public int LoginMaxAttempts { get; set; } = 5;
 
         public int LoginBlockDurationMinutes { get; set; } = 1440;
+
+        public string? QmProApiKey { get; set; }
     }
 }

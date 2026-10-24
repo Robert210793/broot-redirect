@@ -70,6 +70,10 @@ namespace Broot.Redirect.Core.Interfaces
         /// 
         bool MatcherExists(string matcher, Guid? excludeRuleId = null);
 
+        RedirectRule? GetByExternalDocumentId(string externalDocumentId);
+
+        RedirectRule? FindEquivalentMatcher(string matcher, Guid? excludeRuleId = null);
+
         /// <summary>
         /// Finds an existing rule whose matcher hierarchically swallows the given matcher
         /// (or is swallowed by it). Only the shorter of the two matchers can swallow the

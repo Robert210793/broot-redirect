@@ -5,6 +5,8 @@
         private readonly RequestDelegate _next;
         private readonly ILogger<CsrfProtectionMiddleware> _logger;
 
+        private static readonly PathString IntegrationPathPrefix = new("/api/qm-pro");
+
         private static readonly HashSet<string> SafeMethods = new(StringComparer.OrdinalIgnoreCase)
         {
             "GET",
@@ -25,6 +27,13 @@
             var path = context.Request.Path.Value ?? string.Empty;
 
             if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+            {
+                await _next(context);
+
+                return;
+            }
+
+            if (context.Request.Path.StartsWithSegments(IntegrationPathPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 await _next(context);
 

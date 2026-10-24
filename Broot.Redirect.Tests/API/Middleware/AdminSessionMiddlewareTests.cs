@@ -145,5 +145,35 @@ namespace Broot.Redirect.Tests.API.Middleware
 
             nextCalled.Should().BeTrue();
         }
+
+        [Theory]
+        [InlineData("/api/qm-pro/publish")]
+        [InlineData("/api/qm-pro/unpublish")]
+        public async Task InvokeAsync_QmProPath_DoesNotRequireAdminSession(string path)
+        {
+            var (nextCalled, context) = await Invoke(path, "POST");
+
+            nextCalled.Should().BeTrue();
+            context.Response.StatusCode.Should().Be(200);
+        }
+
+        [Theory]
+        [InlineData("/api/rules", "GET")]
+        [InlineData("/api/rules", "POST")]
+        [InlineData("/api/rules/import", "POST")]
+        [InlineData("/api/rules/all", "DELETE")]
+        [InlineData("/api/global-rules", "GET")]
+        [InlineData("/api/stats", "GET")]
+        [InlineData("/api/settings", "PUT")]
+        [InlineData("/api/auth/status", "GET")]
+        [InlineData("/api/auth/logout", "POST")]
+        [InlineData("/api/auth/blocked-ips", "GET")]
+        public async Task InvokeAsync_ExistingProtectedEndpoints_RemainProtected(string path, string method)
+        {
+            var (nextCalled, context) = await Invoke(path, method);
+
+            nextCalled.Should().BeFalse();
+            context.Response.StatusCode.Should().Be(403);
+        }
     }
 }

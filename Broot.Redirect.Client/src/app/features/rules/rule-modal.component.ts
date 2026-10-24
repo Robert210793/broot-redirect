@@ -74,13 +74,25 @@ export class RuleModalComponent {
         return this.rule() !== null;
     }
 
+    get isReadOnly(): boolean {
+        return this.rule()?.source === 'qmPro';
+    }
+
     get modalTitle(): string {
+        if (this.isReadOnly) {
+            return 'Regel anzeigen';
+        }
+
         return this.isEditMode ? 'Regel bearbeiten' : 'Neue Regel';
     }
 
     // -- Actions --
 
     onSave(): void {
+        if (this.isReadOnly) {
+            return;
+        }
+
         // Normalize before validating so the admin sees the cleaned matcher and the
         // request matches what the backend stores (mirrors RuleImportExportService.NormalizeMatcher).
         this.matcher = this.normalizeMatcher(this.matcher);

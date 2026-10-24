@@ -5,16 +5,20 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Deutsch      | Code-Begriff                    | Beschreibung                        |
 |--------------|---------------------------------|-------------------------------------|
 | Admin-Session | `admin_session` | Session-Cookie nach erfolgreicher Anmeldung mit dem gemeinsamen Admin-Passwort |
+| Aktiv-Status / deaktivierte Regel | `IsActive` | Ob eine Regel bei Weiterleitung, Info-Seite und Validierung berücksichtigt wird; eine deaktivierte Regel bleibt gespeichert und belegt ihren Matcher |
+| Alte URL | `OldUrl` | Ursprüngliche On-Premises-URL eines Dokuments aus der Migration; ihr Pfad inklusive Query wird zum Matcher |
 | Ampelstufe | `MatchQualityLevel` | Grün (ab 90), Gelb (ab 60) oder Rot — Darstellung der Match-Qualität |
+| API-Key (QM Pro) | `QmProApiKey` | Geheimer Schlüssel aus der Startkonfiguration, den QM Pro im Header `X-Api-Key` sendet |
 | Aufbewahrungsdauer | `TrackingRetentionDays` | Anzahl Tage, nach denen Tracking-Einträge automatisch gelöscht werden |
 | Aufwärmen (Cache) | `CacheWarmupService` | Laden von Regeln, Einstellungen und globalen Regeln in den Arbeitsspeicher beim Start |
 | Auto-Weiterleitung | `AutoRedirect` | Regelschalter: direkte HTTP-302-Weiterleitung statt Info-Seite |
 | Beibehaltene Query-Parameter | `KeptQueryParam` | Positivliste von Query-Parametern, die trotz «Query verwerfen» übernommen werden |
 | Blockierte IP | `BruteForceProtectionService` | IP-Adresse, die nach zu vielen Fehlversuchen oder manuell gesperrt ist |
+| Dokument-ID | `ExternalDocumentId` | Kennung eines Dokuments in QM Pro (`brtqmSourceId`, Format `SiteUrl\|ListGuid\|ItemUniqueId`); verknüpft genau eine Regel mit einem Dokument |
 | Domain (Regeltyp) | `RedirectType.Domain` | Regel, die nur den Hostnamen austauscht; in Import-Meldungen «Domain-Ersatz» |
 | Feedback | `Feedback` | Rückmeldung zum Aufruf: `OK`, `NOK` oder `auto-redirect` |
 | Globale Regel | `GlobalRule` | Literales Suchen/Ersetzen, das nach Priorität auf jede Ziel-URL angewendet wird |
-| Herkunft | `RuleSource` | Woher eine Regel stammt: Manuell, Import oder Unbekannt |
+| Herkunft | `RuleSource` | Woher eine Regel stammt: Manuell, Import, QM Pro (`RuleSource.QmPro`) oder Unbekannt |
 | Hintergrundauftrag | `jobId` | Lang laufende Operation (Import, alle Regeln löschen) mit abfragbarem Fortschritt |
 | Info-Seite | `InfoPageComponent` | Öffentliche Seite, die auf den veralteten Link hinweist und die neue URL zeigt |
 | Info-Text | `InfoText` | Regelspezifischer Hinweistext auf der Info-Seite |
@@ -23,6 +27,8 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Matcher | `Matcher` | Muster der alten URL, gegen das eine Anfrage geprüft wird (Pfad, Domain oder Regex) |
 | Matcher-Konflikt | `MATCHER_CONFLICT` | Abweisung einer Regel, deren Matcher hierarchisch mit einer bestehenden teilweisen Regel überlappt |
 | Popup-Modus | `PopupMode` | Anzeige der Info-Seite: `inline` (Hinweisbanner) oder `active` (Dialog beim Laden) |
+| Publikations-URL | `PublicationUrl` | URL der publizierten Kopie eines Dokuments in der Publikationsbibliothek; wird zur Ziel-URL der Regel |
+| Publizieren (QM Pro) | `Publish` | Aufruf aus QM Pro, der die Regel eines Dokuments anlegt oder aktualisiert und aktiviert |
 | Regex (Regeltyp) | `RedirectType.Regex` | Regel mit regulärem Ausdruck, zuletzt geprüft |
 | Score | `Score` | Interne Punktzahl zur Auswahl der besten Regel unter mehreren Kandidaten |
 | Smart Search | `SmartSearchService` | Fallback ohne Treffer: Weiterleitung auf eine Suche mit einem aus dem Pfad abgeleiteten Suchbegriff |
@@ -41,3 +47,4 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Weiterleitungstyp | `RedirectType` | Teilweise, Wildcard, Domain oder Regex |
 | Wildcard (Regeltyp) | `RedirectType.Wildcard` | Regel für genau einen Pfad (exakter Nachschlag), optional mit Query; in Import-Meldungen «Vollständig» |
 | Ziel-URL | `TargetUrl` | Ziel einer Regel; Interpretation hängt vom Weiterleitungstyp ab |
+| Zurückziehen (QM Pro) | `Unpublish` | Aufruf aus QM Pro beim Löschen, Inaktivieren oder Archivieren eines Dokuments; deaktiviert die Regel des Dokuments |
