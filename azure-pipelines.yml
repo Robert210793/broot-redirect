@@ -23,6 +23,8 @@ variables:
     value: 1392b159-6724-49d9-89cd-9cbdb0ea2d00
   - name: imageRepository
     value: broot-redirect
+  - name: testProject
+    value: Broot.Redirect.Tests/Broot.Redirect.Tests.csproj
 
 resources:
   containers:
@@ -69,13 +71,13 @@ stages:
               packageType: sdk
               version: 8.0.x
 
-          - script: dotnet restore
+          - script: dotnet restore $(testProject)
             displayName: Restore
 
-          - script: dotnet build --no-restore
+          - script: dotnet build $(testProject) --no-restore
             displayName: Build
 
-          - script: dotnet test --no-build --logger trx --results-directory "$(Agent.TempDirectory)/test-results"
+          - script: dotnet test $(testProject) --no-build --logger trx --results-directory "$(Agent.TempDirectory)/test-results"
             displayName: Test
 
           - task: PublishTestResults@2
