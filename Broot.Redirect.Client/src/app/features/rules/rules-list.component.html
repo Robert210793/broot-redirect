@@ -145,6 +145,12 @@
                                 <span>{{ queryParams.sortOrder === 'asc' ? ' ↑' : ' ↓' }}</span>
                             }
                         </th>
+                        <th class="sortable" (click)="onSort('isActive')" style="width: 100px">
+                            Status
+                            @if (queryParams.sortBy === 'isActive') {
+                                <span>{{ queryParams.sortOrder === 'asc' ? ' ↑' : ' ↓' }}</span>
+                            }
+                        </th>
                         <th class="sortable" (click)="onSort('createdAt')" style="width: 110px">
                             Erstellt
                             @if (queryParams.sortBy === 'createdAt') {
@@ -190,8 +196,12 @@
                             </td>
                             <td>
                                 <span class="badge" [class]="'badge-source-' + rule.source">{{ sourceLabel(rule.source) }}</span>
-                                @if (!rule.isActive) {
-                                    <span class="badge badge-inactive">deaktiviert</span>
+                            </td>
+                            <td>
+                                @if (rule.isActive) {
+                                    <span class="text-tertiary" style="font-size: 0.8rem">Aktiv</span>
+                                } @else {
+                                    <span class="badge badge-inactive">Deaktiviert</span>
                                 }
                             </td>
                             <td>

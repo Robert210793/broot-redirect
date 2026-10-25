@@ -913,6 +913,19 @@ namespace Broot.Redirect.Tests.API.Services
                 result[0].RedirectType.Should().Be(RedirectType.Wildcard);
             }
 
+            [Theory]
+            [InlineData("asc", true)]
+            [InlineData("desc", false)]
+            public void ApplySorting_ByIsActive_OrdersActiveFirstWhenAscending(string sortOrder, bool expectedFirstIsActive)
+            {
+                var inactive = new RedirectRule { Id = Guid.NewGuid(), Matcher = "/inactive", IsActive = false };
+                var active = new RedirectRule { Id = Guid.NewGuid(), Matcher = "/active", IsActive = true };
+
+                var result = RuleImportExportService.ApplySorting(new[] { inactive, active }, "isActive", sortOrder).ToList();
+
+                result[0].IsActive.Should().Be(expectedFirstIsActive);
+            }
+
             [Fact]
             public void ApplySorting_ByCreatedAtAsc()
             {

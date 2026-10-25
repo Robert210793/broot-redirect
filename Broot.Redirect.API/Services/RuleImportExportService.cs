@@ -810,6 +810,10 @@ namespace Broot.Redirect.API.Services
                     ? rules.OrderBy(rule => rule.Source.ToString())
                     : rules.OrderByDescending(rule => rule.Source.ToString()),
 
+                "isactive" => sortOrder == "asc"
+                    ? rules.OrderByDescending(rule => rule.IsActive)
+                    : rules.OrderBy(rule => rule.IsActive),
+
                 _ => sortOrder == "asc"
                     ? rules.OrderBy(rule => rule.CreatedAt)
                     : rules.OrderByDescending(rule => rule.CreatedAt)
