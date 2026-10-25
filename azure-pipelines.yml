@@ -111,15 +111,17 @@ stages:
                 git tag "v$version"
                 git push origin "v$version"
                 publish=true
-              elif [ "$release" = "existing" ] || [ "${{ parameters.rebuildCurrentVersion }}" = "True" ]; then
+              elif [ "$release" = "existing" ] || [ "${REBUILD_CURRENT_VERSION,,}" = "true" ]; then
                 publish=true
               fi
 
-              echo "Version: $version ($release), publish image: $publish"
+              echo "Version: $version ($release), rebuild requested: $REBUILD_CURRENT_VERSION, publish image: $publish"
               echo "##vso[task.setvariable variable=appVersion]$version"
               echo "##vso[task.setvariable variable=publishImage]$publish"
               echo "##vso[build.updatebuildnumber]$version"
             displayName: Determine version
+            env:
+              REBUILD_CURRENT_VERSION: ${{ parameters.rebuildCurrentVersion }}
 
           - task: AzureCLI@2
             displayName: Build and push image to ACR
