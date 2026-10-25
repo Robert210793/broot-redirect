@@ -1,6 +1,3 @@
-# Azure DevOps is the source of truth. Every push to main is mirrored to GitHub,
-# where .github/workflows/build.yaml builds the Docker image and pushes it to ghcr.io.
-
 trigger:
   branches:
     include:
@@ -8,23 +5,132 @@ trigger:
 
 pr: none
 
-pool:
-  vmImage: ubuntu-latest
+parameters:
+  - name: rebuildCurrentVersion
+    displayName: Image der aktuellen Version auch ohne neues Release bauen und pushen
+    type: boolean
+    default: false
 
 variables:
-  - group: github-mirror # must contain the secret variable GITHUB_PAT
+  - group: github-mirror
   - name: GitHubRepo
     value: Robert210793/broot-redirect
+  - name: azureServiceConnection
+    value: sc-brootacr
+  - name: acrName
+    value: brootacr
+  - name: acrSubscriptionId
+    value: 1392b159-6724-49d9-89cd-9cbdb0ea2d00
+  - name: imageRepository
+    value: broot-redirect
 
-steps:
-  - checkout: self
-    fetchDepth: 0 # full history; pushing from a shallow clone can be rejected
-    fetchTags: false
-    persistCredentials: false
+resources:
+  containers:
+    - container: azurite
+      image: mcr.microsoft.com/azure-storage/azurite
+      ports:
+        - 10000:10000
+        - 10001:10001
+        - 10002:10002
 
-  - bash: |
-      set -euo pipefail
-      git push "https://x-access-token:${GITHUB_PAT}@github.com/$(GitHubRepo).git" "HEAD:$(Build.SourceBranch)"
-    displayName: Push to GitHub
-    env:
-      GITHUB_PAT: $(GITHUB_PAT)
+stages:
+  - stage: MirrorToGitHub
+    displayName: Mirror to GitHub
+    dependsOn: []
+    jobs:
+      - job: Mirror
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            fetchTags: false
+            persistCredentials: false
+
+          - bash: |
+              set -euo pipefail
+              git push "https://x-access-token:${GITHUB_PAT}@github.com/$(GitHubRepo).git" "HEAD:$(Build.SourceBranch)"
+            displayName: Push to GitHub
+            env:
+              GITHUB_PAT: $(GITHUB_PAT)
+
+  - stage: Test
+    dependsOn: []
+    jobs:
+      - job: Test
+        pool:
+          vmImage: ubuntu-latest
+        services:
+          azurite: azurite
+        steps:
+          - task: UseDotNet@2
+            displayName: Use .NET 8
+            inputs:
+              packageType: sdk
+              version: 8.0.x
+
+          - script: dotnet restore
+            displayName: Restore
+
+          - script: dotnet build --no-restore
+            displayName: Build
+
+          - script: dotnet test --no-build --logger trx --results-directory "$(Agent.TempDirectory)/test-results"
+            displayName: Test
+
+          - task: PublishTestResults@2
+            displayName: Publish test results
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: '**/*.trx'
+              searchFolder: $(Agent.TempDirectory)/test-results
+
+  - stage: Release
+    dependsOn: Test
+    jobs:
+      - job: Release
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            fetchTags: true
+            persistCredentials: true
+
+          - bash: |
+              set -euo pipefail
+              result=$(bash pipelines/next-version.sh)
+              version=$(echo "$result" | sed -n 's/^version=//p')
+              release=$(echo "$result" | sed -n 's/^release=//p')
+              publish=false
+
+              if [ "$release" = "new" ]; then
+                git tag "v$version"
+                git push origin "v$version"
+                publish=true
+              elif [ "$release" = "existing" ] || [ "${{ parameters.rebuildCurrentVersion }}" = "True" ]; then
+                publish=true
+              fi
+
+              echo "Version: $version ($release), publish image: $publish"
+              echo "##vso[task.setvariable variable=appVersion]$version"
+              echo "##vso[task.setvariable variable=publishImage]$publish"
+              echo "##vso[build.updatebuildnumber]$version"
+            displayName: Determine version
+
+          - task: AzureCLI@2
+            displayName: Build and push image to ACR
+            condition: and(succeeded(), eq(variables.publishImage, 'true'))
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                image="$(acrName).azurecr.io/$(imageRepository)"
+                az account set --subscription "$(acrSubscriptionId)"
+                az acr login --name "$(acrName)"
+                docker build --build-arg APP_VERSION="$(appVersion)" -t "$image:$(appVersion)" -t "$image:latest" .
+                docker push "$image:$(appVersion)"
+                docker push "$image:latest"

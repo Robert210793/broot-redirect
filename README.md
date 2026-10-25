@@ -859,6 +859,21 @@ Das Paket enthält einen persönlichen Tab «Regeln», der `https://<host>/rules
 
 ## 17. CI/CD und Versionierung
 
+### Azure Pipelines (Azure Container Registry)
+
+[`azure-pipelines.yml`](azure-pipelines.yml) läuft bei jedem Push auf `main` in Azure DevOps:
+
+1. **Mirror to GitHub** — spiegelt `main` nach GitHub (Übergangsphase, solange Umgebungen noch aus `ghcr.io` ziehen).
+2. **Test** — restore, build, `dotnet test` gegen einen Azurite-Service-Container, Testergebnisse im Pipeline-Lauf.
+3. **Release** — [`pipelines/next-version.sh`](pipelines/next-version.sh) ermittelt die Version aus den Conventional Commits seit dem letzten Tag (`feat` → Minor, `fix`/`perf` → Patch, `!` bzw. `BREAKING CHANGE` → Major, sonst kein Release). Bei einem neuen Release setzt die Pipeline das Tag `vX.Y.Z` in Azure Repos und pusht das Image als `brootacr.azurecr.io/broot-redirect:X.Y.Z` und `:latest`. Ohne neues Release wird kein Image gebaut; der Laufzeitparameter *«Image der aktuellen Version auch ohne neues Release bauen und pushen»* baut die aktuelle Version trotzdem.
+
+Voraussetzungen in Azure DevOps:
+- ARM-Service-Connection `sc-brootacr` (Workload Identity Federation, manuell, über den Tenant der Registry hinweg) mit `AcrPush` auf `brootacr`
+- Variablengruppe `github-mirror` mit `GITHUB_PAT` (solange gespiegelt wird)
+- Build-Service-Identität mit *Contribute* und *Create tag* auf dem Repository, damit die Pipeline Versions-Tags pushen kann
+
+### GitHub Actions (ghcr.io, Übergangsphase)
+
 [`.github/workflows`](.github/workflows) — bei Push auf `main` und bei manuellem Auslösen:
 
 1. **test** — restore, build, `dotnet test` gegen einen Azurite-Service-Container, dazu eine AltCover-Coverage-Zusammenfassung in der GitHub Job Summary.
