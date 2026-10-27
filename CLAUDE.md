@@ -13,7 +13,7 @@
 | `{LEGACY_DIR}` | `docs/legacy` |
 | `{SRC_DIR}` | `.` (Repo-Root, kein `src/`-Ordner) |
 | `{BACKEND_DIR}` | `Broot.Redirect.API`, `Broot.Redirect.Core`, `Broot.Redirect.Infrastructure` |
-| `{FRONTEND_DIR}` | `Broot.Redirect.Client` |
+| `{FRONTEND_DIR}` | `Broot.Redirect.Client` (Angular), `Broot.Redirect.SPFx` (SPFx-WebPart für die QM-Pro-Site) |
 | `{NAMESPACE}` | `Broot.Redirect` |
 | `{CODE_PREFIX}` | — (kein Präfix; der bestehende Code verwendet keines, z. B. `RedirectRule`) |
 | `{QUEUE_NAME}` | — (kein Messaging) |
@@ -28,6 +28,7 @@
 ### Stack
 - **Backend**: .NET 8 / ASP.NET Core, Azure Table Storage, ein einzelner Container → `Broot.Redirect.API/`, `Broot.Redirect.Core/`, `Broot.Redirect.Infrastructure/`
 - **Frontend**: Angular 19 (Standalone Components, Signals), wird nach `wwwroot/` gebaut und von der API ausgeliefert → `Broot.Redirect.Client/`
+- **SPFx**: SharePoint Framework, React, Fluent UI v8, PnPjs v4, Jest; eigenes `.sppkg` für den App Catalog der QM-Pro-Site → `Broot.Redirect.SPFx/` (US-13.002, ADR-003)
 - **Tests**: xUnit, NSubstitute, FluentAssertions, Azurite-Integrationstests → `Broot.Redirect.Tests/`
 - **Anforderungen**: User Stories & Epics → `docs/requirements/`
 
@@ -47,6 +48,7 @@ broot-redirect/
 ├── Broot.Redirect.Core/               # Domain-Modelle, Interfaces, Matching- und Transformationslogik (kein I/O)
 ├── Broot.Redirect.Infrastructure/     # Table-Storage-Repositories, In-Memory-Caches, Background Services
 ├── Broot.Redirect.Client/             # Angular-SPA (Admin-Panel und öffentliche Info-Seite)
+├── Broot.Redirect.SPFx/               # SPFx-Solution (WebPart «Redirect Regeln» für die QM-Pro-Site, eigenes .sppkg)
 └── Broot.Redirect.Tests/              # Unit- und Integrationstests
 ```
 

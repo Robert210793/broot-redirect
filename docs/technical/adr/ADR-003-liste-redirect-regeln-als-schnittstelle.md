@@ -4,7 +4,7 @@
 Accepted — 2026-10-27
 
 ## Kontext
-Ein SPFx-WebPart in der Legacy-QM-Pro-Solution erfasst Bereiche mit vielen alten On-Premises-URLs und einer gemeinsamen Ziel-URL (US-13.002). Ein Timer-Trigger in QM Pro liest diese Einträge periodisch und gleicht sie mit den Regeln in broot-redirect ab (US-13.003). Die SharePoint-Liste ist damit der Vertrag zwischen zwei Komponenten in zwei Repositories.
+Ein SPFx-WebPart (`Broot.Redirect.SPFx/`, ausgeliefert auf die QM-Pro-Site) erfasst Bereiche mit vielen alten On-Premises-URLs und einer gemeinsamen Ziel-URL (US-13.002). Ein Timer-Trigger in QM Pro liest diese Einträge periodisch und gleicht sie mit den Regeln in broot-redirect ab (US-13.003). Die SharePoint-Liste ist damit der Vertrag zwischen zwei unabhängig ausgelieferten Komponenten.
 
 Alte URLs mit Parametern wie `RootFolder=…&FolderCTID=…&View=…` überschreiten 255 Zeichen. Einzeilige Text- und Hyperlink-Felder sind auf 255 Zeichen begrenzt, mehrzeilige Textfelder lassen sich nicht indizieren. Die Liste muss mehr als 5'000 Einträge aufnehmen, und doppelte Quell-URLs sollen schon bei der Erfassung nach demselben Massstab erkannt werden, den broot-redirect für gleichwertige Matcher anwendet.
 

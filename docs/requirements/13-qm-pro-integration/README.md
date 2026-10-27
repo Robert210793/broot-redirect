@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Schnittstelle für QM Pro 365: Beim Publizieren eines Dokuments schreibt QM Pro die Weiterleitungsregel von der alten On-Premises-URL auf die Publikations-URL, beim Zurückziehen deaktiviert QM Pro die Regel. Zusätzlich erfasst ein SPFx-WebPart in QM Pro Bereiche mit vielen alten URLs und einer gemeinsamen Ziel-URL in der Liste «Redirect Regeln»; ein Timer-Trigger gleicht diese Liste periodisch mit den Regeln in broot-redirect ab.
+Schnittstelle für QM Pro 365: Beim Publizieren eines Dokuments schreibt QM Pro die Weiterleitungsregel von der alten On-Premises-URL auf die Publikations-URL, beim Zurückziehen deaktiviert QM Pro die Regel. Zusätzlich erfasst ein SPFx-WebPart auf der QM-Pro-Site Bereiche mit vielen alten URLs und einer gemeinsamen Ziel-URL in der Liste «Redirect Regeln»; ein Timer-Trigger gleicht diese Liste periodisch mit den Regeln in broot-redirect ab.
 
 ## User Stories
 
