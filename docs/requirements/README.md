@@ -25,7 +25,7 @@ Weitere Dokumente: [DEPENDENCIES.md](DEPENDENCIES.md) · [DOMAIN-GLOSSARY.md](DO
 | 10 | [Laufzeit-Einstellungen](10-laufzeit-einstellungen/README.md) | Ohne Neustart änderbare Einstellungen für Verhalten und Texte. | 3 |
 | 11 | [Admin-Zugang & Sicherheit](11-admin-zugang-sicherheit/README.md) | Anmeldung, Schutz der Admin-Endpunkte, IP-Sperren, Begrenzung der Anfragen und CSRF-Schutz. | 7 |
 | 12 | [Betrieb](12-betrieb/README.md) | Health-Endpunkt, Aufwärmen des Caches und Versionsanzeige. | 3 |
-| 13 | [QM-Pro-Integration](13-qm-pro-integration/README.md) | Schnittstelle, über die QM Pro 365 beim Publizieren Regeln schreibt und beim Zurückziehen deaktiviert. | 2 |
+| 13 | [QM-Pro-Integration](13-qm-pro-integration/README.md) | Schnittstelle, über die QM Pro 365 beim Publizieren Regeln schreibt und beim Zurückziehen deaktiviert. | 3 |
 
 ## User Story Index
 
@@ -89,6 +89,8 @@ Weitere Dokumente: [DEPENDENCIES.md](DEPENDENCIES.md) · [DOMAIN-GLOSSARY.md](DO
 | [US-12.003](12-betrieb/US-12.003-version-anzeigen.md) | Installierte Version anzeigen | Betrieb |
 | [US-13.001](13-qm-pro-integration/US-13.001-qm-pro-regeln-schreiben-und-deaktivieren.md) | Regeln aus QM Pro beim Publizieren schreiben und beim Zurückziehen deaktivieren | QM-Pro-Integration |
 | [US-13.002](13-qm-pro-integration/US-13.002-regeln-pro-bereich-erfassen.md) | Regeln pro Bereich in einem SPFx-WebPart erfassen | QM-Pro-Integration |
+| [US-13.003](13-qm-pro-integration/US-13.003-bereichsregeln-abgleichen.md) | Regeln aus der Liste «Redirect Regeln» periodisch abgleichen | QM-Pro-Integration |
+
 ## Offene Fragen der Bestandsaufnahme
 
 | US | Frage |
