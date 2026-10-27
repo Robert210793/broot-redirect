@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "broot-redirect-spfx-client-side-solution",
+    "id": "5c1c6f19-faea-49e3-817d-2e754f0a3f39",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "Beetroot AG",
+      "websiteUrl": "https://www.beetroot.ag",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.21.1"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Redirect Regeln pro Bereich erfassen"
+      },
+      "longDescription": {
+        "default": "WebPart zum Erfassen von Bereichen mit Quell-URLs und Ziel-URL in der Liste «Redirect Regeln» der QM-Pro-Site"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "broot-redirect-spfx Feature",
+        "description": "Aktiviert das WebPart «Redirect Regeln».",
+        "id": "0304173b-0588-4331-9d96-86bbc1dfa2aa",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/broot-redirect-spfx.sppkg"
+  }
+}

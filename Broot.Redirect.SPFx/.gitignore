@@ -1,0 +1,12 @@
+node_modules
+dist
+lib
+release
+solution
+temp
+*.sppkg
+.heft
+coverage
+*.scss.ts
+*.resx.ts
+*.log

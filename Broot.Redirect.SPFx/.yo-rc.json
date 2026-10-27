@@ -1,0 +1,18 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.22.0",
+    "sdksVersions": {},
+    "version": "1.21.1",
+    "libraryName": "broot-redirect-spfx",
+    "libraryId": "5c1c6f19-faea-49e3-817d-2e754f0a3f39",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "broot-redirect-spfx",
+    "solutionShortDescription": "Redirect Regeln pro Bereich erfassen",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

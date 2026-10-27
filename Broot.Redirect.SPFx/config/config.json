@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "brtqm-redirect-rules-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/brtqmRedirectRules/BrtqmRedirectRulesWebPart.js",
+          "manifest": "./src/webparts/brtqmRedirectRules/BrtqmRedirectRulesWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "BrtqmRedirectRulesWebPartStrings": "lib/webparts/brtqmRedirectRules/loc/{locale}.js"
+  }
+}

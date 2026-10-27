@@ -1,0 +1,21 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
+  "id": "5a58b6e3-00c4-4b9c-8c86-05719ac5b0cb",
+  "alias": "BrtqmRedirectRulesWebPart",
+  "componentType": "WebPart",
+  "version": "*",
+  "manifestVersion": 2,
+  "requiresCustomScript": false,
+  "supportedHosts": ["SharePointWebPart", "SharePointFullPage"],
+  "preconfiguredEntries": [{
+    "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+    "group": { "default": "Advanced" },
+    "title": { "default": "Redirect Regeln", "de-de": "Redirect Regeln" },
+    "description": {
+      "default": "Maintain source URLs per area for the list Redirect Regeln",
+      "de-de": "Quell-URLs pro Bereich in der Liste «Redirect Regeln» erfassen"
+    },
+    "officeFabricIconFontName": "Switch",
+    "properties": {}
+  }]
+}

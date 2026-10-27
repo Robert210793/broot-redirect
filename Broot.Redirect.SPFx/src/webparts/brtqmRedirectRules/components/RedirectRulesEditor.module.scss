@@ -1,0 +1,19 @@
+.editor {
+  max-width: 960px;
+}
+
+.row {
+  width: 100%;
+}
+
+.removed {
+  color: "[theme:neutralSecondary, default: #605e5c]";
+  text-decoration: line-through;
+  word-break: break-all;
+}
+
+.details {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  word-break: break-all;
+}

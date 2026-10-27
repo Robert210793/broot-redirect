@@ -174,6 +174,7 @@ Broot.Redirect.Core/           Domain-Modelle, Service-Interfaces, Matching- und
 Broot.Redirect.Infrastructure/ Azure-Table-Storage-Repositories, In-Memory-Caches, Background Services
 Broot.Redirect.Client/         Angular-19-SPA (Admin-Panel und öffentliche Info-Seite)
 Broot.Redirect.Tests/          xUnit — Unit-Tests und Azurite-gestützte Integrationstests
+Broot.Redirect.SPFx/           SPFx-Solution mit dem WebPart «Redirect Regeln» für die QM-Pro-Site (eigenes .sppkg)
 ```
 
 ```
@@ -704,6 +705,7 @@ dotnet test
 - **Coverage:** AltCover ist im Testprojekt verdrahtet und schreibt `Broot.Redirect.Tests/coverage.xml`. `Program.cs` und Fremdassemblies werden herausgefiltert, `[ExcludeFromCodeCoverage]` wird berücksichtigt. Die CI rendert eine Markdown-Zusammenfassung in die Job Summary.
 - **Integrationstests** ([`Broot.Redirect.Tests/Integration/`](Broot.Redirect.Tests/Integration/)) laufen über `AzuriteFixture` gegen eine echte Azurite-Instanz auf `127.0.0.1:10002`, in der xUnit-Collection `"Azurite"`. Tabellen werden pro Test angelegt und beim Dispose gelöscht. **Ohne laufendes Azurite schlagen diese Tests fehl** — vorher Azurite starten (oder `docker-compose up azurite`).
 - Frontend-Tests sind aufgesetzt (Karma/Jasmine über `ng test`), es existieren jedoch keine Spec-Dateien.
+- Die SPFx-Solution hat eigene Jest-Tests (`npm test` in `Broot.Redirect.SPFx/`); die Service-Tests laufen gegen eine In-Memory-Nachbildung der Liste «Redirect Regeln».
 
 Die Teststruktur spiegelt den Quellbaum: `Tests/Core/Services/`, `Tests/API/Controllers/`, `Tests/API/Middleware/`, `Tests/Infrastructure/Cache/`, `Tests/Infrastructure/Persistence/`, `Tests/Integration/`.
 
@@ -846,6 +848,14 @@ Das Dockerfile besteht aus drei Stufen: Node 22 baut die Angular-App, das .NET-8
 3. `broot-redirect-teams.zip` in Teams hochladen: *Apps → Apps verwalten → App hochladen* (eigene App, erfordert die Berechtigung zum Hochladen benutzerdefinierter Apps) oder über das Teams Admin Center für die ganze Organisation.
 
 Das Paket enthält einen persönlichen Tab «Regeln», der `https://<host>/rules` lädt. Die Anmeldung erfolgt im Tab mit dem Admin-Passwort.
+
+### WebPart «Redirect Regeln» auf der QM-Pro-Site
+
+Das SPFx-WebPart wird unabhängig vom Container ausgeliefert (Details in [`Broot.Redirect.SPFx/README.md`](Broot.Redirect.SPFx/README.md)):
+
+1. Liste «Redirect Regeln» mit `Broot.Redirect.SPFx/provisioning/Initialize-BrtqmRedirectRulesList.ps1` auf der QM-Pro-Site bereitstellen (Besitzerrechte, PnP.PowerShell; wiederholbar).
+2. `npx gulp bundle --ship` und `npx gulp package-solution --ship` in `Broot.Redirect.SPFx/` ausführen.
+3. `broot-redirect-spfx.sppkg` in den App Catalog der QM-Pro-Site hochladen und das WebPart auf einer Seite einbinden.
 
 ### Checkliste für die Produktion
 
