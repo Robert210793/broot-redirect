@@ -104,6 +104,8 @@ Epic 01 und Epic 09 hängen gegenseitig voneinander ab: Die automatische Weiterl
 | US-12.002 | Daten beim Start in den Cache laden | — |
 | US-12.003 | Installierte Version anzeigen | US-12.001 |
 | US-13.001 | Regeln aus QM Pro schreiben und deaktivieren | US-01.002, US-03.002, US-05.001, US-05.002, US-05.003, US-05.004, US-05.005, US-05.006, US-07.002, US-07.003, US-07.005, US-08.001, US-11.005, US-11.006, US-11.007 |
+| US-13.002 | Regeln pro Bereich in einem SPFx-WebPart erfassen | — |
+| US-13.003 | Regeln aus der Liste «Redirect Regeln» periodisch abgleichen | US-13.002, US-13.001, US-05.004, US-03.001, US-03.002, US-03.006 |
 
 ---
 
@@ -179,3 +181,5 @@ Die Stories der Bestandsaufnahme sind bereits umgesetzt. Die Reihenfolge zeigt, 
 
 ### Phase 6 — Integrationen
 1. US-13.001 Regeln aus QM Pro beim Publizieren schreiben und beim Zurückziehen deaktivieren
+2. US-13.002 Regeln pro Bereich in einem SPFx-WebPart erfassen
+3. US-13.003 Regeln aus der Liste «Redirect Regeln» periodisch abgleichen

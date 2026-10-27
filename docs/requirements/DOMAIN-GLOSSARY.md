@@ -13,12 +13,14 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Aufwärmen (Cache) | `CacheWarmupService` | Laden von Regeln, Einstellungen und globalen Regeln in den Arbeitsspeicher beim Start |
 | Auto-Weiterleitung | `AutoRedirect` | Regelschalter: direkte HTTP-302-Weiterleitung statt Info-Seite |
 | Beibehaltene Query-Parameter | `KeptQueryParam` | Positivliste von Query-Parametern, die trotz «Query verwerfen» übernommen werden |
+| Bereich | `brtqmArea` | Fachliche Gruppe von Quell-URLs in der Liste «Redirect Regeln» mit genau einer gemeinsamen Ziel-URL; existiert nur über ihre Listeneinträge, Namen werden ohne Gross-/Kleinschreibung und Rand-Leerzeichen verglichen |
+| Bereichsliste (Herkunft) | — (im Refinement festzulegen) | Herkunft von Regeln, die der Abgleich aus der Liste «Redirect Regeln» anlegt (US-13.003); getrennt von «QM Pro» |
 | Blockierte IP | `BruteForceProtectionService` | IP-Adresse, die nach zu vielen Fehlversuchen oder manuell gesperrt ist |
 | Dokument-ID | `ExternalDocumentId` | Kennung eines Dokuments in QM Pro (`brtqmSourceId`, Format `SiteUrl\|ListGuid\|ItemUniqueId`); verknüpft genau eine Regel mit einem Dokument |
 | Domain (Regeltyp) | `RedirectType.Domain` | Regel, die nur den Hostnamen austauscht; in Import-Meldungen «Domain-Ersatz» |
 | Feedback | `Feedback` | Rückmeldung zum Aufruf: `OK`, `NOK` oder `auto-redirect` |
 | Globale Regel | `GlobalRule` | Literales Suchen/Ersetzen, das nach Priorität auf jede Ziel-URL angewendet wird |
-| Herkunft | `RuleSource` | Woher eine Regel stammt: Manuell, Import, QM Pro (`RuleSource.QmPro`) oder Unbekannt |
+| Herkunft | `RuleSource` | Woher eine Regel stammt: Manuell, Import, QM Pro (`RuleSource.QmPro`), Bereichsliste (US-13.003) oder Unbekannt |
 | Hintergrundauftrag | `jobId` | Lang laufende Operation (Import, alle Regeln löschen) mit abfragbarem Fortschritt |
 | Info-Seite | `InfoPageComponent` | Öffentliche Seite, die auf den veralteten Link hinweist und die neue URL zeigt |
 | Info-Text | `InfoText` | Regelspezifischer Hinweistext auf der Info-Seite |
@@ -26,9 +28,12 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Match-Qualität | `Quality` | Dem Benutzer angezeigte Güte der Zuordnung in Prozent (100, 75, 50, 0) |
 | Matcher | `Matcher` | Muster der alten URL, gegen das eine Anfrage geprüft wird (Pfad, Domain oder Regex) |
 | Matcher-Konflikt | `MATCHER_CONFLICT` | Abweisung einer Regel, deren Matcher hierarchisch mit einer bestehenden teilweisen Regel überlappt |
+| Normalisierter Schlüssel | `brtqmSourceKey` | Vergleichswert einer Quell-URL ohne Host, dekodiert, ohne Gross-/Kleinschreibung, Query unabhängig von der Reihenfolge, gespeichert als `v1:` + SHA-256 (ADR-003); verhindert doppelte Quell-URLs in der Liste «Redirect Regeln» |
 | Popup-Modus | `PopupMode` | Anzeige der Info-Seite: `inline` (Hinweisbanner) oder `active` (Dialog beim Laden) |
 | Publikations-URL | `PublicationUrl` | URL der publizierten Kopie eines Dokuments in der Publikationsbibliothek; wird zur Ziel-URL der Regel |
 | Publizieren (QM Pro) | `Publish` | Aufruf aus QM Pro, der die Regel eines Dokuments anlegt oder aktualisiert und aktiviert |
+| Quell-URL | `brtqmSourceUrl` | Alte On-Premises-URL in der Liste «Redirect Regeln», gespeichert inklusive Host; der Timer-Trigger entfernt den Host, danach entspricht sie einer «Alten URL» |
+| Redirect Regeln (Liste) | `Lists/brtqmRedirectRules` | SharePoint-Liste auf der QM-Pro-Site, in der das WebPart pro Quell-URL einen Eintrag mit Bereich und Ziel-URL führt; Identifier eines Eintrags ist seine SharePoint-GUID (`UniqueId`) |
 | Regex (Regeltyp) | `RedirectType.Regex` | Regel mit regulärem Ausdruck, zuletzt geprüft |
 | Score | `Score` | Interne Punktzahl zur Auswahl der besten Regel unter mehreren Kandidaten |
 | Smart Search | `SmartSearchService` | Fallback ohne Treffer: Weiterleitung auf eine Suche mit einem aus dem Pfad abgeleiteten Suchbegriff |

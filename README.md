@@ -133,6 +133,8 @@ QM Pro 365 schreibt beim Publizieren eines Dokuments die Weiterleitungsregel sel
 - **Zurückziehen:** setzt `IsActive = false`. Bereits deaktivierte oder unbekannte Dokument-IDs sind kein Fehler.
 - **Admin-Panel:** QM-Pro-Regeln sind nicht bearbeitbar (`PUT` → 409 `RULE_MANAGED_BY_QMPRO`), lassen sich aber löschen. Der Import überspringt sie (Kapitel 12).
 
+Zusätzlich erfasst ein SPFx-WebPart in QM Pro Bereiche mit vielen alten URLs und einer gemeinsamen Ziel-URL in der SharePoint-Liste «Redirect Regeln» (`Lists/brtqmRedirectRules`); ein Timer-Trigger in QM Pro gleicht diese Liste periodisch mit den Regeln der Herkunft «Bereichsliste» ab (US-13.002, US-13.003). Schema, Identifier und normalisierter Schlüssel der Liste: siehe [ADR-003](docs/technical/adr/ADR-003-liste-redirect-regeln-als-schnittstelle.md).
+
 ---
 
 ## 3. Architektur
