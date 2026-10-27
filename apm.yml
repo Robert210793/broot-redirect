@@ -12,6 +12,9 @@ dependencies:
   - git: https://beetrootag@dev.azure.com/beetrootag/Beetroot-Framework/_git/broot-ai-dev-toolkit
     path: packages/dotnet
     ref: main
+  - git: https://beetrootag@dev.azure.com/beetrootag/Beetroot-Framework/_git/broot-ai-dev-toolkit
+    path: packages/spfx
+    ref: main
   mcp: []
 includes: auto
 scripts: {}
