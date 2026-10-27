@@ -9,3 +9,4 @@ Schnittstelle für QM Pro 365: Beim Publizieren eines Dokuments schreibt QM Pro 
 | ID | Titel |
 |----|-------|
 | [US-13.001](US-13.001-qm-pro-regeln-schreiben-und-deaktivieren.md) | Regeln aus QM Pro beim Publizieren schreiben und beim Zurückziehen deaktivieren |
+| [US-13.002](US-13.002-regeln-pro-bereich-erfassen.md) | Regeln pro Bereich in einem SPFx-WebPart erfassen |
