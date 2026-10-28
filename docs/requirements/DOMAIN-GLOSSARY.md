@@ -4,6 +4,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 
 | Deutsch      | Code-Begriff                    | Beschreibung                        |
 |--------------|---------------------------------|-------------------------------------|
+| Abgleich (Bereichsliste) | `AreaRuleSyncService` | Übernahme des vollständigen Stands der Liste «Redirect Regeln» als Regeln der Herkunft «Bereichsliste» (anlegen, aktualisieren, löschen); ausgelöst durch den Timer-Trigger `brtqmRedirectRulesSync` in QM Pro |
 | Admin-Session | `admin_session` | Session-Cookie nach erfolgreicher Anmeldung mit dem gemeinsamen Admin-Passwort |
 | Aktiv-Status / deaktivierte Regel | `IsActive` | Ob eine Regel bei Weiterleitung, Info-Seite und Validierung berücksichtigt wird; eine deaktivierte Regel bleibt gespeichert und belegt ihren Matcher |
 | Alte URL | `OldUrl` | Ursprüngliche On-Premises-URL eines Dokuments aus der Migration; ihr Pfad inklusive Query wird zum Matcher |
@@ -14,7 +15,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Auto-Weiterleitung | `AutoRedirect` | Regelschalter: direkte HTTP-302-Weiterleitung statt Info-Seite |
 | Beibehaltene Query-Parameter | `KeptQueryParam` | Positivliste von Query-Parametern, die trotz «Query verwerfen» übernommen werden |
 | Bereich | `brtqmArea` | Fachliche Gruppe von Quell-URLs in der Liste «Redirect Regeln» mit genau einer gemeinsamen Ziel-URL; existiert nur über ihre Listeneinträge, Namen werden ohne Gross-/Kleinschreibung und Rand-Leerzeichen verglichen |
-| Bereichsliste (Herkunft) | — (im Refinement festzulegen) | Herkunft von Regeln, die der Abgleich aus der Liste «Redirect Regeln» anlegt (US-13.003); getrennt von «QM Pro» |
+| Bereichsliste (Herkunft) | `RuleSource.AreaList` (`arealist`) | Herkunft von Regeln, die der Abgleich aus der Liste «Redirect Regeln» anlegt (US-13.003); getrennt von «QM Pro»; der Identifier des Listeneintrags liegt in `ExternalDocumentId` |
 | Blockierte IP | `BruteForceProtectionService` | IP-Adresse, die nach zu vielen Fehlversuchen oder manuell gesperrt ist |
 | Dokument-ID | `ExternalDocumentId` | Kennung eines Dokuments in QM Pro (`brtqmSourceId`, Format `SiteUrl\|ListGuid\|ItemUniqueId`); verknüpft genau eine Regel mit einem Dokument |
 | Domain (Regeltyp) | `RedirectType.Domain` | Regel, die nur den Hostnamen austauscht; in Import-Meldungen «Domain-Ersatz» |
