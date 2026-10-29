@@ -58,6 +58,45 @@ namespace Broot.Redirect.Tests.Core.Services
                 result.Should().Be("https://defaultdomain.com/new/subpage");
             }
 
+            [Theory]
+            [InlineData("/ims/FRW_Cod_Patadm/31%20Pat.administration")]
+            [InlineData("/ims/FRW_Cod_Patadm/31%20Pat.administration/")]
+            [InlineData("/ims/FRW_Cod_Patadm/31%20Pat.administration/Merkblatt%20Aufnahme.docx")]
+            [InlineData("/ims/FRW_Cod_Patadm/31%20Pat.administration/Unterordner/Merkblatt.docx?Web=1")]
+            [InlineData("/ims/frw_cod_patadm/31 pat.administration/Merkblatt.docx")]
+            public void ResolveTargetUrl_PartialRuleWithPathMatcherAndAbsoluteTarget_ResolvesToExactTarget(string requestUrl)
+            {
+                const string target = "https://lindenhofgruppech.sharepoint.com/sites/Lhg-ims/SitePages/Prozess.aspx?ProzessId=b56d29d4-7382-419a-a278-ecad3ba0b3d2#Patientenadministration";
+                var rule = CreateRule("/ims/FRW_Cod_Patadm/31%20Pat.administration", RedirectType.Partial, target);
+
+                var result = _sut.ResolveTargetUrl(requestUrl, rule, "https://lindenhofgruppech.sharepoint.com/sites/lhg-ims");
+
+                result.Should().Be(target);
+            }
+
+            [Theory]
+            [InlineData("http://new.example.com/library")]
+            [InlineData("HTTPS://new.example.com/library/")]
+            public void ResolveTargetUrl_PartialRuleWithPathMatcherAndAbsoluteTarget_DoesNotUseDefaultDomain(string target)
+            {
+                var rule = CreateRule("/old", RedirectType.Partial, target);
+
+                var result = _sut.ResolveTargetUrl("/old/sub/page.aspx", rule, "https://defaultdomain.com");
+
+                result.Should().Be(target);
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_PartialRuleWithAbsoluteTargetAndForwardQueryParams_ForwardsOriginalQuery()
+            {
+                var rule = CreateRule("/old", RedirectType.Partial, "https://new.example.com/page.aspx");
+                rule.ForwardQueryParams = true;
+
+                var result = _sut.ResolveTargetUrl("/old/sub?x=1", rule, "https://defaultdomain.com");
+
+                result.Should().Be("https://new.example.com/page.aspx?x=1");
+            }
+
             [Fact]
             public void ResolveTargetUrl_PartialRuleWithDomainMatcher_ReplacesDomain()
             {

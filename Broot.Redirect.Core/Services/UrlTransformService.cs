@@ -233,6 +233,12 @@ namespace Broot.Redirect.Core.Services
                 return targetBase + normalizedOldPath;
             }
 
+            if (rule.TargetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || rule.TargetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return rule.TargetUrl;
+            }
+
             var cleanMatcher = rule.Matcher.TrimEnd('/');
             var cleanTarget = rule.TargetUrl.Trim('/');
 

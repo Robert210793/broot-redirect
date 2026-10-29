@@ -75,7 +75,7 @@ Die zentrale Entität ([`RedirectRule`](Broot.Redirect.Core/Models/RedirectRule.
 
 | Typ | Beispiel-Matcher | Verhalten |
 |---|---|---|
-| **`Partial`** | `/old-section` | Der Matcher wird *irgendwo* im Pfad gefunden und durch `TargetUrl` ersetzt; alles Nachfolgende bleibt erhalten. `/old-section/page/1` → `/new-section/page/1`. Standardtyp und der am häufigsten genutzte. |
+| **`Partial`** | `/old-section` | Der Matcher wird *irgendwo* im Pfad gefunden und durch `TargetUrl` ersetzt; alles Nachfolgende bleibt erhalten. `/old-section/page/1` → `/new-section/page/1`. Standardtyp und der am häufigsten genutzte. Ist die `TargetUrl` eine absolute `http(s)`-URL, führt jede URL unterhalb des Matchers genau auf diese Ziel-URL (inklusive ihrer Query und ihres Fragments); der Rest des Pfads wird nicht angehängt. So arbeiten die Ordnerregeln der Bereichsliste. |
 | **`Wildcard`** | `/reports/*` | Wird über einen O(1)-Index auf den exakten Pfad aufgelöst (der ganze normalisierte Pfad ist der Schlüssel). Der Suffix nach dem Matcher-Präfix wird an das Ziel angehängt. |
 | **`Domain`** | `old.example.com` | Trifft nur auf den Hostnamen zu. Der gesamte Pfad bleibt erhalten, nur die Domain wird ausgetauscht. |
 | **`Regex`** | `^/legacy/\d+$` | Vollwertiges .NET-Regex gegen die komplette Request-URL. Vorkompiliert mit konfigurierbarem Timeout. Wird zuletzt ausgewertet und nimmt nie an der Überlappungsprüfung teil. |

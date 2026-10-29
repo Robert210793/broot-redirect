@@ -447,6 +447,13 @@ namespace Broot.Redirect.Tests.Core.Services
 
                 result.Should().NotBeNull();
                 result!.Rule.TargetUrl.Should().Be($"https://tenant.sharepoint.com/{expected}");
+
+                var globalRuleCache = Substitute.For<IGlobalRuleCacheService>();
+                globalRuleCache.GetAll().Returns(Array.Empty<GlobalRule>());
+
+                new UrlTransformService(globalRuleCache)
+                    .ResolveTargetUrl(requestUrl, result.Rule, "https://tenant.sharepoint.com/sites/default")
+                    .Should().Be($"https://tenant.sharepoint.com/{expected}");
             }
         }
 
