@@ -8,6 +8,8 @@ export interface FakeItem {
   brtqmSourceUrl: string;
   brtqmTargetUrl: string;
   brtqmSourceKey: string;
+  Modified: string;
+  Editor: { Title: string };
 }
 
 export interface FakeError {
@@ -66,6 +68,7 @@ export class FakeSharePoint {
   public batchSizes: number[] = [];
   public writes: WriteRequest[] = [];
   public queries: string[] = [];
+  public expands: string[] = [];
   private nextId: number = 1;
 
   public seed(values: Partial<FakeItem>[]): FakeItem[] {
@@ -78,6 +81,8 @@ export class FakeSharePoint {
         brtqmSourceUrl: '',
         brtqmTargetUrl: '',
         brtqmSourceKey: '',
+        Modified: '2026-10-29T07:00:00Z',
+        Editor: { Title: 'Test Benutzer' },
         ...value
       };
       this.nextId = Math.max(this.nextId, item.Id) + 1;
@@ -106,7 +111,10 @@ export class FakeSharePoint {
   private toRaw(item: FakeItem, fields: string[]): Record<string, unknown> {
     const raw: Record<string, unknown> = { 'odata.etag': `"${item.etagVersion}"` };
     const source = item as unknown as Record<string, unknown>;
-    (fields.length > 0 ? fields : Object.keys(item)).forEach((field) => { raw[field] = source[field]; });
+    (fields.length > 0 ? fields : Object.keys(item)).forEach((field) => {
+      const name = field.split('/')[0];
+      raw[name] = source[name];
+    });
     return raw;
   }
 
@@ -175,6 +183,7 @@ export class FakeSharePoint {
 
     const builder = Object.assign(execute, {
       select: (...fields: string[]) => { query.fields = fields; return builder; },
+      expand: (...expanded: string[]) => { this.expands.push(...expanded); return builder; },
       filter: (filter: string) => { query.filter = filter; return builder; },
       orderBy: (field: string, ascending: boolean = true) => { query.orderBy = field; query.ascending = ascending; return builder; },
       top: (top: number) => { query.top = top; return builder; },

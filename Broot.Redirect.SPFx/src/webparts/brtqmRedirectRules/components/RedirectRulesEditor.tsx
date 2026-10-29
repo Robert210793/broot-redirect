@@ -13,7 +13,9 @@ import {
 import * as strings from 'BrtqmRedirectRulesWebPartStrings';
 import { areaCompareValue } from '../logic/AreaName';
 import { buildAreaSnapshot } from '../logic/AreaSavePlanner';
+import { buildRedirectRulesCsv, exportFileName } from '../logic/RedirectRulesCsv';
 import { AreaSaveCoordinator } from '../services/AreaSaveCoordinator';
+import { downloadTextFile } from '../services/FileDownload';
 import { IRedirectRulesService } from '../services/RedirectRulesService';
 import { AreaInputValidation, AreaOption, AreaSnapshot, RowIssue, SaveResult, SourceUrlRow } from '../types';
 import { AreaPicker, NEW_AREA_KEY } from './AreaPicker';
@@ -84,6 +86,7 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
   const [rowIssues, setRowIssues] = React.useState<Record<string, RowIssue>>({});
   const [feedback, setFeedback] = React.useState<Feedback | undefined>(undefined);
   const [busy, setBusy] = React.useState<boolean>(false);
+  const [exporting, setExporting] = React.useState<boolean>(false);
 
   const resetForm = (): void => {
     setExpected(undefined);
@@ -227,6 +230,20 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
     });
   };
 
+  const onExport = (): void => {
+    setFeedback(undefined);
+    setExporting(true);
+    run(async () => {
+      try {
+        const entries = await service.getAllEntries();
+        downloadTextFile(exportFileName(new Date()), buildRedirectRulesCsv(entries), 'text/csv;charset=utf-8');
+        setFeedback({ type: MessageBarType.success, text: format(strings.Exported, String(entries.length)) });
+      } finally {
+        setExporting(false);
+      }
+    });
+  };
+
   const updateRows = (update: (current: SourceUrlRow[]) => SourceUrlRow[]): void => setRows(update);
 
   if (loadState === 'loading') {
@@ -291,7 +308,8 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
       <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
         <PrimaryButton text={strings.Save} disabled={busy || selectedKey === undefined} onClick={onSave} />
         <DefaultButton text={strings.Reload} disabled={busy} onClick={onReload} />
-        {busy && <Spinner size={SpinnerSize.small} label={strings.Saving} labelPosition="right" />}
+        <DefaultButton text={strings.ExportCsv} iconProps={{ iconName: 'Download' }} disabled={busy} onClick={onExport} />
+        {busy && <Spinner size={SpinnerSize.small} label={exporting ? strings.Exporting : strings.Saving} labelPosition="right" />}
       </Stack>
     </Stack>
   );

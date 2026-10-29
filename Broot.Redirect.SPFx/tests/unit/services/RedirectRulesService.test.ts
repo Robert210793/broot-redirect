@@ -53,6 +53,37 @@ describe('RedirectRulesService', () => {
     expect(fake.queries.filter((query) => query.indexOf('Id gt') === 0)).toHaveLength(2);
   });
 
+  it('reads all entries of all areas page by page beyond 5000 entries for the export', async () => {
+    const { fake, service } = setup();
+    fake.seed(Array.from({ length: PAGE_SIZE + 2 }, (_, index) => ({
+      brtqmArea: index % 2 === 0 ? 'Finanzen' : 'Audit',
+      brtqmSourceUrl: `https://old/${index}`,
+      brtqmTargetUrl: 'https://new/target'
+    })));
+    fake.seed([{ brtqmArea: 'IT', brtqmSourceUrl: 'https://old/it/', brtqmTargetUrl: 'https://new/it', Modified: '2026-10-28T12:30:00Z', Editor: { Title: 'Anna Muster' } }]);
+
+    const entries = await service.getAllEntries();
+
+    expect(entries).toHaveLength(PAGE_SIZE + 3);
+    expect(entries[PAGE_SIZE + 2]).toEqual({
+      id: PAGE_SIZE + 3,
+      uniqueId: `guid-${PAGE_SIZE + 3}`,
+      area: 'IT',
+      sourceUrl: 'https://old/it/',
+      targetUrl: 'https://new/it',
+      modified: '2026-10-28T12:30:00Z',
+      modifiedBy: 'Anna Muster'
+    });
+    expect(fake.queries.filter((query) => query.indexOf('Id gt') === 0)).toEqual(['Id gt 0', `Id gt ${PAGE_SIZE}`]);
+    expect(fake.expands).toContain('Editor');
+  });
+
+  it('exports an empty list without entries', async () => {
+    const { service } = setup();
+
+    expect(await service.getAllEntries()).toEqual([]);
+  });
+
   it('reads the entries of an area through the indexed area field', async () => {
     const { fake, service } = setup();
     fake.seed([

@@ -43,6 +43,9 @@ declare interface IBrtqmRedirectRulesWebPartStrings {
   PartiallySaved: string;
   AreaNoLongerExists: string;
   UnexpectedError: string;
+  ExportCsv: string;
+  Exporting: string;
+  Exported: string;
 }
 
 declare module 'BrtqmRedirectRulesWebPartStrings' {

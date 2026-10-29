@@ -43,6 +43,9 @@ define([], function() {
     "AreaRemoved": "Alle Quell-URLs wurden entfernt; der Bereich existiert nicht mehr.",
     "PartiallySaved": "Folgende Quell-URLs wurden nicht gespeichert. Erneutes Speichern ergänzt die fehlenden Änderungen:",
     "AreaNoLongerExists": "Der Bereich hat keine Einträge mehr.",
-    "UnexpectedError": "Beim Zugriff auf die Liste «Redirect Regeln» ist ein Fehler aufgetreten: {0}"
+    "UnexpectedError": "Beim Zugriff auf die Liste «Redirect Regeln» ist ein Fehler aufgetreten: {0}",
+    "ExportCsv": "Als CSV exportieren",
+    "Exporting": "Wird exportiert …",
+    "Exported": "{0} Einträge wurden als CSV exportiert."
   };
 });

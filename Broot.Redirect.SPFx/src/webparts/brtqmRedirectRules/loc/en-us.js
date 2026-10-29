@@ -43,6 +43,9 @@ define([], function() {
     "AreaRemoved": "All source URLs were removed; the area no longer exists.",
     "PartiallySaved": "The following source URLs were not saved. Saving again completes the missing changes:",
     "AreaNoLongerExists": "The area has no entries anymore.",
-    "UnexpectedError": "An error occurred while accessing the list «Redirect Regeln»: {0}"
+    "UnexpectedError": "An error occurred while accessing the list «Redirect Regeln»: {0}",
+    "ExportCsv": "Export as CSV",
+    "Exporting": "Exporting …",
+    "Exported": "{0} entries were exported as CSV."
   };
 });

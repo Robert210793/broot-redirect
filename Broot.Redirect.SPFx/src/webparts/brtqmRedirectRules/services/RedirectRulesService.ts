@@ -10,6 +10,7 @@ import { groupAreas } from '../logic/AreaName';
 import {
   AreaEntryReference,
   AreaOption,
+  ExportEntry,
   RedirectRuleEntry,
   SaveFailureReason,
   SaveOperation,
@@ -21,6 +22,7 @@ export const PAGE_SIZE: number = 5000;
 export const BATCH_SIZE: number = 100;
 
 const ENTRY_FIELDS: string[] = ['Id', 'UniqueId', 'brtqmArea', 'brtqmSourceUrl', 'brtqmTargetUrl', 'brtqmSourceKey'];
+const EXPORT_FIELDS: string[] = ['Id', 'UniqueId', 'brtqmArea', 'brtqmSourceUrl', 'brtqmTargetUrl', 'Modified', 'Editor/Title'];
 const THROTTLING_MESSAGE: RegExp = /SPQueryThrottledException|list view threshold|Schwellenwert/i;
 
 interface RawItem {
@@ -30,6 +32,8 @@ interface RawItem {
   brtqmSourceUrl?: string;
   brtqmTargetUrl?: string;
   brtqmSourceKey?: string;
+  Modified?: string;
+  Editor?: { Title?: string };
   'odata.etag'?: string;
   __metadata?: { etag?: string };
 }
@@ -50,6 +54,7 @@ export interface IRedirectRulesService {
   listExists(): Promise<boolean>;
   getAreas(): Promise<AreaOption[]>;
   getAreaEntries(areaName: string): Promise<RedirectRuleEntry[]>;
+  getAllEntries(): Promise<ExportEntry[]>;
   findAreaEntry(areaName: string): Promise<AreaEntryReference | undefined>;
   findEntriesBySourceKeys(sourceKeys: string[]): Promise<Record<string, AreaEntryReference[]>>;
   canExecute(operations: SaveOperation[]): Promise<boolean>;
@@ -83,6 +88,18 @@ function toEntry(item: RawItem): RedirectRuleEntry {
     sourceUrl: item.brtqmSourceUrl || '',
     targetUrl: item.brtqmTargetUrl || '',
     sourceKey: item.brtqmSourceKey || ''
+  };
+}
+
+function toExportEntry(item: RawItem): ExportEntry {
+  return {
+    id: item.Id,
+    uniqueId: item.UniqueId || '',
+    area: item.brtqmArea || '',
+    sourceUrl: item.brtqmSourceUrl || '',
+    targetUrl: item.brtqmTargetUrl || '',
+    modified: item.Modified || '',
+    modifiedBy: (item.Editor && item.Editor.Title) || ''
   };
 }
 
@@ -169,6 +186,27 @@ export class RedirectRulesService implements IRedirectRulesService {
         throw error;
       }
       return this.readAreaEntriesByIdWindows(areaName);
+    }
+  }
+
+  public async getAllEntries(): Promise<ExportEntry[]> {
+    const entries: ExportEntry[] = [];
+    let lastId = 0;
+
+    for (;;) {
+      const page: RawItem[] = await this.list().items
+        .select(...EXPORT_FIELDS)
+        .expand('Editor')
+        .filter(`Id gt ${lastId}`)
+        .orderBy('Id', true)
+        .top(PAGE_SIZE)();
+
+      page.forEach((item) => entries.push(toExportEntry(item)));
+
+      if (page.length < PAGE_SIZE) {
+        return entries;
+      }
+      lastId = page[page.length - 1].Id;
     }
   }
 

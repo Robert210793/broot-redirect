@@ -8,6 +8,16 @@ export interface RedirectRuleEntry {
   sourceKey: string;
 }
 
+export interface ExportEntry {
+  id: number;
+  uniqueId: string;
+  area: string;
+  sourceUrl: string;
+  targetUrl: string;
+  modified: string;
+  modifiedBy: string;
+}
+
 export interface AreaSnapshot {
   area: string;
   targetUrl: string;

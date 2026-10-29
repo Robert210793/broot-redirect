@@ -10,14 +10,23 @@ src/webparts/brtqmRedirectRules/
 ├── components/                      React-Komponenten ohne Geschäftslogik (Fluent UI v8)
 ├── services/
 │   ├── RedirectRulesService.ts      einzige Klasse mit PnPjs-Aufrufen (Lesen seitenweise, Batches à 100)
-│   └── AreaSaveCoordinator.ts       Ablauf beim Speichern: Eingaben, Recht, gleichzeitige Änderung, Dubletten, Ausführung
-├── logic/                           reine Module: Schlüssel, URL-Prüfung, Bereichsname, Änderungsplanung, Konfliktprüfung
+│   ├── AreaSaveCoordinator.ts       Ablauf beim Speichern: Eingaben, Recht, gleichzeitige Änderung, Dubletten, Ausführung
+│   └── FileDownload.ts              Herunterladen einer erzeugten Datei im Browser
+├── logic/                           reine Module: Schlüssel, URL-Prüfung, Bereichsname, Änderungsplanung, Konfliktprüfung, CSV-Export
 ├── types/                           gemeinsame Typen
 └── loc/                             Texte (de-de primär, en-us als Fallback)
 provisioning/
 └── Initialize-BrtqmRedirectRulesList.ps1   idempotente Bereitstellung der Liste
 tests/unit/                          Jest-Tests (Logik und Service gegen eine In-Memory-Liste)
 ```
+
+## CSV-Export
+
+Die Schaltfläche «Als CSV exportieren» lädt die ganze Liste «Redirect Regeln» als `Redirect-Regeln_JJJJ-MM-TT.csv` herunter, für alle Benutzer mit Lesezugriff auf die Liste. Die Einträge werden seitenweise gelesen (auch über 5'000) und nach Bereich, danach nach Listeneintrags-ID sortiert.
+
+- Spalten: `Bereich`, `Quell-URL`, `Ziel-URL`, `Geändert am` (lokale Zeit, `TT.MM.JJJJ HH:MM`), `Geändert von`, `UniqueId` (Identifier für den Abgleich, US-13.003)
+- Format für Excel mit Schweizer Einstellungen: Semikolon als Trennzeichen, UTF-8 mit BOM, Zeilenende CRLF; Felder mit `;`, `"` oder Zeilenumbruch in Anführungszeichen
+- Werte, die mit `=`, `+`, `-` oder `@` beginnen, erhalten ein vorangestelltes `'`, damit Excel sie nicht als Formel ausführt (wie der Export von broot-redirect)
 
 ## Entwicklung
 
