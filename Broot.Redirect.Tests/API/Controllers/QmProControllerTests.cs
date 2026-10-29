@@ -185,7 +185,7 @@ namespace Broot.Redirect.Tests.API.Controllers
             }
 
             [Fact]
-            public async Task Publish_OverlappingPartialRule_Returns409WithMatcherConflict()
+            public async Task Publish_BelowPartialRule_Returns201()
             {
                 var partial = new RedirectRule
                 {
@@ -198,10 +198,8 @@ namespace Broot.Redirect.Tests.API.Controllers
 
                 var result = await _sut.Publish(PublishRequest(), CancellationToken.None) as ObjectResult;
 
-                result!.StatusCode.Should().Be(StatusCodes.Status409Conflict);
-                var body = ToJson(result.Value);
-                body.GetProperty("code").GetString().Should().Be("MATCHER_CONFLICT");
-                body.GetProperty("conflictingRule").GetProperty("matcher").GetString().Should().Be("/docs");
+                result!.StatusCode.Should().Be(StatusCodes.Status201Created);
+                ToJson(result.Value).GetProperty("result").GetString().Should().Be("created");
             }
 
             [Fact]

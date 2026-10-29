@@ -310,9 +310,9 @@ Wird nach der Auswahl des Siegers in `CalculateQuality` bestimmt:
 
 ### Überlappungsprüfung von Matchern
 
-Beim Anlegen oder Ändern einer Regel weist `RuleCacheService.FindOverlappingMatcher` Matcher zurück, die hierarchisch von einem bestehenden Matcher verschluckt werden (oder umgekehrt) — etwa `/a/b` im Konflikt mit `/a/b/c`.
+Beim Anlegen oder Ändern einer `Partial`-Regel weist `RuleCacheService.FindOverlappingMatcher` Matcher zurück, die hierarchisch unter oder über einer bestehenden `Partial`-Regel liegen — etwa `/a/b` im Konflikt mit `/a/b/c`.
 
-Entscheidend ist der Typ des **kürzeren** der beiden Matcher: nur `Partial` matcht über ein Pfadsegment-Präfix und kann darunterliegende Pfade verschlucken. `Wildcard` wird über einen exakten Pfad-Lookup im `_wildcardIndex` aufgelöst und `Domain` über den Hostnamen — beide überlappen deshalb nie hierarchisch. Eine Wildcard-Regel für einen Ordner (`/ims/Bereich/11%20Audit`) und Wildcard-Regeln für Dateien darunter (`/ims/Bereich/11%20Audit/Richtlinie.docx`) sind also kein Konflikt und dürfen nebeneinander existieren. Gleich lange Matcher und Regex-Regeln werden übersprungen.
+Nur zwei `Partial`-Regeln konkurrieren um dieselben Requests: Sie werden über den Score verglichen (Segmente, Query-Paare, Platzhalter), sodass ein kürzerer Ordner mit Query-Bedingungen einen tieferen überbieten kann. `Wildcard` wird über einen exakten Pfad-Lookup im `_wildcardIndex` **vor** jeder `Partial`-Regel aufgelöst und `Domain` über den Hostnamen — beide überlappen deshalb nie hierarchisch, unabhängig von der Herkunft. Eine Wildcard-Regel für ein Dokument (`/ims/Bereich/11%20Audit/Richtlinie.docx`) darf also unter einem `Partial`-Ordner (`/ims/Bereich/11%20Audit`) liegen: Der Link des Dokuments führt auf die Wildcard-Regel, jeder andere Link im Ordner auf die `Partial`-Regel, und eine deaktivierte Wildcard-Regel fällt auf den Ordner zurück (Korrektur K3 in US-13.003). Gleich lange Matcher und Regex-Regeln werden übersprungen.
 
 Beim Segmentvergleich wird der Query-String verworfen (`/a/b.aspx?x=1` zählt als Pfad `/a/b.aspx`) und jedes Segment nach dem Split prozentdekodiert — dadurch sind kodierte und dekodierte Schreibweisen desselben Pfads vergleichbar (`11%20Audit` und `11 Audit`), ohne dass ein kodiertes `%2F` innerhalb eines Segments zu einem zusätzlichen Trennzeichen wird.
 
@@ -502,7 +502,7 @@ Alle Endpunkte liefern camelCase-JSON. Enums werden als camelCase-Strings serial
 |---|---|---|
 | `GET` | `/api/rules?page=&limit=&search=&sortBy=&sortOrder=` | Paginierte Liste. `limit` maximal 500, Standard 50. Wird aus dem Cache bedient. |
 | `GET` | `/api/rules/{id}` | Einzelne Regel. |
-| `POST` | `/api/rules` | Anlegen. `400` bei doppeltem Matcher, `409` `MATCHER_CONFLICT` bei hierarchischer Überlappung mit einer `Partial`-Regel. |
+| `POST` | `/api/rules` | Anlegen. `400` bei doppeltem Matcher, `409` `MATCHER_CONFLICT`, wenn eine `Partial`-Regel hierarchisch mit einer anderen `Partial`-Regel überlappt. |
 | `PUT` | `/api/rules/{id}` | Teilaktualisierung — Felder mit `null` behalten ihren bisherigen Wert. `Source`, `IsActive` und `ExternalDocumentId` bleiben erhalten; `RedirectType` ändert sich nur bei expliziter Angabe. Regeln mit Herkunft `qmPro` → `409` `RULE_MANAGED_BY_QMPRO` (409 statt 403, weil der Client 403 als fehlende Anmeldung behandelt). |
 | `DELETE` | `/api/rules/{id}` | Löscht eine Regel (auch QM-Pro-Regeln). |
 | `DELETE` | `/api/rules/bulk` | Body `{ ids: [...] }`. Liefert `{ deleted, notFound }`. |
@@ -527,7 +527,7 @@ Header `X-Api-Key` erforderlich, keine Admin-Session, kein `Origin`/`Referer` n�
 | `POST` | `/api/qm-pro/unpublish` | Body `{ documentId }`. Immer `200` mit `deactivated`, `alreadyInactive` oder `notFound`. |
 | `PUT` | `/api/qm-pro/area-rules` | Abgleich der Bereichsliste (Kapitel 2). Body `{ entries: [{ id, sourceUrl, targetUrl }] }` mit dem vollständigen Stand; eine leere Liste ist gültig und löscht alle Regeln der Herkunft `AreaList`. Immer `200` mit `{ created, updated, deleted, unchanged, skipped: [{ id, code, error, conflictingRuleId? }] }`. |
 
-Erfolg bei `publish`/`unpublish`: `{ ruleId, result }` (`ruleId` fehlt bei `notFound`). Fehler: `{ error, code }` — `400` `VALIDATION_ERROR` (fehlende Felder, alte URL weder Pfad noch absolute URL, Publikations-URL keine absolute `http(s)`-URL, Regelvalidierung; bei `area-rules` nur fehlender Body oder fehlendes Feld `entries`), `401` `UNAUTHORIZED`, `409` `MATCHER_DUPLICATE` (alte URL ist bereits gleichwertiger Matcher einer anderen Regel, auch einer deaktivierten) bzw. `409` `MATCHER_CONFLICT` (Überlappung mit einer `Partial`-Regel), jeweils mit `conflictingRule { id, matcher }`, `429` (Stufe `Integration`), `503` `CACHE_NOT_READY` mit `Retry-After`, solange der Cache nicht aufgewärmt ist. Bei `area-rules` erscheinen ungültige oder kollidierende Einträge nicht als Fehlerstatus, sondern in `skipped` mit den Codes `VALIDATION_ERROR`, `DUPLICATE_ENTRY`, `MATCHER_DUPLICATE` und `MATCHER_CONFLICT`. Wiederholungen bei `429`, `503` und `5xx` übernimmt QM Pro.
+Erfolg bei `publish`/`unpublish`: `{ ruleId, result }` (`ruleId` fehlt bei `notFound`). Fehler: `{ error, code }` — `400` `VALIDATION_ERROR` (fehlende Felder, alte URL weder Pfad noch absolute URL, Publikations-URL keine absolute `http(s)`-URL, Regelvalidierung; bei `area-rules` nur fehlender Body oder fehlendes Feld `entries`), `401` `UNAUTHORIZED`, `409` `MATCHER_DUPLICATE` (alte URL ist bereits gleichwertiger Matcher einer anderen Regel, auch einer deaktivierten) mit `conflictingRule { id, matcher }`; eine alte URL unter einer `Partial`-Regel, etwa einem Bereichsordner, ist kein Konflikt, `429` (Stufe `Integration`), `503` `CACHE_NOT_READY` mit `Retry-After`, solange der Cache nicht aufgewärmt ist. Bei `area-rules` erscheinen ungültige oder kollidierende Einträge nicht als Fehlerstatus, sondern in `skipped` mit den Codes `VALIDATION_ERROR`, `DUPLICATE_ENTRY`, `MATCHER_DUPLICATE` und `MATCHER_CONFLICT`. Wiederholungen bei `429`, `503` und `5xx` übernimmt QM Pro.
 
 ### Globale Regeln (Admin)
 
@@ -876,7 +876,7 @@ Der Timer-Trigger `brtqmRedirectRulesSync` liegt in der Function App von QM Pro 
 - In QM Pro: `BrootRedirectEnabled=true`, `BrootRedirectBaseUrl` (URL dieser Instanz), `BrootRedirectApiKey` (= `SmartRedirect__QmProApiKey`) und neu `RedirectRulesSyncSchedule` (NCRONTAB, z. B. `0 */15 * * * *`). Das Setting muss in jeder Umgebung gesetzt sein, sonst startet die Funktion nicht.
 - In broot-redirect: keine zusätzliche Konfiguration; der Endpunkt erbt API-Key, CSRF-Ausnahme und die Stufe `Integration` der Anfragebegrenzung von `/api/qm-pro`.
 - Reihenfolge: zuerst broot-redirect mit dem Endpunkt `PUT /api/qm-pro/area-rules` ausliefern, dann den Timer-Trigger aktivieren. Vorher antwortet broot-redirect mit `404`, und QM Pro protokolliert bei jedem Lauf einen Fehler.
-- Manuelle Regeln mit derselben Quell-URL blockieren Listeneinträge (`MATCHER_DUPLICATE`, `MATCHER_CONFLICT`); sie sind vor dem ersten Abgleich im Admin-Panel zu löschen. Übersprungene Einträge stehen in beiden Logs (Application Insights) mit Identifier, Code und Grund.
+- Manuelle Regeln mit derselben Quell-URL (`MATCHER_DUPLICATE`) und manuelle Ordnerregeln, die mit einem Bereichsordner verschachtelt sind (`MATCHER_CONFLICT`), blockieren Listeneinträge; sie sind vor dem ersten Abgleich im Admin-Panel zu löschen. Dokumentregeln aus QM Pro unter einem Bereichsordner sind kein Konflikt. Übersprungene Einträge stehen in beiden Logs (Application Insights) mit Identifier, Code und Grund.
 
 ### Checkliste für die Produktion
 

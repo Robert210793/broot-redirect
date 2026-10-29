@@ -78,12 +78,12 @@ namespace Broot.Redirect.Core.Interfaces
             RuleSource? excludedSource = null);
 
         /// <summary>
-        /// Finds an existing rule whose matcher hierarchically swallows the given matcher
-        /// (or is swallowed by it). Only the shorter of the two matchers can swallow the
-        /// longer one, and only if it belongs to a <see cref="RedirectType.Partial"/> rule,
-        /// because partial rules match by path-segment prefix. Wildcard and domain rules
-        /// resolve by exact path respectively host, so they never overlap hierarchically.
-        /// Regex rules are skipped. Returns null if no overlap is found.
+        /// Finds an existing <see cref="RedirectType.Partial"/> rule whose matcher lies
+        /// hierarchically above or below the given matcher, when the given matcher belongs
+        /// to a partial rule as well. Two partial rules compete for the same requests and are
+        /// ranked by score, so a nested one can be swallowed. Wildcard rules resolve through
+        /// an exact path lookup before any partial rule, and domain and regex rules resolve
+        /// differently, so none of them overlaps hierarchically. Returns null if no overlap is found.
         /// </summary>
         RedirectRule? FindOverlappingMatcher(
             string matcher,

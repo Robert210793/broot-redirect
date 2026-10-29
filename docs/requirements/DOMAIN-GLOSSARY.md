@@ -30,7 +30,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Laufzeit-Einstellungen | `AppSettings` | Im Admin-Panel änderbare Einstellungen, gespeichert in Table Storage |
 | Match-Qualität | `Quality` | Dem Benutzer angezeigte Güte der Zuordnung in Prozent (100, 75, 50, 0) |
 | Matcher | `Matcher` | Muster der alten URL, gegen das eine Anfrage geprüft wird (Pfad, Domain oder Regex) |
-| Matcher-Konflikt | `MATCHER_CONFLICT` | Abweisung einer Regel, deren Matcher hierarchisch mit einer bestehenden teilweisen Regel überlappt |
+| Matcher-Konflikt | `MATCHER_CONFLICT` | Abweisung einer teilweisen Regel, deren Matcher hierarchisch mit einer bestehenden teilweisen Regel überlappt; «Wildcard»-Regeln stehen nie in diesem Konflikt |
 | Normalisierter Schlüssel | `brtqmSourceKey` | Vergleichswert einer Quell-URL ohne Host, dekodiert, ohne Gross-/Kleinschreibung, Query unabhängig von der Reihenfolge, gespeichert als `v1:` + SHA-256 (ADR-003); verhindert doppelte Quell-URLs in der Liste «Redirect Regeln» |
 | Popup-Modus | `PopupMode` | Anzeige der Info-Seite: `inline` (Hinweisbanner) oder `active` (Dialog beim Laden) |
 | Publikations-URL | `PublicationUrl` | URL der publizierten Kopie eines Dokuments in der Publikationsbibliothek; wird zur Ziel-URL der Regel |

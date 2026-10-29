@@ -376,7 +376,7 @@ namespace Broot.Redirect.Tests.API.Services
                 var response = await SyncAsync(
                     Entry(IdA, "/ims/A/"),
                     Entry(IdB, "/ims/a"),
-                    Entry(IdC, "/ims/C/x.docx"),
+                    Entry(IdC, "/ims/C/x/"),
                     Entry("d", "kein Link"));
 
                 response.Skipped.Select(entry => entry.Id).Should().Equal(IdB, IdC, "d");
@@ -450,27 +450,48 @@ namespace Broot.Redirect.Tests.API.Services
                 _cache.GetById(other.Id).Should().BeSameAs(other);
             }
 
-            [Fact]
-            public async Task Sync_FolderOverWildcardOfOtherOrigin_SkipsWithMatcherConflict()
+            [Theory]
+            [InlineData(RuleSource.Manual, true)]
+            [InlineData(RuleSource.Import, true)]
+            [InlineData(RuleSource.QmPro, true)]
+            [InlineData(RuleSource.QmPro, false)]
+            public async Task Sync_FolderAboveDocumentRuleOfOtherOrigin_IsCreated(RuleSource source, bool isActive)
             {
-                var manual = AddRule("/ims/A/Dokument.docx", RuleSource.Manual);
+                var document = AddRule("/ims/A/Dokument.docx", source, isActive: isActive);
 
                 var response = await SyncAsync(Entry(IdA, "/ims/A/"));
+
+                response.Created.Should().Be(1);
+                response.Skipped.Should().BeEmpty();
+                AreaRules().Should().ContainSingle().Which.Matcher.Should().Be("/ims/A");
+                _cache.GetById(document.Id).Should().BeSameAs(document);
+            }
+
+            [Fact]
+            public async Task Sync_DocumentBelowFolderRuleOfOtherOrigin_IsCreated()
+            {
+                AddRule("/ims", RuleSource.Manual, RedirectType.Partial);
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx"));
+
+                response.Created.Should().Be(1);
+                response.Skipped.Should().BeEmpty();
+            }
+
+            [Theory]
+            [InlineData("/ims", "/ims/A/")]
+            [InlineData("/ims/A/B", "/ims/A/")]
+            public async Task Sync_FolderNestedWithFolderRuleOfOtherOrigin_SkipsWithMatcherConflict(string manualFolder, string entryFolder)
+            {
+                var manual = AddRule(manualFolder, RuleSource.Manual, RedirectType.Partial);
+
+                var response = await SyncAsync(Entry(IdA, entryFolder));
 
                 var skipped = response.Skipped.Should().ContainSingle().Subject;
                 skipped.Code.Should().Be(AreaRuleSyncService.MatcherConflictCode);
                 skipped.ConflictingRuleId.Should().Be(manual.Id);
+                skipped.Error.Should().Contain("Ordnerregel");
                 AreaRules().Should().BeEmpty();
-            }
-
-            [Fact]
-            public async Task Sync_UrlBelowPartialRuleOfOtherOrigin_SkipsWithMatcherConflict()
-            {
-                var manual = AddRule("/ims", RuleSource.Manual, RedirectType.Partial);
-
-                var response = await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx"));
-
-                response.Skipped.Should().ContainSingle().Which.ConflictingRuleId.Should().Be(manual.Id);
             }
 
             [Fact]

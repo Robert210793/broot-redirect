@@ -364,27 +364,11 @@ namespace Broot.Redirect.Tests.API.Services
                 result.Status.Should().Be(QmProPublishStatus.Updated);
             }
 
-            [Fact]
-            public async Task Publish_OverlapsPartialRule_ReturnsMatcherConflict()
-            {
-                var partial = new RedirectRule
-                {
-                    Id = Guid.NewGuid(),
-                    Matcher = "/sites/qm",
-                    TargetUrl = "/new",
-                    RedirectType = RedirectType.Partial
-                };
-                _cache.AddRule(partial);
-
-                var result = await _sut.PublishAsync(PublishRequest());
-
-                result.Status.Should().Be(QmProPublishStatus.MatcherConflict);
-                result.ConflictingRule!.Id.Should().Be(partial.Id);
-                await _repository.DidNotReceive().CreateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
-            }
-
-            [Fact]
-            public async Task Publish_OverlapsDeactivatedPartialRule_ReturnsMatcherConflict()
+            [Theory]
+            [InlineData(RuleSource.Manual, true)]
+            [InlineData(RuleSource.Import, true)]
+            [InlineData(RuleSource.Manual, false)]
+            public async Task Publish_BelowPartialRule_CreatesRuleAndKeepsFolderRule(RuleSource source, bool isActive)
             {
                 var partial = new RedirectRule
                 {
@@ -392,13 +376,16 @@ namespace Broot.Redirect.Tests.API.Services
                     Matcher = "/sites/qm",
                     TargetUrl = "/new",
                     RedirectType = RedirectType.Partial,
-                    IsActive = false
+                    Source = source,
+                    IsActive = isActive
                 };
                 _cache.AddRule(partial);
 
                 var result = await _sut.PublishAsync(PublishRequest());
 
-                result.Status.Should().Be(QmProPublishStatus.MatcherConflict);
+                result.Status.Should().Be(QmProPublishStatus.Created);
+                await _repository.Received(1).CreateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
+                _cache.GetById(partial.Id).Should().BeSameAs(partial);
             }
         }
 
@@ -517,14 +504,15 @@ namespace Broot.Redirect.Tests.API.Services
             }
 
             [Fact]
-            public async Task Publish_BelowAreaListFolder_IsRejectedAsConflict()
+            public async Task Publish_BelowAreaListFolder_CreatesRuleAndKeepsAreaRule()
             {
                 var areaRule = AddAreaRule("/sites/qm", "5b0c2a4e-0000-4000-8000-000000000001");
 
                 var result = await _sut.PublishAsync(PublishRequest());
 
-                result.Status.Should().Be(QmProPublishStatus.MatcherConflict);
-                result.ConflictingRule!.Id.Should().Be(areaRule.Id);
+                result.Status.Should().Be(QmProPublishStatus.Created);
+                result.Rule!.Source.Should().Be(RuleSource.QmPro);
+                _cache.GetById(areaRule.Id).Should().BeSameAs(areaRule);
             }
         }
     }

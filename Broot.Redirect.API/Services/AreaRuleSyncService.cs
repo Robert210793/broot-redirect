@@ -147,7 +147,7 @@ namespace Broot.Redirect.API.Services
                     skipped.Add((winner.Index, Skip(
                         winner.Id,
                         MatcherConflictCode,
-                        "Die Quell-URL überschneidet sich mit einer Regel anderer Herkunft",
+                        "Der Ordner überschneidet sich mit einer Ordnerregel («Teilweise») anderer Herkunft",
                         overlappingRule.Id)));
 
                     continue;

@@ -488,6 +488,78 @@ namespace Broot.Redirect.Tests.Core.Services
                     .ResolveTargetUrl(requestUrl, result.Rule, "https://tenant.sharepoint.com/sites/default")
                     .Should().Be($"https://tenant.sharepoint.com/{expected}");
             }
+
+            private const string AreaFolder = "/ims/Strategie/11%20Risiko-%20und%20Chancenmanagement";
+            private const string AreaTarget = "https://lindenhofgruppech.sharepoint.com/sites/Lhg-ims/SitePages/Prozess.aspx?ProzessId=04b77248-18e0-44b6-9b58-1365c4aea6c6";
+            private const string DocumentPath = "/ims/Strategie/11 Risiko- und Chancenmanagement/Richtlinie Risikomanagement.docx";
+            private const string DocumentTarget = "https://lindenhofgruppech.sharepoint.com/sites/Lhg-ims/Publikation/Strategie/Richtlinie%20Risikomanagement.pdf?d=b74b2c604fee94e908ede7ca16b517ae5&Web=1";
+
+            private static RuleCacheService CacheWith(params RedirectRule[] rules)
+            {
+                var cache = new RuleCacheService(
+                    Options.Create(new CacheOptions { CaseSensitiveMatching = false, TrailingSlashPolicy = "ignore" }),
+                    Substitute.For<ILogger<RuleCacheService>>());
+                cache.Initialize(rules);
+
+                return cache;
+            }
+
+            public static IEnumerable<object[]> FolderRuleVariants()
+            {
+                yield return new object[] { AreaFolder, DefaultConfig() };
+                yield return new object[] { AreaFolder + "?Web=1", DefaultConfig() };
+                yield return new object[] { AreaFolder + "?Web=1", new RuleMatchingConfig { WeightPathSegment = 500, WeightQueryPair = 900, PenaltyWildcard = 0, BonusExactMatch = 900 } };
+            }
+
+            [Theory]
+            [MemberData(nameof(FolderRuleVariants))]
+            public void ResolveMatch_DocumentRuleBelowFolderRule_DocumentRuleWinsRegardlessOfWeightsAndFolderQuery(string folderMatcher, RuleMatchingConfig config)
+            {
+                var folder = CreateRule(folderMatcher, RedirectType.Partial, AreaTarget);
+                folder.Source = RuleSource.AreaList;
+                var document = CreateRule(DocumentPath, RedirectType.Wildcard, DocumentTarget);
+                document.Source = RuleSource.QmPro;
+                var matching = new RuleMatchingService(CacheWith(folder, document));
+
+                matching.ResolveMatch(DocumentPath + "?Web=1", config)!.Rule.Should().BeSameAs(document);
+                matching.ResolveMatch("/ims/Strategie/11%20Risiko-%20und%20Chancenmanagement/Richtlinie%20Risikomanagement.docx?Web=1", config)!.Rule.Should().BeSameAs(document);
+                matching.ResolveMatch("/ims/Strategie/11 Risiko- und Chancenmanagement/Anderes Dokument.docx?Web=1", config)!.Rule.Should().BeSameAs(folder);
+            }
+
+            [Fact]
+            public void ResolveMatch_DocumentRuleBelowFolderRule_DocumentLinkWithoutQueryResolvesToDocumentTarget()
+            {
+                var folder = CreateRule(AreaFolder, RedirectType.Partial, AreaTarget);
+                folder.Source = RuleSource.AreaList;
+                var document = CreateRule(DocumentPath, RedirectType.Wildcard, DocumentTarget);
+                document.Source = RuleSource.QmPro;
+
+                var result = new RuleMatchingService(CacheWith(folder, document)).ResolveMatch(DocumentPath, DefaultConfig());
+
+                result!.Rule.Should().BeSameAs(document);
+                result.Quality.Should().Be(100);
+
+                var globalRuleCache = Substitute.For<IGlobalRuleCacheService>();
+                globalRuleCache.GetAll().Returns(Array.Empty<GlobalRule>());
+
+                new UrlTransformService(globalRuleCache)
+                    .ResolveTargetUrl(DocumentPath, result.Rule, "https://lindenhofgruppech.sharepoint.com/sites/lhg-ims")
+                    .Should().Be(DocumentTarget);
+            }
+
+            [Fact]
+            public void ResolveMatch_DeactivatedDocumentRuleBelowFolderRule_FallsBackToFolderRule()
+            {
+                var folder = CreateRule(AreaFolder, RedirectType.Partial, AreaTarget);
+                folder.Source = RuleSource.AreaList;
+                var document = CreateRule(DocumentPath, RedirectType.Wildcard, DocumentTarget);
+                document.Source = RuleSource.QmPro;
+                document.IsActive = false;
+
+                var result = new RuleMatchingService(CacheWith(folder, document)).ResolveMatch(DocumentPath, DefaultConfig());
+
+                result!.Rule.Should().BeSameAs(folder);
+            }
         }
 
         public class FindMatchingRuleTests

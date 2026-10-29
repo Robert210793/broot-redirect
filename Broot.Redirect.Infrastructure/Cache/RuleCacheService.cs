@@ -208,6 +208,11 @@ namespace Broot.Redirect.Infrastructure.Cache
             Guid? excludeRuleId = null,
             RuleSource? excludedSource = null)
         {
+            if (redirectType != RedirectType.Partial)
+            {
+                return null;
+            }
+
             var inputSegments = MatcherEquivalence.SplitPathSegments(matcher);
 
             if (inputSegments.Length == 0)
@@ -221,7 +226,7 @@ namespace Broot.Redirect.Infrastructure.Cache
             {
                 foreach (var rule in _rulesById.Values)
                 {
-                    if (rule.RedirectType == RedirectType.Regex)
+                    if (rule.RedirectType != RedirectType.Partial)
                     {
                         continue;
                     }
@@ -248,18 +253,9 @@ namespace Broot.Redirect.Infrastructure.Cache
                         continue;
                     }
 
-                    // Only the shorter matcher can swallow the longer one, and only when it
-                    // matches by path-segment prefix. Wildcard rules resolve through an exact
-                    // path lookup, so a folder rule and a file rule beneath it never compete.
-                    var shorterType = inputSegments.Length < existingSegments.Length
-                        ? redirectType
-                        : rule.RedirectType;
-
-                    if (shorterType != RedirectType.Partial)
-                    {
-                        continue;
-                    }
-
+                    // Only two partial rules compete for the same request, ranked by score.
+                    // Wildcard rules resolve through an exact path lookup before any partial
+                    // rule, so a wildcard rule never conflicts with a partial rule above or below it.
                     var shorterLength = Math.Min(inputSegments.Length, existingSegments.Length);
                     var allSharedMatch = true;
 

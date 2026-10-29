@@ -11,8 +11,7 @@ namespace Broot.Redirect.API.Services
         Updated,
         Unchanged,
         ValidationFailed,
-        MatcherDuplicate,
-        MatcherConflict
+        MatcherDuplicate
     }
 
     public enum QmProUnpublishStatus
@@ -129,22 +128,6 @@ namespace Broot.Redirect.API.Services
                         QmProPublishStatus.MatcherDuplicate,
                         Error: "Die alte URL ist bereits Matcher einer anderen Regel",
                         ConflictingRule: equivalentRule);
-                }
-
-                var overlappingRule = _cacheService.FindOverlappingMatcher(matcher, RedirectType.Wildcard, existingRule?.Id);
-
-                if (overlappingRule != null)
-                {
-                    _logger.LogWarning(
-                        "QM Pro publish for document {DocumentId} rejected: matcher '{Matcher}' overlaps rule {ConflictingRuleId}.",
-                        documentId,
-                        matcher,
-                        overlappingRule.Id);
-
-                    return new QmProPublishResult(
-                        QmProPublishStatus.MatcherConflict,
-                        Error: "Die alte URL überschneidet sich mit einer bestehenden Regel",
-                        ConflictingRule: overlappingRule);
                 }
 
                 if (existingRule == null)

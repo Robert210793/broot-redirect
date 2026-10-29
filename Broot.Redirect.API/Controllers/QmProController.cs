@@ -48,7 +48,6 @@ namespace Broot.Redirect.API.Controllers
                 QmProPublishStatus.Updated => Ok(RuleResponse(result.Rule, "updated")),
                 QmProPublishStatus.Unchanged => Ok(RuleResponse(result.Rule, "unchanged")),
                 QmProPublishStatus.MatcherDuplicate => MatcherConflict(result, "MATCHER_DUPLICATE"),
-                QmProPublishStatus.MatcherConflict => MatcherConflict(result, "MATCHER_CONFLICT"),
                 _ => ValidationError(result.Error)
             };
         }
