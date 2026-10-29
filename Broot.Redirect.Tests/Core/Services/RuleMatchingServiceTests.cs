@@ -417,6 +417,39 @@ namespace Broot.Redirect.Tests.Core.Services
             }
 
             [Theory]
+            [InlineData("?RootFolder=%2Fims%2FStrategie%2F11%20Strategieprozess%20BSC&FolderCTID=0x012000773E66E4B493D644840363F8F545A6FD&View=%7B41949723%2DAAEB%2D476F%2DA489%2DE7397F5E41A5%7D")]
+            [InlineData("?View=%7B41949723%2DAAEB%2D476F%2DA489%2DE7397F5E41A5%7D&RootFolder=%2Fims%2FStrategie%2F11%20Strategieprozess%20BSC&FolderCTID=0x012000773E66E4B493D644840363F8F545A6FD")]
+            [InlineData("?FolderCTID=0x012000773E66E4B493D644840363F8F545A6FD&RootFolder=/ims/Strategie/11 Strategieprozess BSC&View={41949723-AAEB-476F-A489-E7397F5E41A5}")]
+            public void ResolveMatch_AreaListViewUrlFromRealCache_ResolvesToAreaTargetRegardlessOfQueryOrder(string query)
+            {
+                const string path = "/ims/Strategie/Forms/AllItems.aspx";
+                const string target = "https://lindenhofgruppech.sharepoint.com/sites/Lhg-ims/SitePages/Prozess.aspx?ProzessId=66097e1c-d133-481d-81bc-22b93755ad7a#Strategieprozess%20/%20Balanced%20Scorecard%20(BSC)";
+
+                var rule = CreateRule(
+                    path + "?RootFolder=%2Fims%2FStrategie%2F11%20Strategieprozess%20BSC&FolderCTID=0x012000773E66E4B493D644840363F8F545A6FD&View=%7B41949723%2DAAEB%2D476F%2DA489%2DE7397F5E41A5%7D",
+                    RedirectType.Wildcard,
+                    target);
+                rule.Source = RuleSource.AreaList;
+
+                var cache = new RuleCacheService(
+                    Options.Create(new CacheOptions { CaseSensitiveMatching = false, TrailingSlashPolicy = "ignore" }),
+                    Substitute.For<ILogger<RuleCacheService>>());
+                cache.Initialize(new[] { rule });
+
+                var result = new RuleMatchingService(cache).ResolveMatch(path + query, DefaultConfig());
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().BeSameAs(rule);
+
+                var globalRuleCache = Substitute.For<IGlobalRuleCacheService>();
+                globalRuleCache.GetAll().Returns(Array.Empty<GlobalRule>());
+
+                new UrlTransformService(globalRuleCache)
+                    .ResolveTargetUrl(path + query, result.Rule, "https://lindenhofgruppech.sharepoint.com/sites/lhg-ims")
+                    .Should().Be(target);
+            }
+
+            [Theory]
             [InlineData("/ims/KVP/11%20Prozessabweichungen/Unterordner/Anweisung.docx?Web=1", "inner")]
             [InlineData("/ims/KVP/11%20Prozessabweichungen/Unterordner?Web=1", "inner")]
             [InlineData("/ims/KVP/11%20Prozessabweichungen/Unterordner/", "inner")]

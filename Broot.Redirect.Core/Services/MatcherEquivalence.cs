@@ -41,14 +41,19 @@ namespace Broot.Redirect.Core.Services
 
             foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
             {
-                var separatorIndex = part.IndexOf('=');
-                var key = separatorIndex >= 0 ? part[..separatorIndex] : part;
-                var value = separatorIndex >= 0 ? part[(separatorIndex + 1)..] : string.Empty;
-
-                pairs.Add((DecodeAndLower(key), DecodeAndLower(value)));
+                pairs.Add(ParseQueryPair(part));
             }
 
             return pairs;
+        }
+
+        public static (string Key, string Value) ParseQueryPair(string part)
+        {
+            var separatorIndex = part.IndexOf('=');
+            var key = separatorIndex >= 0 ? part[..separatorIndex] : part;
+            var value = separatorIndex >= 0 ? part[(separatorIndex + 1)..] : string.Empty;
+
+            return (DecodeAndLower(key), DecodeAndLower(value));
         }
 
         public static bool AreEquivalent(string left, string right)

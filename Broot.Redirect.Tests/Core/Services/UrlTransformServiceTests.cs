@@ -97,6 +97,67 @@ namespace Broot.Redirect.Tests.Core.Services
                 result.Should().Be("https://new.example.com/page.aspx?x=1");
             }
 
+            [Theory]
+            [InlineData("/ims/Strategie/Forms/AllItems.aspx?View=%7B4194%7D&RootFolder=%2Fims%2FStrategie%2FBSC&FolderCTID=0x0120")]
+            [InlineData("/ims/Strategie/Forms/AllItems.aspx?FolderCTID=0x0120&View=%7B4194%7D&RootFolder=%2Fims%2FStrategie%2FBSC")]
+            [InlineData("/IMS/strategie/forms/allitems.aspx?folderctid=0x0120&view={4194}&RootFolder=/ims/Strategie/BSC")]
+            public void ResolveTargetUrl_WildcardQueryMatcherWithReorderedQuery_ResolvesToTarget(string requestUrl)
+            {
+                const string target = "https://tenant.sharepoint.com/sites/QM/SitePages/Prozess.aspx?ProzessId=1#BSC";
+                var rule = CreateRule(
+                    "/ims/Strategie/Forms/AllItems.aspx?RootFolder=%2Fims%2FStrategie%2FBSC&FolderCTID=0x0120&View=%7B4194%7D",
+                    RedirectType.Wildcard,
+                    target);
+
+                var result = _sut.ResolveTargetUrl(requestUrl, rule, "https://default.com/sites/qm");
+
+                result.Should().Be(target);
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_WildcardQueryMatcherWithReorderedQueryAndExtraParameter_MergesOnlyExtraParameter()
+            {
+                var rule = CreateRule("/old.aspx?a=1&b=2", RedirectType.Wildcard, "https://new.com/page?fixed=1#top");
+
+                var result = _sut.ResolveTargetUrl("/old.aspx?b=2&extra=x%20y&a=1", rule, "https://default.com");
+
+                result.Should().Be("https://new.com/page?fixed=1&extra=x%20y#top");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_WildcardQueryMatcherWithReorderedQueryAndRelativeTarget_PrependsDefaultDomain()
+            {
+                var rule = CreateRule("/old.aspx?a=1&b=2", RedirectType.Wildcard, "/new/page");
+
+                var result = _sut.ResolveTargetUrl("/old.aspx?b=2&a=1", rule, "https://default.com");
+
+                result.Should().Be("https://default.com/new/page");
+            }
+
+            [Fact]
+            public void ResolveTargetUrl_WildcardQueryMatcherWithDiscardQueryParams_ResolvesToTarget()
+            {
+                var rule = CreateRule("/old.aspx?a=1&b=2", RedirectType.Wildcard, "https://new.com/page?fixed=1");
+                rule.DiscardQueryParams = true;
+
+                var result = _sut.ResolveTargetUrl("/old.aspx?a=1&b=2&extra=1", rule, "https://default.com");
+
+                result.Should().Be("https://new.com/page?fixed=1");
+            }
+
+            [Theory]
+            [InlineData("/other.aspx?b=2&a=1")]
+            [InlineData("/old.aspx?b=2")]
+            [InlineData("/old.aspx?b=2&a=9")]
+            public void ResolveTargetUrl_WildcardQueryMatcherNotSatisfied_KeepsFallback(string requestUrl)
+            {
+                var rule = CreateRule("/old.aspx?a=1&b=2", RedirectType.Wildcard, "https://new.com/page");
+
+                var result = _sut.ResolveTargetUrl(requestUrl, rule, "https://default.com");
+
+                result.Should().Be("https://default.com" + requestUrl);
+            }
+
             [Fact]
             public void ResolveTargetUrl_PartialRuleWithDomainMatcher_ReplacesDomain()
             {

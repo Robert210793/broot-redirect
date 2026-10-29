@@ -313,9 +313,11 @@ namespace Broot.Redirect.Core.Services
             try { decodedMatcher = Uri.UnescapeDataString(cleanMatcher); }
             catch { decodedMatcher = cleanMatcher; }
 
+            string? suffix = null;
+
             if (decodedOldPath.StartsWith(decodedMatcher, StringComparison.OrdinalIgnoreCase))
             {
-                var suffix = decodedOldPath[decodedMatcher.Length..];
+                suffix = decodedOldPath[decodedMatcher.Length..];
 
                 // Matching is performed on decoded text, but forwarded source query values
                 // must keep their original percent-encoding.
@@ -335,30 +337,100 @@ namespace Broot.Redirect.Core.Services
                         suffix = suffixPath + workingOldPath[rawTailIndex..];
                     }
                 }
-
-                var targetBase = rawTarget;
-
-                if (cleanMatcher.EndsWith('/') && !targetBase.EndsWith('/'))
-                {
-                    targetBase += "/";
-                }
-
-                if (!targetBase.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                    && !targetBase.StartsWith('/')
-                    && targetBase.Length > 0)
-                {
-                    targetBase = "/" + targetBase;
-                }
-
-                if (targetBase.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                {
-                    return CombineTargetAndSuffix(targetBase, suffix);
-                }
-
-                return CombineTargetAndSuffix(cleanDomain + targetBase, suffix);
+            }
+            else if (TryGetUnorderedQuerySuffix(
+                workingOldPath,
+                cleanMatcher,
+                rule.DiscardQueryParams || rule.ForwardQueryParams,
+                out var unorderedSuffix))
+            {
+                suffix = unorderedSuffix;
             }
 
-            return cleanDomain + workingOldPath;
+            if (suffix == null)
+            {
+                return cleanDomain + workingOldPath;
+            }
+
+            var targetBase = rawTarget;
+
+            if (cleanMatcher.EndsWith('/') && !targetBase.EndsWith('/'))
+            {
+                targetBase += "/";
+            }
+
+            if (!targetBase.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                && !targetBase.StartsWith('/')
+                && targetBase.Length > 0)
+            {
+                targetBase = "/" + targetBase;
+            }
+
+            if (targetBase.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                return CombineTargetAndSuffix(targetBase, suffix);
+            }
+
+            return CombineTargetAndSuffix(cleanDomain + targetBase, suffix);
+        }
+
+        private static bool TryGetUnorderedQuerySuffix(
+            string oldPath,
+            string matcher,
+            bool queryStripped,
+            out string suffix)
+        {
+            suffix = string.Empty;
+
+            var matcherParts = matcher.Split('?', 2);
+
+            if (matcherParts.Length < 2)
+            {
+                return false;
+            }
+
+            var oldParts = oldPath.Split('?', 2);
+
+            if (!string.Equals(DecodePathForComparison(oldParts[0]), DecodePathForComparison(matcherParts[0]), StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var matcherPairs = MatcherEquivalence.ParseQueryPairs(matcher);
+            var oldPairs = new HashSet<(string Key, string Value)>();
+            var extraParts = new List<string>();
+
+            if (oldParts.Length == 2)
+            {
+                foreach (var part in oldParts[1].Split('&', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var pair = MatcherEquivalence.ParseQueryPair(part);
+
+                    oldPairs.Add(pair);
+
+                    if (!matcherPairs.Contains(pair))
+                    {
+                        extraParts.Add(part);
+                    }
+                }
+            }
+
+            if (!queryStripped && !matcherPairs.IsSubsetOf(oldPairs))
+            {
+                return false;
+            }
+
+            suffix = extraParts.Count == 0 ? string.Empty : "&" + string.Join('&', extraParts);
+
+            return true;
+        }
+
+        private static string DecodePathForComparison(string path)
+        {
+            try { path = Uri.UnescapeDataString(path); }
+            catch { }
+
+            return path.Length > 1 ? path.TrimEnd('/') : path;
         }
 
         private static string ResolveDomain(string originalUrl, RedirectRule rule, string cleanDomain)
