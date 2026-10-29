@@ -34,23 +34,25 @@ namespace Broot.Redirect.API.Services
         RedirectRule? Rule = null,
         string? Error = null);
 
-    public sealed class QmProRuleService : IDisposable
+    public sealed class QmProRuleService
     {
         private readonly IRedirectRuleRepository _repository;
         private readonly IRuleCacheService _cacheService;
         private readonly RuleValidationService _validationService;
+        private readonly IntegrationWriteLock _writeLock;
         private readonly ILogger<QmProRuleService> _logger;
-        private readonly SemaphoreSlim _writeLock = new(1, 1);
 
         public QmProRuleService(
             IRedirectRuleRepository repository,
             IRuleCacheService cacheService,
             RuleValidationService validationService,
+            IntegrationWriteLock writeLock,
             ILogger<QmProRuleService> logger)
         {
             _repository = repository;
             _cacheService = cacheService;
             _validationService = validationService;
+            _writeLock = writeLock;
             _logger = logger;
         }
 
@@ -103,7 +105,7 @@ namespace Broot.Redirect.API.Services
 
             try
             {
-                var existingRule = _cacheService.GetByExternalDocumentId(documentId);
+                var existingRule = GetQmProRule(documentId);
 
                 if (existingRule != null
                     && existingRule.IsActive
@@ -210,7 +212,7 @@ namespace Broot.Redirect.API.Services
 
             try
             {
-                var existingRule = _cacheService.GetByExternalDocumentId(documentId);
+                var existingRule = GetQmProRule(documentId);
 
                 if (existingRule == null)
                 {
@@ -240,11 +242,6 @@ namespace Broot.Redirect.API.Services
             {
                 _writeLock.Release();
             }
-        }
-
-        public void Dispose()
-        {
-            _writeLock.Dispose();
         }
 
         public static string BuildMatcher(Uri oldUri)
@@ -278,6 +275,13 @@ namespace Broot.Redirect.API.Services
             return false;
         }
 
+        private RedirectRule? GetQmProRule(string documentId)
+        {
+            var rule = _cacheService.GetByExternalDocumentId(documentId);
+
+            return rule?.Source == RuleSource.QmPro ? rule : null;
+        }
+
         private async Task PersistUpdateAsync(RedirectRule rule)
         {
             var persisted = await _repository.UpdateAsync(rule, CancellationToken.None);
@@ -290,7 +294,7 @@ namespace Broot.Redirect.API.Services
             _cacheService.UpdateRule(rule);
         }
 
-        private static bool TryParseAbsoluteHttpUrl(string value, [NotNullWhen(true)] out Uri? uri)
+        public static bool TryParseAbsoluteHttpUrl(string value, [NotNullWhen(true)] out Uri? uri)
         {
             if (Uri.TryCreate(value.Trim(), UriKind.Absolute, out var parsed)
                 && (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps)

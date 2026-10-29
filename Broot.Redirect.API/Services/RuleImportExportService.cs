@@ -40,6 +40,10 @@ namespace Broot.Redirect.API.Services
 
         public const string QmProManagedImportError = "Die zugeordnete Regel wird von QM Pro verwaltet und kann nicht importiert werden";
 
+        public const string AreaListOriginImportError = "Einträge mit Herkunft «Bereichsliste» werden nicht importiert";
+
+        public const string AreaListManagedImportError = "Die zugeordnete Regel wird über die Liste «Redirect Regeln» verwaltet und kann nicht importiert werden";
+
         public static byte[] GenerateCsv(IReadOnlyList<RedirectRule> rules)
         {
             using var memoryStream = new MemoryStream();
@@ -542,7 +546,7 @@ namespace Broot.Redirect.API.Services
             return byMatcher;
         }
 
-        public static string? GetQmProImportError(
+        public static string? GetManagedRuleImportError(
             ImportRuleEntry entry,
             IRuleCacheService cacheService,
             Dictionary<string, RedirectRule> matcherLookup)
@@ -552,24 +556,49 @@ namespace Broot.Redirect.API.Services
                 return QmProOriginImportError;
             }
 
-            if (!string.IsNullOrEmpty(entry.Id)
-                && Guid.TryParse(entry.Id, out var parsedId)
-                && cacheService.GetById(parsedId)?.Source == RuleSource.QmPro)
+            if (IsAreaListOrigin(entry.Origin))
+            {
+                return AreaListOriginImportError;
+            }
+
+            RedirectRule? byId = null;
+
+            if (!string.IsNullOrEmpty(entry.Id) && Guid.TryParse(entry.Id, out var parsedId))
+            {
+                byId = cacheService.GetById(parsedId);
+            }
+
+            RedirectRule? byMatcher = null;
+
+            if (!string.IsNullOrWhiteSpace(entry.Matcher))
+            {
+                matcherLookup.TryGetValue(CanonicalizeMatcher(entry.Matcher), out byMatcher);
+            }
+
+            if (byId?.Source == RuleSource.QmPro || byMatcher?.Source == RuleSource.QmPro)
             {
                 return QmProManagedImportError;
             }
 
-            if (!string.IsNullOrWhiteSpace(entry.Matcher)
-                && matcherLookup.TryGetValue(CanonicalizeMatcher(entry.Matcher), out var byMatcher)
-                && byMatcher.Source == RuleSource.QmPro)
+            if (byId?.Source == RuleSource.AreaList || byMatcher?.Source == RuleSource.AreaList)
             {
-                return QmProManagedImportError;
+                return AreaListManagedImportError;
             }
 
             return null;
         }
 
         public static bool IsQmProOrigin(string? origin)
+        {
+            return CompactOriginEquals(origin, "qmpro");
+        }
+
+        public static bool IsAreaListOrigin(string? origin)
+        {
+            return CompactOriginEquals(origin, "arealist") || CompactOriginEquals(origin, "bereichsliste");
+        }
+
+        private static bool CompactOriginEquals(string? origin, string expected)
         {
             if (string.IsNullOrWhiteSpace(origin))
             {
@@ -578,7 +607,7 @@ namespace Broot.Redirect.API.Services
 
             var compact = new string(origin.Where(char.IsLetterOrDigit).ToArray());
 
-            return string.Equals(compact, "qmpro", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(compact, expected, StringComparison.OrdinalIgnoreCase);
         }
 
         public static string FormatOrigin(RuleSource source)

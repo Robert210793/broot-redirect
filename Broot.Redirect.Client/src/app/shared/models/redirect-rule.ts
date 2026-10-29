@@ -18,7 +18,7 @@ export interface RedirectRule {
 
 export type RedirectType = 'wildcard' | 'partial' | 'domain' | 'regex';
 
-export type RuleSource = 'manual' | 'import' | 'unknown' | 'qmPro';
+export type RuleSource = 'manual' | 'import' | 'unknown' | 'qmPro' | 'areaList';
 
 export type MatchQualityLevel = 'red' | 'yellow' | 'green';
 

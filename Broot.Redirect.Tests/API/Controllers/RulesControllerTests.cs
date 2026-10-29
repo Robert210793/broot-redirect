@@ -1645,6 +1645,16 @@ namespace Broot.Redirect.Tests.API.Controllers
                 return rule;
             }
 
+            private static RedirectRule CreateAreaListRule(string matcher = "/ims/KVP")
+            {
+                var rule = CreateRule(matcher, RedirectType.Partial);
+                rule.TargetUrl = "https://tenant.sharepoint.com/sites/QM/KVP";
+                rule.Source = RuleSource.AreaList;
+                rule.ExternalDocumentId = "5b0c2a4e-0000-4000-8000-000000000001";
+
+                return rule;
+            }
+
             private void SetJsonBody(IEnumerable<ImportRuleEntry> entries)
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(entries);
@@ -1707,6 +1717,95 @@ namespace Broot.Redirect.Tests.API.Controllers
                 var updated = result!.Value as RedirectRule;
                 updated!.IsActive.Should().BeFalse();
                 updated.ExternalDocumentId.Should().Be("legacy-doc");
+            }
+
+            [Fact]
+            public async Task Update_AreaListRule_Returns409WithRuleManagedByAreaListAndDoesNotWrite()
+            {
+                var rule = CreateAreaListRule();
+                _cacheService.GetById(rule.Id).Returns(rule);
+
+                var result = await _sut.Update(rule.Id, new UpdateRuleRequest { TargetUrl = "https://other/" }) as ConflictObjectResult;
+
+                result.Should().NotBeNull();
+                var code = result!.Value!.GetType().GetProperty("code")!.GetValue(result.Value);
+                var error = result.Value.GetType().GetProperty("error")!.GetValue(result.Value);
+                code.Should().Be("RULE_MANAGED_BY_AREA_LIST");
+                error.Should().Be("Regel wird über die Liste «Redirect Regeln» verwaltet und kann nicht bearbeitet werden");
+                await _repository.DidNotReceive().UpdateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
+                _cacheService.DidNotReceive().UpdateRule(Arg.Any<RedirectRule>());
+            }
+
+            [Fact]
+            public async Task Delete_AreaListRule_IsAllowed()
+            {
+                var rule = CreateAreaListRule();
+                _cacheService.GetById(rule.Id).Returns(rule);
+
+                var result = await _sut.Delete(rule.Id);
+
+                result.Should().BeOfType<NoContentResult>();
+                await _repository.Received(1).DeleteAsync(rule.Id, Arg.Any<CancellationToken>());
+                _cacheService.Received(1).RemoveRule(rule.Id);
+            }
+
+            [Fact]
+            public async Task ImportPreview_EntryWithAreaListOrigin_IsInvalid()
+            {
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Matcher = "/new", TargetUrl = "/t", RedirectType = "partial", Origin = "arealist" }
+                });
+
+                var response = (await _sut.ImportPreview() as OkObjectResult)!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
+                response.Preview[0].Reason.Should().Be(RuleImportExportService.AreaListOriginImportError);
+            }
+
+            [Fact]
+            public async Task ImportPreview_EntryMatchingAreaListRuleByMatcher_IsInvalid()
+            {
+                var rule = CreateAreaListRule();
+                _cacheService.GetAll().Returns(new List<RedirectRule> { rule });
+
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Matcher = rule.Matcher + "/", TargetUrl = "/t", RedirectType = "partial" }
+                });
+
+                var response = (await _sut.ImportPreview() as OkObjectResult)!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
+                response.Counts.Update.Should().Be(0);
+                response.Preview[0].Reason.Should().Be(RuleImportExportService.AreaListManagedImportError);
+            }
+
+            [Fact]
+            public async Task Import_EntriesForAreaListRules_AreSkippedAsErrorsAndRuleStaysUnchanged()
+            {
+                var rule = CreateAreaListRule();
+                _cacheService.GetAll().Returns(new List<RedirectRule> { rule });
+                _cacheService.GetById(rule.Id).Returns(rule);
+                _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<RedirectRule> { rule });
+
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Id = rule.Id.ToString(), Matcher = "/other", TargetUrl = "https://changed/", RedirectType = "partial" },
+                    new ImportRuleEntry { Matcher = rule.Matcher, TargetUrl = "https://changed/", RedirectType = "partial" },
+                    new ImportRuleEntry { Matcher = "/orphan", TargetUrl = "/t", RedirectType = "partial", Origin = "Bereichsliste" }
+                });
+
+                var progress = await WaitForJob(await _sut.Import());
+
+                progress.Errors.Should().HaveCount(3);
+                progress.Errors.Should().OnlyContain(error =>
+                    error.Contains(RuleImportExportService.AreaListManagedImportError)
+                    || error.Contains(RuleImportExportService.AreaListOriginImportError));
+                progress.Imported.Should().Be(0);
+                progress.Updated.Should().Be(0);
+                await _repository.DidNotReceive().UpdateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
+                await _repository.DidNotReceive().CreateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
             }
 
             [Fact]

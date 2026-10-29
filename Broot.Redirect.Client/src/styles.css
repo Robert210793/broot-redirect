@@ -494,6 +494,11 @@ body {
   color: var(--color-success);
 }
 
+.badge-source-areaList {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
 .badge-inactive {
   background: var(--color-danger-light);
   color: var(--color-danger);

@@ -41,14 +41,22 @@ namespace Broot.Redirect.Tests.API.Controllers
                 _repository,
                 _cache,
                 new RuleValidationService(),
+                new IntegrationWriteLock(),
                 Substitute.For<ILogger<QmProRuleService>>());
 
             _sut = CreateController(service, _cache);
         }
 
-        private static QmProController CreateController(QmProRuleService service, IRuleCacheService cache)
+        private QmProController CreateController(QmProRuleService service, IRuleCacheService cache)
         {
-            return new QmProController(service, cache)
+            var areaRuleSyncService = new AreaRuleSyncService(
+                _repository,
+                cache,
+                new RuleValidationService(),
+                new IntegrationWriteLock(),
+                Substitute.For<ILogger<AreaRuleSyncService>>());
+
+            return new QmProController(service, areaRuleSyncService, cache)
             {
                 ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
             };
@@ -206,6 +214,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                     _repository,
                     coldCache,
                     new RuleValidationService(),
+                    new IntegrationWriteLock(),
                     Substitute.For<ILogger<QmProRuleService>>());
                 var sut = CreateController(service, coldCache);
 
@@ -274,6 +283,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                     _repository,
                     coldCache,
                     new RuleValidationService(),
+                    new IntegrationWriteLock(),
                     Substitute.For<ILogger<QmProRuleService>>());
                 var sut = CreateController(service, coldCache);
 
@@ -313,6 +323,139 @@ namespace Broot.Redirect.Tests.API.Controllers
                 json.GetProperty("source").GetString().Should().Be("manual");
                 json.GetProperty("isActive").GetBoolean().Should().BeTrue();
                 json.TryGetProperty("externalDocumentId", out _).Should().BeFalse();
+            }
+
+            [Fact]
+            public void RedirectRule_FromAreaList_SerializesSourceAsAreaList()
+            {
+                var json = ToJson(new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/ims/A",
+                    Source = RuleSource.AreaList,
+                    ExternalDocumentId = "5b0c2a4e-0000-4000-8000-000000000001"
+                });
+
+                json.GetProperty("source").GetString().Should().Be("areaList");
+                json.GetProperty("externalDocumentId").GetString().Should().Be("5b0c2a4e-0000-4000-8000-000000000001");
+            }
+        }
+
+        public class AreaRulesTests : QmProControllerTests
+        {
+            private const string EntryId = "5b0c2a4e-0000-4000-8000-000000000001";
+
+            private static AreaRuleSyncRequest SyncRequest(params AreaRuleSyncEntry?[] entries)
+            {
+                return new AreaRuleSyncRequest { Entries = entries.ToList() };
+            }
+
+            private static AreaRuleSyncEntry Entry(
+                string id = EntryId,
+                string? sourceUrl = "/ims/KVP_Innovation/11%20Prozessabweichungen/",
+                string? targetUrl = "https://tenant.sharepoint.com/sites/QM/KVP")
+            {
+                return new AreaRuleSyncEntry { Id = id, SourceUrl = sourceUrl, TargetUrl = targetUrl };
+            }
+
+            [Fact]
+            public void SyncAreaRules_IsPutOnAreaRulesRoute()
+            {
+                var method = typeof(QmProController).GetMethod(nameof(QmProController.SyncAreaRules))!;
+
+                method.GetCustomAttributes(typeof(HttpPutAttribute), inherit: true)
+                    .Cast<HttpPutAttribute>()
+                    .Should().ContainSingle(attribute => attribute.Template == "area-rules");
+            }
+
+            [Fact]
+            public async Task SyncAreaRules_ValidState_Returns200WithCountsAndEmptySkipped()
+            {
+                var result = await _sut.SyncAreaRules(SyncRequest(Entry()), CancellationToken.None) as ObjectResult;
+
+                result!.StatusCode.Should().Be(StatusCodes.Status200OK);
+                var body = ToJson(result.Value);
+                body.GetProperty("created").GetInt32().Should().Be(1);
+                body.GetProperty("updated").GetInt32().Should().Be(0);
+                body.GetProperty("deleted").GetInt32().Should().Be(0);
+                body.GetProperty("unchanged").GetInt32().Should().Be(0);
+                body.GetProperty("skipped").GetArrayLength().Should().Be(0);
+                _cache.GetAll().Should().ContainSingle().Which.Source.Should().Be(RuleSource.AreaList);
+            }
+
+            [Fact]
+            public async Task SyncAreaRules_SkippedEntry_IsReportedWithIdCodeErrorAndConflictingRuleId()
+            {
+                var manualRule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = "/ims/KVP_Innovation/11%20Prozessabweichungen",
+                    TargetUrl = "https://tenant.sharepoint.com/manual",
+                    Source = RuleSource.Manual
+                };
+                _cache.AddRule(manualRule);
+
+                var result = await _sut.SyncAreaRules(SyncRequest(Entry(), Entry(id: "x", sourceUrl: "kein Link")), CancellationToken.None) as ObjectResult;
+
+                result!.StatusCode.Should().Be(StatusCodes.Status200OK);
+                var skipped = ToJson(result.Value).GetProperty("skipped");
+                skipped.GetArrayLength().Should().Be(2);
+                skipped[0].GetProperty("id").GetString().Should().Be(EntryId);
+                skipped[0].GetProperty("code").GetString().Should().Be("MATCHER_DUPLICATE");
+                skipped[0].GetProperty("error").GetString().Should().NotBeNullOrEmpty();
+                skipped[0].GetProperty("conflictingRuleId").GetGuid().Should().Be(manualRule.Id);
+                skipped[1].GetProperty("id").GetString().Should().Be("x");
+                skipped[1].GetProperty("code").GetString().Should().Be("VALIDATION_ERROR");
+                skipped[1].TryGetProperty("conflictingRuleId", out _).Should().BeFalse();
+            }
+
+            [Fact]
+            public async Task SyncAreaRules_EmptyEntries_IsValidAndReturns200()
+            {
+                var result = await _sut.SyncAreaRules(SyncRequest(), CancellationToken.None) as ObjectResult;
+
+                result!.StatusCode.Should().Be(StatusCodes.Status200OK);
+            }
+
+            [Fact]
+            public async Task SyncAreaRules_MissingEntries_Returns400ValidationError()
+            {
+                var result = await _sut.SyncAreaRules(new AreaRuleSyncRequest(), CancellationToken.None) as ObjectResult;
+
+                result!.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+                ToJson(result.Value).GetProperty("code").GetString().Should().Be("VALIDATION_ERROR");
+                await _repository.DidNotReceive().BulkDeleteAsync(Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>());
+            }
+
+            [Fact]
+            public async Task SyncAreaRules_MissingBody_Returns400ValidationError()
+            {
+                var result = await _sut.SyncAreaRules(null, CancellationToken.None) as ObjectResult;
+
+                result!.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+                ToJson(result.Value).GetProperty("code").GetString().Should().Be("VALIDATION_ERROR");
+            }
+
+            [Fact]
+            public async Task SyncAreaRules_BeforeWarmup_Returns503WithRetryAfterAndDoesNotWrite()
+            {
+                var coldCache = new RuleCacheService(
+                    Options.Create(new CacheOptions()),
+                    Substitute.For<ILogger<RuleCacheService>>());
+                var service = new QmProRuleService(
+                    _repository,
+                    coldCache,
+                    new RuleValidationService(),
+                    new IntegrationWriteLock(),
+                    Substitute.For<ILogger<QmProRuleService>>());
+                var sut = CreateController(service, coldCache);
+
+                var result = await sut.SyncAreaRules(SyncRequest(Entry()), CancellationToken.None) as ObjectResult;
+
+                result!.StatusCode.Should().Be(StatusCodes.Status503ServiceUnavailable);
+                sut.Response.Headers.RetryAfter.ToString().Should().Be(QmProController.CacheNotReadyRetryAfterSeconds.ToString());
+                ToJson(result.Value).GetProperty("code").GetString().Should().Be("CACHE_NOT_READY");
+                await _repository.DidNotReceive().BulkUpsertAsync(Arg.Any<IReadOnlyList<RedirectRule>>(), Arg.Any<CancellationToken>());
             }
         }
     }

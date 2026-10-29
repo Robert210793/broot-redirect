@@ -20,6 +20,8 @@ namespace Broot.Redirect.Core.Models
         /// </summary>
         Import,
 
-        QmPro
+        QmPro,
+
+        AreaList
     }
 }

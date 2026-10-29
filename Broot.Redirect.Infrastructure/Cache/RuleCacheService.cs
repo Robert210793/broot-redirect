@@ -1,5 +1,6 @@
 ﻿using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Models;
+using Broot.Redirect.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -155,15 +156,18 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
         }
 
-        public RedirectRule? FindEquivalentMatcher(string matcher, Guid? excludeRuleId = null)
+        public RedirectRule? FindEquivalentMatcher(
+            string matcher,
+            Guid? excludeRuleId = null,
+            RuleSource? excludedSource = null)
         {
             if (string.IsNullOrWhiteSpace(matcher))
             {
                 return null;
             }
 
-            var inputSegments = NormalizeAndSplitSegments(matcher);
-            var inputQuery = ParseQueryPairs(matcher);
+            var inputSegments = MatcherEquivalence.SplitPathSegments(matcher);
+            var inputQuery = MatcherEquivalence.ParseQueryPairs(matcher);
 
             foreach (var rule in _rulesById.Values)
             {
@@ -177,14 +181,19 @@ namespace Broot.Redirect.Infrastructure.Cache
                     continue;
                 }
 
-                var existingSegments = NormalizeAndSplitSegments(rule.Matcher);
+                if (excludedSource.HasValue && rule.Source == excludedSource.Value)
+                {
+                    continue;
+                }
+
+                var existingSegments = MatcherEquivalence.SplitPathSegments(rule.Matcher);
 
                 if (!existingSegments.SequenceEqual(inputSegments, StringComparer.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
-                if (ParseQueryPairs(rule.Matcher).SetEquals(inputQuery))
+                if (MatcherEquivalence.ParseQueryPairs(rule.Matcher).SetEquals(inputQuery))
                 {
                     return rule;
                 }
@@ -196,9 +205,10 @@ namespace Broot.Redirect.Infrastructure.Cache
         public RedirectRule? FindOverlappingMatcher(
             string matcher,
             RedirectType redirectType,
-            Guid? excludeRuleId = null)
+            Guid? excludeRuleId = null,
+            RuleSource? excludedSource = null)
         {
-            var inputSegments = NormalizeAndSplitSegments(matcher);
+            var inputSegments = MatcherEquivalence.SplitPathSegments(matcher);
 
             if (inputSegments.Length == 0)
             {
@@ -221,7 +231,12 @@ namespace Broot.Redirect.Infrastructure.Cache
                         continue;
                     }
 
-                    var existingSegments = NormalizeAndSplitSegments(rule.Matcher);
+                    if (excludedSource.HasValue && rule.Source == excludedSource.Value)
+                    {
+                        continue;
+                    }
+
+                    var existingSegments = MatcherEquivalence.SplitPathSegments(rule.Matcher);
 
                     if (existingSegments.Length == 0)
                     {
@@ -332,6 +347,26 @@ namespace Broot.Redirect.Infrastructure.Cache
             _logger.LogDebug("Removed {Count} rules from cache.", ruleIds.Count);
         }
 
+        public void ApplyChanges(IReadOnlyList<RedirectRule> upsertedRules, IReadOnlySet<Guid> removedRuleIds)
+        {
+            foreach (var ruleId in removedRuleIds)
+            {
+                _rulesById.TryRemove(ruleId, out _);
+            }
+
+            foreach (var rule in upsertedRules)
+            {
+                _rulesById[rule.Id] = rule;
+            }
+
+            RebuildIndexes();
+
+            _logger.LogDebug(
+                "Applied {UpsertCount} upserted and {RemovedCount} removed rules to cache.",
+                upsertedRules.Count,
+                removedRuleIds.Count);
+        }
+
         public void ReplaceAll(IReadOnlyList<RedirectRule> rules)
         {
             _rulesById.Clear();
@@ -439,7 +474,7 @@ namespace Broot.Redirect.Infrastructure.Cache
         private Dictionary<string, RedirectRule> BuildExternalDocumentIndex(bool logDuplicates)
         {
             var groups = _rulesById.Values
-                .Where(rule => !string.IsNullOrWhiteSpace(rule.ExternalDocumentId))
+                .Where(rule => rule.Source != RuleSource.AreaList && !string.IsNullOrWhiteSpace(rule.ExternalDocumentId))
                 .GroupBy(rule => rule.ExternalDocumentId!.Trim(), StringComparer.OrdinalIgnoreCase);
 
             var index = new Dictionary<string, RedirectRule>(StringComparer.OrdinalIgnoreCase);
@@ -468,44 +503,6 @@ namespace Broot.Redirect.Infrastructure.Cache
             return index;
         }
 
-        private static HashSet<(string Key, string Value)> ParseQueryPairs(string matcher)
-        {
-            var pairs = new HashSet<(string Key, string Value)>();
-            var queryIndex = matcher.IndexOf('?');
-
-            if (queryIndex < 0)
-            {
-                return pairs;
-            }
-
-            var query = matcher[(queryIndex + 1)..];
-            var fragmentIndex = query.IndexOf('#');
-
-            if (fragmentIndex >= 0)
-            {
-                query = query[..fragmentIndex];
-            }
-
-            foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var separatorIndex = part.IndexOf('=');
-                var key = separatorIndex >= 0 ? part[..separatorIndex] : part;
-                var value = separatorIndex >= 0 ? part[(separatorIndex + 1)..] : string.Empty;
-
-                pairs.Add((DecodeAndLower(key), DecodeAndLower(value)));
-            }
-
-            return pairs;
-        }
-
-        private static string DecodeAndLower(string value)
-        {
-            try { value = Uri.UnescapeDataString(value); }
-            catch (UriFormatException) { }
-
-            return value.ToLowerInvariant();
-        }
-
         private string NormalizeMatcherPath(string matcher)
         {
             var normalized = matcher.Split('?', 2)[0];
@@ -527,25 +524,6 @@ namespace Broot.Redirect.Infrastructure.Cache
             }
 
             return normalized;
-        }
-
-        private static string[] NormalizeAndSplitSegments(string matcher)
-        {
-            // Drop the query string so '/a/b.aspx?x=1' compares as the path '/a/b.aspx'.
-            var normalized = matcher.Trim().Split('?', 2)[0].ToLowerInvariant().TrimEnd('/');
-
-            var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-            // Split first, then decode, so an encoded '%2F' inside a segment does not
-            // turn into an extra separator. Keeps encoded and decoded spellings of the
-            // same path comparable ('11%20Audit' vs '11 Audit').
-            for (var index = 0; index < segments.Length; index++)
-            {
-                try { segments[index] = Uri.UnescapeDataString(segments[index]); }
-                catch { /* keep original segment if decoding fails */ }
-            }
-
-            return segments;
         }
     }
 }

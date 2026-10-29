@@ -180,6 +180,15 @@ namespace Broot.Redirect.API.Controllers
                 });
             }
 
+            if (existingRule.Source == RuleSource.AreaList)
+            {
+                return Conflict(new
+                {
+                    error = "Regel wird über die Liste «Redirect Regeln» verwaltet und kann nicht bearbeitet werden",
+                    code = "RULE_MANAGED_BY_AREA_LIST"
+                });
+            }
+
             if (request.Matcher != null)
             {
                 request.Matcher = RuleImportExportService.NormalizeMatcher(request.Matcher);
@@ -453,12 +462,12 @@ namespace Broot.Redirect.API.Controllers
                     continue;
                 }
 
-                var qmProError = RuleImportExportService.GetQmProImportError(entry, _cacheService, matcherLookup);
+                var managedRuleError = RuleImportExportService.GetManagedRuleImportError(entry, _cacheService, matcherLookup);
 
-                if (qmProError != null)
+                if (managedRuleError != null)
                 {
                     previewEntry.Status = "invalid";
-                    previewEntry.Reason = qmProError;
+                    previewEntry.Reason = managedRuleError;
                     counts.Invalid++;
 
                     previewEntries.Add(previewEntry);
@@ -563,11 +572,11 @@ namespace Broot.Redirect.API.Controllers
                                 continue;
                             }
 
-                            var qmProError = RuleImportExportService.GetQmProImportError(entry, cacheService, matcherLookup);
+                            var managedRuleError = RuleImportExportService.GetManagedRuleImportError(entry, cacheService, matcherLookup);
 
-                            if (qmProError != null)
+                            if (managedRuleError != null)
                             {
-                                progress.Errors.Add($"Entry {index}: {qmProError}");
+                                progress.Errors.Add($"Entry {index}: {managedRuleError}");
                                 progress.Processed++;
 
                                 continue;

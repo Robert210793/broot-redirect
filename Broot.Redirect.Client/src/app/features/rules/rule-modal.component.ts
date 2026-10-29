@@ -75,7 +75,18 @@ export class RuleModalComponent {
     }
 
     get isReadOnly(): boolean {
-        return this.rule()?.source === 'qmPro';
+        return this.readOnlyNotice !== null;
+    }
+
+    get readOnlyNotice(): string | null {
+        switch (this.rule()?.source) {
+            case 'qmPro':
+                return 'Regel wird von QM Pro verwaltet und kann nicht bearbeitet werden.';
+            case 'areaList':
+                return 'Regel wird über die Liste «Redirect Regeln» verwaltet und kann nicht bearbeitet werden.';
+            default:
+                return null;
+        }
     }
 
     get modalTitle(): string {

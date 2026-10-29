@@ -40,7 +40,9 @@ builder.Services.AddSingleton<IUrlTransformService, UrlTransformService>();
 builder.Services.AddSingleton<ISmartSearchService, SmartSearchService>();
 builder.Services.AddSingleton<BruteForceProtectionService>();
 builder.Services.AddSingleton<RuleValidationService>();
+builder.Services.AddSingleton<IntegrationWriteLock>();
 builder.Services.AddSingleton<QmProRuleService>();
+builder.Services.AddSingleton<AreaRuleSyncService>();
 builder.Services.AddSingleton<QmProApiKeyFilter>();
 
 builder.Services.AddDistributedMemoryCache();

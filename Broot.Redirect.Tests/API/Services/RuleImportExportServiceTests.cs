@@ -1190,6 +1190,7 @@ namespace Broot.Redirect.Tests.API.Services
             [InlineData(RuleSource.Manual, "manual")]
             [InlineData(RuleSource.Import, "import")]
             [InlineData(RuleSource.QmPro, "qmpro")]
+            [InlineData(RuleSource.AreaList, "arealist")]
             public void FormatOrigin_UsesLowercaseValues(RuleSource source, string expected)
             {
                 RuleImportExportService.FormatOrigin(source).Should().Be(expected);
@@ -1260,6 +1261,53 @@ namespace Broot.Redirect.Tests.API.Services
             {
                 RuleImportExportService.IsQmProOrigin(origin).Should().Be(expected);
             }
+
+            [Theory]
+            [InlineData("arealist", true)]
+            [InlineData("AreaList", true)]
+            [InlineData("areaList", true)]
+            [InlineData("area-list", true)]
+            [InlineData("Bereichsliste", true)]
+            [InlineData("qmpro", false)]
+            [InlineData("manual", false)]
+            [InlineData("", false)]
+            [InlineData(null, false)]
+            public void IsAreaListOrigin_RecognizesSpellings(string? origin, bool expected)
+            {
+                RuleImportExportService.IsAreaListOrigin(origin).Should().Be(expected);
+            }
+
+            [Fact]
+            public void GenerateCsvAndXlsx_AreaListRule_ExportsOriginArealist()
+            {
+                var rule = CreateRule("/ims/KVP");
+                rule.Source = RuleSource.AreaList;
+
+                var rows = ReadCsvRows(RuleImportExportService.GenerateCsv(new List<RedirectRule> { rule }));
+                rows[1][rows[0].ToList().IndexOf("Origin")].Should().Be("arealist");
+
+                using var workbook = new XLWorkbook(new MemoryStream(RuleImportExportService.GenerateXlsx(new List<RedirectRule> { rule })));
+                workbook.Worksheets.First().Cell(2, 13).GetString().Should().Be("arealist");
+            }
+
+            [Fact]
+            public async Task ParseJson_ExportedAreaListRule_ContainsSourceAndIdentifierAndIsRecognizedAsAreaList()
+            {
+                var rule = CreateRule("/ims/KVP");
+                rule.Source = RuleSource.AreaList;
+                rule.ExternalDocumentId = "5b0c2a4e-0000-4000-8000-000000000001";
+
+                var exported = JsonSerializer.Serialize(
+                    new List<RedirectRule> { rule },
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+                var entries = await RuleImportExportService.ParseJsonFromStreamAsync(
+                    new MemoryStream(Encoding.UTF8.GetBytes(exported)));
+
+                exported.Should().Contain("\"source\":\"AreaList\"");
+                exported.Should().Contain("\"externalDocumentId\":\"5b0c2a4e-0000-4000-8000-000000000001\"");
+                RuleImportExportService.IsAreaListOrigin(entries.Single().Origin).Should().BeTrue();
+            }
         }
 
         public class QmProImportErrorTests
@@ -1276,41 +1324,41 @@ namespace Broot.Redirect.Tests.API.Services
             }
 
             [Fact]
-            public void GetQmProImportError_EntryWithQmProOrigin_ReturnsError_EvenWithoutMatchingRule()
+            public void GetManagedRuleImportError_EntryWithQmProOrigin_ReturnsError_EvenWithoutMatchingRule()
             {
                 var entry = new ImportRuleEntry { Matcher = "/new", Origin = "qmpro" };
 
-                var error = RuleImportExportService.GetQmProImportError(entry, _cacheService, new Dictionary<string, RedirectRule>());
+                var error = RuleImportExportService.GetManagedRuleImportError(entry, _cacheService, new Dictionary<string, RedirectRule>());
 
                 error.Should().Be(RuleImportExportService.QmProOriginImportError);
             }
 
             [Fact]
-            public void GetQmProImportError_EntryMatchingQmProRuleById_ReturnsError()
+            public void GetManagedRuleImportError_EntryMatchingQmProRuleById_ReturnsError()
             {
                 var rule = QmProRule();
                 _cacheService.GetById(rule.Id).Returns(rule);
                 var entry = new ImportRuleEntry { Id = rule.Id.ToString(), Matcher = "/other", Origin = "manual" };
 
-                var error = RuleImportExportService.GetQmProImportError(entry, _cacheService, new Dictionary<string, RedirectRule>());
+                var error = RuleImportExportService.GetManagedRuleImportError(entry, _cacheService, new Dictionary<string, RedirectRule>());
 
                 error.Should().Be(RuleImportExportService.QmProManagedImportError);
             }
 
             [Fact]
-            public void GetQmProImportError_EntryMatchingQmProRuleByCanonicalMatcher_ReturnsError()
+            public void GetManagedRuleImportError_EntryMatchingQmProRuleByCanonicalMatcher_ReturnsError()
             {
                 var rule = QmProRule();
                 var lookup = RuleImportExportService.BuildMatcherLookup(new List<RedirectRule> { rule });
                 var entry = new ImportRuleEntry { Matcher = "/SITES/qm/a b.docx" };
 
-                var error = RuleImportExportService.GetQmProImportError(entry, _cacheService, lookup);
+                var error = RuleImportExportService.GetManagedRuleImportError(entry, _cacheService, lookup);
 
                 error.Should().Be(RuleImportExportService.QmProManagedImportError);
             }
 
             [Fact]
-            public void GetQmProImportError_EntryMatchingManualRule_ReturnsNull()
+            public void GetManagedRuleImportError_EntryMatchingManualRule_ReturnsNull()
             {
                 var manual = CreateRule("/manual");
                 manual.Source = RuleSource.Manual;
@@ -1318,7 +1366,32 @@ namespace Broot.Redirect.Tests.API.Services
                 var lookup = RuleImportExportService.BuildMatcherLookup(new List<RedirectRule> { manual });
                 var entry = new ImportRuleEntry { Id = manual.Id.ToString(), Matcher = "/manual", Origin = "manual" };
 
-                RuleImportExportService.GetQmProImportError(entry, _cacheService, lookup).Should().BeNull();
+                RuleImportExportService.GetManagedRuleImportError(entry, _cacheService, lookup).Should().BeNull();
+            }
+
+            [Fact]
+            public void GetManagedRuleImportError_EntryWithAreaListOrigin_ReturnsAreaListOriginError()
+            {
+                var entry = new ImportRuleEntry { Matcher = "/new", Origin = "arealist" };
+
+                RuleImportExportService.GetManagedRuleImportError(entry, _cacheService, new Dictionary<string, RedirectRule>())
+                    .Should().Be(RuleImportExportService.AreaListOriginImportError);
+            }
+
+            [Fact]
+            public void GetManagedRuleImportError_EntryMatchingAreaListRuleByIdOrMatcher_ReturnsAreaListManagedError()
+            {
+                var rule = CreateRule("/ims/KVP");
+                rule.Source = RuleSource.AreaList;
+                _cacheService.GetById(rule.Id).Returns(rule);
+                var lookup = RuleImportExportService.BuildMatcherLookup(new List<RedirectRule> { rule });
+
+                RuleImportExportService.GetManagedRuleImportError(
+                        new ImportRuleEntry { Id = rule.Id.ToString(), Matcher = "/other" }, _cacheService, new Dictionary<string, RedirectRule>())
+                    .Should().Be(RuleImportExportService.AreaListManagedImportError);
+                RuleImportExportService.GetManagedRuleImportError(
+                        new ImportRuleEntry { Matcher = "/IMS/KVP/" }, _cacheService, lookup)
+                    .Should().Be(RuleImportExportService.AreaListManagedImportError);
             }
         }
     }

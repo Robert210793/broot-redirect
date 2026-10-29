@@ -35,6 +35,7 @@ namespace Broot.Redirect.Tests.API.Services
                 _repository,
                 _cache,
                 new RuleValidationService(),
+                new IntegrationWriteLock(),
                 Substitute.For<ILogger<QmProRuleService>>());
         }
 
@@ -471,6 +472,59 @@ namespace Broot.Redirect.Tests.API.Services
                 republished.Rule!.Id.Should().Be(created.Rule!.Id);
                 republished.Rule.IsActive.Should().BeTrue();
                 _cache.LookupWildcardCandidates("/sites/qm/freigegebene dokumente/handbuch.docx").Should().ContainSingle();
+            }
+        }
+
+        public class AreaListInteractionTests : QmProRuleServiceTests
+        {
+            private RedirectRule AddAreaRule(string matcher, string externalDocumentId)
+            {
+                var rule = new RedirectRule
+                {
+                    Id = Guid.NewGuid(),
+                    Matcher = matcher,
+                    TargetUrl = "https://tenant.sharepoint.com/sites/QM/Bereich",
+                    RedirectType = RedirectType.Partial,
+                    Source = RuleSource.AreaList,
+                    ExternalDocumentId = externalDocumentId
+                };
+
+                _cache.AddRule(rule);
+
+                return rule;
+            }
+
+            [Fact]
+            public async Task Unpublish_AreaListRuleWithSameIdentifier_IsNotTouched()
+            {
+                var areaRule = AddAreaRule("/ims/A", DocumentId);
+
+                var result = await _sut.UnpublishAsync(new QmProUnpublishRequest { DocumentId = DocumentId });
+
+                result.Status.Should().Be(QmProUnpublishStatus.NotFound);
+                _cache.GetById(areaRule.Id)!.IsActive.Should().BeTrue();
+            }
+
+            [Fact]
+            public async Task Publish_MatcherOfAreaListRule_IsRejectedAsDuplicate()
+            {
+                var areaRule = AddAreaRule("/sites/qm/Freigegebene%20Dokumente/Handbuch.docx?web=1", "5b0c2a4e-0000-4000-8000-000000000001");
+
+                var result = await _sut.PublishAsync(PublishRequest());
+
+                result.Status.Should().Be(QmProPublishStatus.MatcherDuplicate);
+                result.ConflictingRule!.Id.Should().Be(areaRule.Id);
+            }
+
+            [Fact]
+            public async Task Publish_BelowAreaListFolder_IsRejectedAsConflict()
+            {
+                var areaRule = AddAreaRule("/sites/qm", "5b0c2a4e-0000-4000-8000-000000000001");
+
+                var result = await _sut.PublishAsync(PublishRequest());
+
+                result.Status.Should().Be(QmProPublishStatus.MatcherConflict);
+                result.ConflictingRule!.Id.Should().Be(areaRule.Id);
             }
         }
     }
