@@ -60,8 +60,8 @@ Die zentrale Entität ([`RedirectRule`](Broot.Redirect.Core/Models/RedirectRule.
 | `Matcher` | Das Muster, gegen das die eingehende URL geprüft wird. Entweder ein Pfad (beginnt mit `/`), eine reine Domain (`old.example.com`) oder ein Regex. |
 | `TargetUrl` | Wohin die URL zeigen soll. Die Interpretation hängt vom `RedirectType` ab. |
 | `RedirectType` | `Partial`, `Wildcard`, `Domain` oder `Regex` — siehe unten. |
-| `Source` | `Manual`, `Import`, `QmPro` oder `Unknown` — woher die Regel stammt. Wird im Admin-UI angezeigt. `QmPro` erhalten ausschliesslich Regeln, die über die QM-Pro-Schnittstelle angelegt werden. |
-| `ExternalDocumentId` | Optionale Dokument-ID aus QM Pro (`brtqmSourceId`). Ordnet eine Regel genau einem Dokument zu; nur bei Regeln mit Herkunft `QmPro` gesetzt. |
+| `Source` | `Manual`, `Import`, `QmPro`, `AreaList` oder `Unknown` — woher die Regel stammt. Wird im Admin-UI angezeigt («Bereichsliste» für `AreaList`). `QmPro` erhalten ausschliesslich Regeln, die über die QM-Pro-Schnittstelle angelegt werden, `AreaList` ausschliesslich Regeln aus dem Abgleich der Liste «Redirect Regeln». |
+| `ExternalDocumentId` | Optionale externe Kennung. Bei Herkunft `QmPro` die Dokument-ID aus QM Pro (`brtqmSourceId`), bei Herkunft `AreaList` der Identifier des Listeneintrags (`UniqueId`, GUID). Ordnet eine Regel genau einem Dokument bzw. Listeneintrag zu; Lookups filtern nach Herkunft. |
 | `IsActive` | Aktiv-Status, Standard `true`. Deaktivierte Regeln bleiben gespeichert, wirken aber weder bei der Weiterleitung noch auf der Info-Seite noch in der Validierung. |
 | `InfoText` | Regelspezifischer Hinweis auf der Info-Seite. Überschreibt den globalen Hinweistext. |
 | `AutoRedirect` | Wenn `true`, wird die Info-Seite übersprungen und direkt ein 302 gesendet. |
@@ -134,6 +134,16 @@ QM Pro 365 schreibt beim Publizieren eines Dokuments die Weiterleitungsregel sel
 - **Admin-Panel:** QM-Pro-Regeln sind nicht bearbeitbar (`PUT` → 409 `RULE_MANAGED_BY_QMPRO`), lassen sich aber löschen. Der Import überspringt sie (Kapitel 12).
 
 Zusätzlich erfasst ein SPFx-WebPart (`Broot.Redirect.SPFx/`, ausgeliefert auf die QM-Pro-Site) Bereiche mit vielen alten URLs und einer gemeinsamen Ziel-URL in der SharePoint-Liste «Redirect Regeln» (`Lists/brtqmRedirectRules`); ein Timer-Trigger in QM Pro gleicht diese Liste periodisch mit den Regeln der Herkunft «Bereichsliste» ab (US-13.002, US-13.003). Schema, Identifier und normalisierter Schlüssel der Liste: siehe [ADR-003](docs/technical/adr/ADR-003-liste-redirect-regeln-als-schnittstelle.md).
+
+### Abgleich der Bereichsliste
+
+Der Timer-Trigger `brtqmRedirectRulesSync` in QM Pro übermittelt bei jedem Lauf den vollständigen Stand der Liste (`PUT /api/qm-pro/area-rules`, siehe Kapitel 10): pro Eintrag Identifier (`UniqueId`), Quell-URL ohne Host und Fragment sowie Ziel-URL. Der [`AreaRuleSyncService`](Broot.Redirect.API/Services/AreaRuleSyncService.cs) gleicht ihn ausschliesslich mit den Regeln der Herkunft `AreaList` ab:
+
+- **Anlegen / Aktualisieren:** Matcher ist Pfad und Query der Quell-URL (kanonisiert wie bei QM Pro), Ziel die Ziel-URL, `AutoRedirect` aus. Endet der Pfad vor `?` auf `/`, wird die Regel `Partial` (Ordner samt Inhalt), sonst `Wildcard`. Bei geändertem Matcher, Typ oder Ziel wird die bestehende Regel aktualisiert; ID, Erstelldatum und übrige Einstellungen bleiben. Unveränderte Einträge schreiben nichts.
+- **Löschen:** Regeln, deren Identifier im Stand fehlt, werden gelöscht (nicht deaktiviert). Ein leerer Stand löscht alle Regeln der Herkunft `AreaList`.
+- **Übersprungene Einträge** werden im Ergebnis gemeldet und protokolliert; eine bestehende Regel mit ihrem Identifier bleibt unverändert: ungültige Einträge (`VALIDATION_ERROR` — Identifier leer oder doppelt, Quell-URL leer, kein Pfad oder keine `http(s)`-URL, Pfad `/`, Ziel-URL keine absolute `http(s)`-URL), gleichwertige Quell-URLs mehrerer Einträge (`DUPLICATE_ENTRY` — massgebend bleibt der Eintrag mit bestehender Regel, sonst der erste in der übermittelten Reihenfolge, also der älteste) und Konflikte mit Regeln anderer Herkunft, auch deaktivierten (`MATCHER_DUPLICATE`, `MATCHER_CONFLICT`).
+- **Verschachtelte Ordner:** Zwischen Regeln der Herkunft `AreaList` entfällt die Überlappungsprüfung; `/ims/A/` und `/ims/A/B/` bestehen nebeneinander, der spezifischere Ordner gewinnt über den Score (Kapitel 5). Admin-Endpunkte, Import und QM-Pro-Publizieren prüfen weiterhin gegen alle Regeln.
+- **Admin-Panel:** Regeln der Herkunft `AreaList` sind nicht bearbeitbar (`PUT` → 409 `RULE_MANAGED_BY_AREA_LIST`), lassen sich aber löschen; der nächste Abgleich legt sie wieder an, solange der Eintrag in der Liste besteht. Der Import überspringt sie (Kapitel 12).
 
 ---
 
@@ -308,11 +318,11 @@ Beim Segmentvergleich wird der Query-String verworfen (`/a/b.aspx?x=1` zählt al
 
 Die API antwortet mit `409 Conflict`, `code: "MATCHER_CONFLICT"` und der konfliktierenden Regel; das Admin-UI zeigt dies in einem Dialog an. Exakte Duplikate ergeben `400`. Bei `PUT` wird der Typ aus dem Request berücksichtigt, sofern er mitgeändert wird.
 
-Die Überlappungsprüfung berücksichtigt auch deaktivierte Regeln.
+Die Überlappungsprüfung berücksichtigt auch deaktivierte Regeln. Der Abgleich der Bereichsliste nimmt über den Parameter `excludedSource` die Regeln der Herkunft `AreaList` aus, sodass verschachtelte Bereichsordner nebeneinander bestehen; alle übrigen Aufrufer prüfen gegen alle Regeln.
 
-### Gleichwertige Matcher (QM-Pro-Schnittstelle)
+### Gleichwertige Matcher (QM-Pro-Schnittstelle und Bereichsliste)
 
-Die QM-Pro-Schnittstelle prüft vor der Überlappungsprüfung zusätzlich mit `RuleCacheService.FindEquivalentMatcher`, ob ein **gleichwertiger** Matcher bereits existiert — über alle Regeln ausser Regex, auch deaktivierte. Gleichwertig heisst: gleiche prozentdekodierte Pfadsegmente ohne Beachtung der Gross-/Kleinschreibung und gleiche Query als Menge von Schlüssel/Wert-Paaren (Reihenfolge egal). `/a b` und `/A%20B` sind gleichwertig, `/a?x=1` und `/a?x=2` nicht. Ein Treffer ergibt `409`, `code: "MATCHER_DUPLICATE"`. Die Admin-Endpunkte verwenden weiterhin den ordinalen Duplikatvergleich.
+Die QM-Pro-Schnittstelle und der Abgleich der Bereichsliste prüfen vor der Überlappungsprüfung zusätzlich mit `RuleCacheService.FindEquivalentMatcher`, ob ein **gleichwertiger** Matcher bereits existiert — über alle Regeln ausser Regex, auch deaktivierte (beim Abgleich ohne Regeln der Herkunft `AreaList`). Gleichwertig heisst: gleiche prozentdekodierte Pfadsegmente ohne Beachtung der Gross-/Kleinschreibung, ohne abschliessenden `/`, und gleiche Query als Menge von Schlüssel/Wert-Paaren (Reihenfolge egal). `/a b` und `/A%20B` sind gleichwertig, `/a?x=1` und `/a?x=2` nicht. Die Regeln liegen in [`MatcherEquivalence`](Broot.Redirect.Core/Services/MatcherEquivalence.cs); der Abgleich nutzt sie auch, um gleichwertige Einträge innerhalb des übermittelten Stands zu erkennen. Ein Treffer ergibt bei QM Pro `409`, `code: "MATCHER_DUPLICATE"`, beim Abgleich einen übersprungenen Eintrag mit diesem Code. Die Admin-Endpunkte verwenden weiterhin den ordinalen Duplikatvergleich.
 
 ### Deaktivierte Regeln
 
@@ -380,9 +390,9 @@ Die drei Schalter greifen wie folgt ineinander:
 
 Das Schreibmuster ist überall **zuerst Storage, dann Cache** — z. B. `await _repository.CreateAsync(rule); _cacheService.AddRule(rule);`. Wirft der Storage-Zugriff eine Exception, bleibt der Cache unberührt und damit konsistent.
 
-Der `CacheWarmupService` läuft beim Start: Er stellt sicher, dass alle vier Tabellen existieren, lädt die Regeln, legt Standard-`AppSettings` an, falls der Datensatz fehlt, und lädt die globalen Regeln. `IsWarmedUp` wird über `/api/health` nach aussen gegeben. Die QM-Pro-Endpunkte antworten vor dem Warmup mit `503` und `Retry-After`, damit bei leerem Cache keine doppelten Regeln entstehen.
+Der `CacheWarmupService` läuft beim Start: Er stellt sicher, dass alle vier Tabellen existieren, lädt die Regeln, legt Standard-`AppSettings` an, falls der Datensatz fehlt, und lädt die globalen Regeln. `IsWarmedUp` wird über `/api/health` nach aussen gegeben. Die QM-Pro-Endpunkte (auch der Abgleich der Bereichsliste) antworten vor dem Warmup mit `503` und `Retry-After`, damit bei leerem Cache keine doppelten Regeln entstehen.
 
-Publizieren und Zurückziehen über die QM-Pro-Schnittstelle werden im `QmProRuleService` prozessweit über eine `SemaphoreSlim(1,1)` serialisiert (kein Distributed Lock, Single-Instance). Parallele Admin-Schreibvorgänge und Import-Jobs sind darin nicht einbezogen. «Alle Regeln löschen» lädt den Cache am Jobende aus dem Storage neu, statt ihn zu leeren — so gehen während des Jobs angelegte Regeln im Cache nicht verloren.
+Publizieren, Zurückziehen und der Abgleich der Bereichsliste werden prozessweit über den gemeinsamen [`IntegrationWriteLock`](Broot.Redirect.API/Services/IntegrationWriteLock.cs) (`SemaphoreSlim(1,1)`) serialisiert (kein Distributed Lock, Single-Instance). Parallele Admin-Schreibvorgänge und Import-Jobs sind darin nicht einbezogen. Der Abgleich schreibt als Sammeloperation: zuerst Storage (`BulkDeleteAsync`, dann `BulkUpsertAsync`), dann eine einzige Cache-Operation `ApplyChanges` mit einem Index-Neuaufbau. Scheitert der Storage-Zugriff mittendrin, lädt er den Cache aus dem Storage neu, damit kein Teilstand zu doppelten Regeln führt. «Alle Regeln löschen» lädt den Cache am Jobende aus dem Storage neu, statt ihn zu leeren — so gehen während des Jobs angelegte Regeln im Cache nicht verloren.
 
 > **Einschränkung bei der Skalierung:** Der Cache ist instanzlokal und es gibt keinen Invalidierungskanal zwischen Instanzen. Bei **mehr als einer Replica** landet die Regeländerung eines Admins nur in derjenigen Instanz, die den Request bedient hat; die übrigen liefern weiterhin veraltete Regeln aus, bis sie neu starten. Die Applikation ist als **Single-Instance** zu betreiben, solange kein Invalidierungsmechanismus ergänzt wird.
 
@@ -394,7 +404,7 @@ Azure Table Storage, vier Tabellen. Nur der Name der Regeltabelle ist konfigurie
 
 | Tabelle | PartitionKey | RowKey | Anmerkungen |
 |---|---|---|---|
-| `RedirectRules` (konfigurierbar über `AzureTableStorage__TableName`) | `"rule"` — konstant | Regel-GUID (Format `N`) | Einzelne Partition. Komplexe Felder (`KeptQueryParams`, `StaticQueryParams`, `SearchAndReplace`) werden als JSON-Strings abgelegt. `Source` als `manual`/`import`/`qmpro`, fehlend = `unknown`. `ExternalDocumentId` (String) und `IsActive` (`bool?`, fehlend = aktiv, beim Schreiben immer gesetzt) sind optional. |
+| `RedirectRules` (konfigurierbar über `AzureTableStorage__TableName`) | `"rule"` — konstant | Regel-GUID (Format `N`) | Einzelne Partition. Komplexe Felder (`KeptQueryParams`, `StaticQueryParams`, `SearchAndReplace`) werden als JSON-Strings abgelegt. `Source` als `manual`/`import`/`qmpro`/`arealist`, fehlend = `unknown`. `ExternalDocumentId` (String; Dokument-ID bei `qmpro`, Listeneintrags-GUID bei `arealist`) und `IsActive` (`bool?`, fehlend = aktiv, beim Schreiben immer gesetzt) sind optional. |
 | `AppSettings` | `"Settings"` | `"default"` | Ein einziger Datensatz. Wird beim ersten Start mit Standardwerten angelegt. |
 | `GlobalRules` | konstant | Regel-GUID | Kleine Tabelle, vollständig gecacht. |
 | `Tracking` | `yyyy-MM-dd` (Datum des Eintrags) | Eintrags-GUID | Nach Datum partitioniert, für effiziente Bereichsabfragen und günstiges Löschen abgelaufener Daten. Kein Cache — schreiblastig, wird selten gelesen. |
@@ -515,8 +525,9 @@ Header `X-Api-Key` erforderlich, keine Admin-Session, kein `Origin`/`Referer` n�
 |---|---|---|
 | `POST` | `/api/qm-pro/publish` | Body `{ documentId, oldUrl, publicationUrl }`. `oldUrl` ist ein Pfad ohne Host (`/ims/…`) oder eine absolute URL (Host wird verworfen). `201` `created`, `200` `updated` (auch Reaktivierung) oder `200` `unchanged`. |
 | `POST` | `/api/qm-pro/unpublish` | Body `{ documentId }`. Immer `200` mit `deactivated`, `alreadyInactive` oder `notFound`. |
+| `PUT` | `/api/qm-pro/area-rules` | Abgleich der Bereichsliste (Kapitel 2). Body `{ entries: [{ id, sourceUrl, targetUrl }] }` mit dem vollständigen Stand; eine leere Liste ist gültig und löscht alle Regeln der Herkunft `AreaList`. Immer `200` mit `{ created, updated, deleted, unchanged, skipped: [{ id, code, error, conflictingRuleId? }] }`. |
 
-Erfolg: `{ ruleId, result }` (`ruleId` fehlt bei `notFound`). Fehler: `{ error, code }` — `400` `VALIDATION_ERROR` (fehlende Felder, alte URL weder Pfad noch absolute URL, Publikations-URL keine absolute `http(s)`-URL, Regelvalidierung), `401` `UNAUTHORIZED`, `409` `MATCHER_DUPLICATE` (alte URL ist bereits gleichwertiger Matcher einer anderen Regel, auch einer deaktivierten) bzw. `409` `MATCHER_CONFLICT` (Überlappung mit einer `Partial`-Regel), jeweils mit `conflictingRule { id, matcher }`, `429` (Stufe `Integration`), `503` `CACHE_NOT_READY` mit `Retry-After`, solange der Cache nicht aufgewärmt ist. Wiederholungen bei `429`, `503` und `5xx` übernimmt QM Pro.
+Erfolg bei `publish`/`unpublish`: `{ ruleId, result }` (`ruleId` fehlt bei `notFound`). Fehler: `{ error, code }` — `400` `VALIDATION_ERROR` (fehlende Felder, alte URL weder Pfad noch absolute URL, Publikations-URL keine absolute `http(s)`-URL, Regelvalidierung; bei `area-rules` nur fehlender Body oder fehlendes Feld `entries`), `401` `UNAUTHORIZED`, `409` `MATCHER_DUPLICATE` (alte URL ist bereits gleichwertiger Matcher einer anderen Regel, auch einer deaktivierten) bzw. `409` `MATCHER_CONFLICT` (Überlappung mit einer `Partial`-Regel), jeweils mit `conflictingRule { id, matcher }`, `429` (Stufe `Integration`), `503` `CACHE_NOT_READY` mit `Retry-After`, solange der Cache nicht aufgewärmt ist. Bei `area-rules` erscheinen ungültige oder kollidierende Einträge nicht als Fehlerstatus, sondern in `skipped` mit den Codes `VALIDATION_ERROR`, `DUPLICATE_ENTRY`, `MATCHER_DUPLICATE` und `MATCHER_CONFLICT`. Wiederholungen bei `429`, `503` und `5xx` übernimmt QM Pro.
 
 ### Globale Regeln (Admin)
 
@@ -615,7 +626,7 @@ Ein dezentes Zahnrad-Symbol prüft den Auth-Status und öffnet entweder das Admi
 
 Die Listenfelder (`KeptQueryParams`, `StaticQueryParams`, `SearchAndReplace`) werden als **JSON-String in einer einzelnen Zelle** hin- und zurückgeschrieben.
 
-Der Export enthält in allen Formaten Herkunft und Status jeder Regel: CSV und XLSX mit den zusätzlichen Spalten `Origin` (`manual|import|unknown|qmpro`) und `Status` (`active|inactive`) am Ende, JSON mit `source`, `isActive` und `externalDocumentId`. `Status` wird beim Import ignoriert.
+Der Export enthält in allen Formaten Herkunft und Status jeder Regel: CSV und XLSX mit den zusätzlichen Spalten `Origin` (`manual|import|unknown|qmpro|arealist`) und `Status` (`active|inactive`) am Ende, JSON mit `source`, `isActive` und `externalDocumentId`. `Status` wird beim Import ignoriert.
 
 Verhalten beim Import:
 
@@ -627,6 +638,7 @@ Verhalten beim Import:
 - Matcher werden normalisiert (getrimmt, abschliessender Slash entfernt, ausser der Matcher endet auf `*`), und Pfadsegmente werden prozentkodiert, unter Erhalt der Struktur.
 - Jeder Eintrag wird einzeln validiert; Fehlschläge landen in der `Errors`-Liste des Jobs, die übrigen Einträge werden dennoch importiert.
 - **QM-Pro-Regeln sind vom Import ausgenommen:** Ein Eintrag, der über ID oder kanonischen Matcher einer Regel mit Herkunft `qmpro` zugeordnet wird oder selbst die Herkunft `qmpro` trägt, wird übersprungen und als Fehler gemeldet (Vorschau: `invalid`); die Regel bleibt unverändert. Ein Restore nach «Alle Regeln löschen» erzeugt so keine verwaisten Regeln — der Neuaufbau erfolgt über `brtqmDocumentPublishAll`. `IsActive` und `ExternalDocumentId` einer aktualisierten Regel bleiben erhalten; neue Regeln sind aktiv.
+- **Regeln der Bereichsliste sind ebenso ausgenommen:** Einträge, die einer Regel mit Herkunft `arealist` zugeordnet werden oder selbst diese Herkunft tragen (`arealist`, `AreaList`, `Bereichsliste`), werden übersprungen und als Fehler gemeldet. Nach «Alle Regeln löschen» legt der nächste Abgleich sie neu an.
 - CSV-Werte werden beim Export gegen Formel-Injection abgesichert und beim Import wieder zurückgewandelt.
 
 ---
@@ -856,6 +868,15 @@ Das SPFx-WebPart wird unabhängig vom Container ausgeliefert (Details in [`Broot
 1. Liste «Redirect Regeln» mit `Broot.Redirect.SPFx/provisioning/Initialize-BrtqmRedirectRulesList.ps1` auf der QM-Pro-Site bereitstellen (Besitzerrechte, PnP.PowerShell; wiederholbar).
 2. `npx gulp bundle --ship` und `npx gulp package-solution --ship` in `Broot.Redirect.SPFx/` ausführen.
 3. `broot-redirect-spfx.sppkg` in den App Catalog der QM-Pro-Site hochladen und das WebPart auf einer Seite einbinden.
+
+### Abgleich der Bereichsliste (Timer-Trigger in QM Pro)
+
+Der Timer-Trigger `brtqmRedirectRulesSync` liegt in der Function App von QM Pro (Modul `QM.Pro.365.BrootRedirect`, README-Abschnitt «broot-redirect Integration» dort) und nutzt dieselbe Konfiguration wie Publizieren und Zurückziehen:
+
+- In QM Pro: `BrootRedirectEnabled=true`, `BrootRedirectBaseUrl` (URL dieser Instanz), `BrootRedirectApiKey` (= `SmartRedirect__QmProApiKey`) und neu `RedirectRulesSyncSchedule` (NCRONTAB, z. B. `0 */15 * * * *`). Das Setting muss in jeder Umgebung gesetzt sein, sonst startet die Funktion nicht.
+- In broot-redirect: keine zusätzliche Konfiguration; der Endpunkt erbt API-Key, CSRF-Ausnahme und die Stufe `Integration` der Anfragebegrenzung von `/api/qm-pro`.
+- Reihenfolge: zuerst broot-redirect mit dem Endpunkt `PUT /api/qm-pro/area-rules` ausliefern, dann den Timer-Trigger aktivieren. Vorher antwortet broot-redirect mit `404`, und QM Pro protokolliert bei jedem Lauf einen Fehler.
+- Manuelle Regeln mit derselben Quell-URL blockieren Listeneinträge (`MATCHER_DUPLICATE`, `MATCHER_CONFLICT`); sie sind vor dem ersten Abgleich im Admin-Panel zu löschen. Übersprungene Einträge stehen in beiden Logs (Application Insights) mit Identifier, Code und Grund.
 
 ### Checkliste für die Produktion
 

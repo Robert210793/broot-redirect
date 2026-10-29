@@ -14,11 +14,16 @@ namespace Broot.Redirect.API.Controllers
         public const int CacheNotReadyRetryAfterSeconds = 5;
 
         private readonly QmProRuleService _ruleService;
+        private readonly AreaRuleSyncService _areaRuleSyncService;
         private readonly IRuleCacheService _cacheService;
 
-        public QmProController(QmProRuleService ruleService, IRuleCacheService cacheService)
+        public QmProController(
+            QmProRuleService ruleService,
+            AreaRuleSyncService areaRuleSyncService,
+            IRuleCacheService cacheService)
         {
             _ruleService = ruleService;
+            _areaRuleSyncService = areaRuleSyncService;
             _cacheService = cacheService;
         }
 
@@ -70,6 +75,29 @@ namespace Broot.Redirect.API.Controllers
                 QmProUnpublishStatus.NotFound => Ok(RuleResponse(null, "notFound")),
                 _ => ValidationError(result.Error)
             };
+        }
+
+        [HttpPut("area-rules")]
+        public async Task<IActionResult> SyncAreaRules([FromBody] AreaRuleSyncRequest? request, CancellationToken cancellationToken)
+        {
+            if (!_cacheService.IsWarmedUp)
+            {
+                return CacheNotReady();
+            }
+
+            if (request == null || !ModelState.IsValid)
+            {
+                return ValidationError("Ungültiger Request-Body");
+            }
+
+            if (request.Entries == null)
+            {
+                return ValidationError("Das Feld «entries» fehlt");
+            }
+
+            var response = await _areaRuleSyncService.SyncAsync(request.Entries, cancellationToken);
+
+            return Ok(response);
         }
 
         private static QmProRuleResponse RuleResponse(RedirectRule? rule, string result)

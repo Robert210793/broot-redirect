@@ -415,6 +415,39 @@ namespace Broot.Redirect.Tests.Core.Services
                     .Should()
                     .Be(expectedTarget);
             }
+
+            [Theory]
+            [InlineData("/ims/KVP/11%20Prozessabweichungen/Unterordner/Anweisung.docx?Web=1", "inner")]
+            [InlineData("/ims/KVP/11%20Prozessabweichungen/Unterordner?Web=1", "inner")]
+            [InlineData("/ims/KVP/11%20Prozessabweichungen/Unterordner/", "inner")]
+            [InlineData("/ims/KVP/11%20Prozessabweichungen/Anweisung.docx?Web=1", "outer")]
+            [InlineData("/ims/KVP/11%20Prozessabweichungen?RootFolder=%2Fims&View=%7B1%7D", "outer")]
+            [InlineData("/ims/KVP/11%20Prozessabweichungen/Unterordner/Exakt.docx", "exact")]
+            public void ResolveMatch_NestedAreaListFoldersFromRealCache_MoreSpecificFolderWins(string requestUrl, string expected)
+            {
+                var outer = CreateRule("/ims/KVP/11%20Prozessabweichungen", RedirectType.Partial, "https://tenant.sharepoint.com/outer");
+                var inner = CreateRule("/ims/KVP/11%20Prozessabweichungen/Unterordner", RedirectType.Partial, "https://tenant.sharepoint.com/inner");
+                var exact = CreateRule("/ims/KVP/11%20Prozessabweichungen/Unterordner/Exakt.docx", RedirectType.Wildcard, "https://tenant.sharepoint.com/exact");
+
+                foreach (var rule in new[] { outer, inner, exact })
+                {
+                    rule.Source = RuleSource.AreaList;
+                }
+
+                var cache = new RuleCacheService(
+                    Options.Create(new CacheOptions
+                    {
+                        CaseSensitiveMatching = false,
+                        TrailingSlashPolicy = "ignore"
+                    }),
+                    Substitute.For<ILogger<RuleCacheService>>());
+                cache.Initialize(new[] { outer, inner, exact });
+
+                var result = new RuleMatchingService(cache).ResolveMatch(requestUrl, DefaultConfig());
+
+                result.Should().NotBeNull();
+                result!.Rule.TargetUrl.Should().Be($"https://tenant.sharepoint.com/{expected}");
+            }
         }
 
         public class FindMatchingRuleTests

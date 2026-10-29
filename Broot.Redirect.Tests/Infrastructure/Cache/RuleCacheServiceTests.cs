@@ -925,6 +925,109 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
 
                 sut.FindEquivalentMatcher("/docs/a.docx").Should().BeNull();
             }
+
+            [Fact]
+            public void FindEquivalentMatcher_ExcludedSource_IsIgnoredButOtherSourcesAreFound()
+            {
+                var sut = CreateService();
+                var areaRule = CreateRule("/docs/a.docx", RedirectType.Wildcard);
+                areaRule.Source = RuleSource.AreaList;
+                var manualRule = CreateRule("/docs/b.docx", RedirectType.Wildcard);
+                manualRule.Source = RuleSource.Manual;
+                sut.Initialize(new[] { areaRule, manualRule });
+
+                sut.FindEquivalentMatcher("/docs/a.docx", excludedSource: RuleSource.AreaList).Should().BeNull();
+                sut.FindEquivalentMatcher("/docs/a.docx").Should().BeSameAs(areaRule);
+                sut.FindEquivalentMatcher("/docs/b.docx", excludedSource: RuleSource.AreaList).Should().BeSameAs(manualRule);
+            }
+        }
+
+        public class FindOverlappingMatcherExcludedSourceTests
+        {
+            [Fact]
+            public void FindOverlappingMatcher_ExcludedSource_IsIgnoredButOtherSourcesAreFound()
+            {
+                var sut = CreateService();
+                var areaFolder = CreateRule("/ims/a", RedirectType.Partial);
+                areaFolder.Source = RuleSource.AreaList;
+                var manualFolder = CreateRule("/docs", RedirectType.Partial);
+                manualFolder.Source = RuleSource.Manual;
+                sut.Initialize(new[] { areaFolder, manualFolder });
+
+                sut.FindOverlappingMatcher("/ims/a/b", RedirectType.Partial, excludedSource: RuleSource.AreaList).Should().BeNull();
+                sut.FindOverlappingMatcher("/ims/a/b", RedirectType.Partial).Should().BeSameAs(areaFolder);
+                sut.FindOverlappingMatcher("/docs/x.docx", RedirectType.Wildcard, excludedSource: RuleSource.AreaList).Should().BeSameAs(manualFolder);
+            }
+
+            [Fact]
+            public void FindOverlappingMatcher_InactiveRuleOfOtherSource_IsFound()
+            {
+                var sut = CreateService();
+                var inactive = CreateRule("/docs/a.docx", RedirectType.Wildcard);
+                inactive.Source = RuleSource.QmPro;
+                inactive.IsActive = false;
+                sut.Initialize(new[] { inactive });
+
+                sut.FindOverlappingMatcher("/docs", RedirectType.Partial, excludedSource: RuleSource.AreaList).Should().BeSameAs(inactive);
+            }
+        }
+
+        public class ApplyChangesTests
+        {
+            [Fact]
+            public void ApplyChanges_AddsUpdatesAndRemovesRulesAndRebuildsIndexes()
+            {
+                var sut = CreateService();
+                var kept = CreateRule("/kept", RedirectType.Wildcard);
+                var updated = CreateRule("/old", RedirectType.Wildcard);
+                var removed = CreateRule("/removed", RedirectType.Wildcard);
+                sut.Initialize(new[] { kept, updated, removed });
+
+                var replacement = CreateRule("/new-folder", RedirectType.Partial, id: updated.Id);
+                var added = CreateRule("/added", RedirectType.Wildcard);
+
+                sut.ApplyChanges(new[] { replacement, added }, new HashSet<Guid> { removed.Id });
+
+                sut.RuleCount.Should().Be(3);
+                sut.GetById(updated.Id).Should().BeSameAs(replacement);
+                sut.GetById(removed.Id).Should().BeNull();
+                sut.LookupWildcardCandidates("/old").Should().BeEmpty();
+                sut.LookupWildcardCandidates("/removed").Should().BeEmpty();
+                sut.LookupWildcardCandidates("/added").Should().ContainSingle().Which.Should().BeSameAs(added);
+                sut.GetPartialAndDomainRules().Should().ContainSingle().Which.Should().BeSameAs(replacement);
+                sut.MatcherExists("/kept").Should().BeTrue();
+            }
+
+            [Fact]
+            public void ApplyChanges_NoChanges_KeepsCache()
+            {
+                var sut = CreateService();
+                var rule = CreateRule("/kept", RedirectType.Wildcard);
+                sut.Initialize(new[] { rule });
+
+                sut.ApplyChanges(Array.Empty<RedirectRule>(), new HashSet<Guid>());
+
+                sut.GetById(rule.Id).Should().BeSameAs(rule);
+            }
+        }
+
+        public class ExternalDocumentIndexTests
+        {
+            [Fact]
+            public void GetByExternalDocumentId_IgnoresAreaListRules()
+            {
+                var sut = CreateService();
+                var areaRule = CreateRule("/ims/a", RedirectType.Partial);
+                areaRule.Source = RuleSource.AreaList;
+                areaRule.ExternalDocumentId = "5b0c2a4e-0000-4000-8000-000000000001";
+                var qmProRule = CreateRule("/docs/a.docx", RedirectType.Wildcard);
+                qmProRule.Source = RuleSource.QmPro;
+                qmProRule.ExternalDocumentId = "site|list|item";
+                sut.Initialize(new[] { areaRule, qmProRule });
+
+                sut.GetByExternalDocumentId("5b0c2a4e-0000-4000-8000-000000000001").Should().BeNull();
+                sut.GetByExternalDocumentId("site|list|item").Should().BeSameAs(qmProRule);
+            }
         }
     }
 }

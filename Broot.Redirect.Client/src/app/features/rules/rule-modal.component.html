@@ -34,8 +34,8 @@
             <!-- Scrollable body -->
             <fieldset class="rule-modal-body" [disabled]="isReadOnly">
 
-                @if (isReadOnly) {
-                    <div class="alert alert-info">Regel wird von QM Pro verwaltet und kann nicht bearbeitet werden.</div>
+                @if (readOnlyNotice) {
+                    <div class="alert alert-info">{{ readOnlyNotice }}</div>
                 }
 
                 <!-- Core fields -->

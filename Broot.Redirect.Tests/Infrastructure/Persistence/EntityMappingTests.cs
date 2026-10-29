@@ -245,6 +245,8 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
         [InlineData("unknown", RuleSource.Unknown)]
         [InlineData("qmpro", RuleSource.QmPro)]
         [InlineData("QmPro", RuleSource.QmPro)]
+        [InlineData("arealist", RuleSource.AreaList)]
+        [InlineData("AreaList", RuleSource.AreaList)]
         public void ToDomainModel_ParsesRuleSource(string sourceString, RuleSource expected)
         {
             var entity = new RedirectRuleEntity
@@ -346,6 +348,29 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
             entity.Source.Should().Be("qmpro");
             restored.Source.Should().Be(RuleSource.QmPro);
             restored.IsActive.Should().BeFalse();
+            restored.ExternalDocumentId.Should().Be(original.ExternalDocumentId);
+        }
+
+        [Fact]
+        public void AreaListRule_RoundTrip_StoresArealistAndIdentifierInExternalDocumentId()
+        {
+            var original = new RedirectRule
+            {
+                Id = Guid.NewGuid(),
+                Matcher = "/ims/KVP",
+                TargetUrl = "https://tenant.sharepoint.com/sites/QM/KVP",
+                RedirectType = RedirectType.Partial,
+                Source = RuleSource.AreaList,
+                ExternalDocumentId = "5b0c2a4e-0000-4000-8000-000000000001"
+            };
+
+            var entity = RedirectRuleEntity.FromDomainModel(original);
+            var restored = entity.ToDomainModel();
+
+            entity.Source.Should().Be("arealist");
+            entity.ExternalDocumentId.Should().Be(original.ExternalDocumentId);
+            restored.Source.Should().Be(RuleSource.AreaList);
+            restored.RedirectType.Should().Be(RedirectType.Partial);
             restored.ExternalDocumentId.Should().Be(original.ExternalDocumentId);
         }
 

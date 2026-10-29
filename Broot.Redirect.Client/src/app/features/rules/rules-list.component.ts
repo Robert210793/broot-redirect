@@ -323,6 +323,8 @@ export class RulesListComponent implements OnInit, OnDestroy {
                 return 'Importiert';
             case 'qmPro':
                 return 'QM Pro';
+            case 'areaList':
+                return 'Bereichsliste';
             default:
                 return 'Unbekannt';
         }

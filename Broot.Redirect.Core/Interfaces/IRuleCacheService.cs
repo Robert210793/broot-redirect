@@ -72,7 +72,10 @@ namespace Broot.Redirect.Core.Interfaces
 
         RedirectRule? GetByExternalDocumentId(string externalDocumentId);
 
-        RedirectRule? FindEquivalentMatcher(string matcher, Guid? excludeRuleId = null);
+        RedirectRule? FindEquivalentMatcher(
+            string matcher,
+            Guid? excludeRuleId = null,
+            RuleSource? excludedSource = null);
 
         /// <summary>
         /// Finds an existing rule whose matcher hierarchically swallows the given matcher
@@ -85,7 +88,8 @@ namespace Broot.Redirect.Core.Interfaces
         RedirectRule? FindOverlappingMatcher(
             string matcher,
             RedirectType redirectType,
-            Guid? excludeRuleId = null);
+            Guid? excludeRuleId = null,
+            RuleSource? excludedSource = null);
 
         /// <summary>
         /// Populates the cache from a complete set of rules.
@@ -119,6 +123,8 @@ namespace Broot.Redirect.Core.Interfaces
         /// </summary>
         /// 
         void RemoveRules(IReadOnlySet<Guid> ruleIds);
+
+        void ApplyChanges(IReadOnlyList<RedirectRule> upsertedRules, IReadOnlySet<Guid> removedRuleIds);
 
         /// <summary>
         /// Replaces the entire cache contents with a new set of rules.

@@ -20,11 +20,13 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Dokument-ID | `ExternalDocumentId` | Kennung eines Dokuments in QM Pro (`brtqmSourceId`, Format `SiteUrl\|ListGuid\|ItemUniqueId`); verknüpft genau eine Regel mit einem Dokument |
 | Domain (Regeltyp) | `RedirectType.Domain` | Regel, die nur den Hostnamen austauscht; in Import-Meldungen «Domain-Ersatz» |
 | Feedback | `Feedback` | Rückmeldung zum Aufruf: `OK`, `NOK` oder `auto-redirect` |
+| Gleichwertiger Matcher | `MatcherEquivalence` | Matcher mit gleichen dekodierten Pfadsegmenten ohne Gross-/Kleinschreibung und ohne abschliessenden `/` sowie gleicher Query als Menge; Massstab für `MATCHER_DUPLICATE` und `DUPLICATE_ENTRY` |
 | Globale Regel | `GlobalRule` | Literales Suchen/Ersetzen, das nach Priorität auf jede Ziel-URL angewendet wird |
 | Herkunft | `RuleSource` | Woher eine Regel stammt: Manuell, Import, QM Pro (`RuleSource.QmPro`), Bereichsliste (US-13.003) oder Unbekannt |
 | Hintergrundauftrag | `jobId` | Lang laufende Operation (Import, alle Regeln löschen) mit abfragbarem Fortschritt |
 | Info-Seite | `InfoPageComponent` | Öffentliche Seite, die auf den veralteten Link hinweist und die neue URL zeigt |
 | Info-Text | `InfoText` | Regelspezifischer Hinweistext auf der Info-Seite |
+| Integrations-Schreibsperre | `IntegrationWriteLock` | Prozessweite Sperre, die Publizieren, Zurückziehen und den Abgleich der Bereichsliste nacheinander ausführt |
 | Laufzeit-Einstellungen | `AppSettings` | Im Admin-Panel änderbare Einstellungen, gespeichert in Table Storage |
 | Match-Qualität | `Quality` | Dem Benutzer angezeigte Güte der Zuordnung in Prozent (100, 75, 50, 0) |
 | Matcher | `Matcher` | Muster der alten URL, gegen das eine Anfrage geprüft wird (Pfad, Domain oder Regex) |
@@ -45,6 +47,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Teilweise (Regeltyp) | `RedirectType.Partial` | Regel für einen Pfadabschnitt, die alle darunterliegenden URLs abdeckt; Standardtyp |
 | Tracking-Eintrag | `TrackingEntry` | Datensatz pro Aufruf der Info-Seite oder automatischer Weiterleitung |
 | Transformations-Trace | `UrlTraceStep` | Schrittweise Aufzeichnung, wie die Ziel-URL entstanden ist (Validierungswerkzeug) |
+| Übersprungener Eintrag (Abgleich) | `AreaRuleSyncSkippedEntry` | Eintrag der Liste «Redirect Regeln», den der Abgleich nicht übernimmt, mit Identifier, Code (`VALIDATION_ERROR`, `DUPLICATE_ENTRY`, `MATCHER_DUPLICATE`, `MATCHER_CONFLICT`) und Grund; eine bestehende Regel des Eintrags bleibt unverändert |
 | Validierung (Trockenlauf) | `POST /api/rules/validate` | Prüfung einer URL-Liste gegen das Regelwerk, ohne Aufrufe zu erfassen |
 | Verhalten ohne Treffer | `NoMatchBehavior` | `RedirectToDefault`, `SmartSearch` oder `Return404` |
 | Vorgeschlagene URL | `UserProposedUrl` | Vom Benutzer im Feedback angegebene korrekte URL |

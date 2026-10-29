@@ -161,6 +161,7 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 "manual" => Core.Models.RuleSource.Manual,
                 "import" => Core.Models.RuleSource.Import,
                 "qmpro" => Core.Models.RuleSource.QmPro,
+                "arealist" => Core.Models.RuleSource.AreaList,
                 _ => Core.Models.RuleSource.Unknown
             };
         }
