@@ -35,8 +35,6 @@ namespace Broot.Redirect.Infrastructure.Cache
 
         private List<(Regex CompiledRegex, RedirectRule Rule)> _regexRules = new();
 
-        private Dictionary<string, Guid> _matcherToId = new();
-
         private Dictionary<string, RedirectRule> _externalDocumentIndex = new(StringComparer.OrdinalIgnoreCase);
 
         private readonly ReaderWriterLockSlim _indexLock = new();
@@ -104,30 +102,6 @@ namespace Broot.Redirect.Infrastructure.Cache
             try
             {
                 return _regexRules;
-            }
-            finally
-            {
-                _indexLock.ExitReadLock();
-            }
-        }
-
-        public bool MatcherExists(string matcher, Guid? excludeRuleId = null)
-        {
-            _indexLock.EnterReadLock();
-
-            try
-            {
-                if (!_matcherToId.TryGetValue(matcher, out var existingId))
-                {
-                    return false;
-                }
-
-                if (excludeRuleId.HasValue && existingId == excludeRuleId.Value)
-                {
-                    return false;
-                }
-
-                return true;
             }
             finally
             {
@@ -386,14 +360,10 @@ namespace Broot.Redirect.Infrastructure.Cache
 
             var regexRules = new List<(Regex, RedirectRule)>();
 
-            var matcherToId = new Dictionary<string, Guid>(StringComparer.Ordinal);
-
             var externalDocumentIndex = BuildExternalDocumentIndex(logDuplicateDocumentIds);
 
             foreach (var rule in _rulesById.Values)
             {
-                matcherToId[rule.Matcher] = rule.Id;
-
                 if (!rule.IsActive)
                 {
                     continue;
@@ -458,7 +428,6 @@ namespace Broot.Redirect.Infrastructure.Cache
                 _wildcardIndex = wildcardIndex;
                 _partialAndDomainRules = partialAndDomainRules;
                 _regexRules = regexRules;
-                _matcherToId = matcherToId;
                 _externalDocumentIndex = externalDocumentIndex;
             }
             finally
@@ -501,18 +470,12 @@ namespace Broot.Redirect.Infrastructure.Cache
 
         private string NormalizeMatcherPath(string matcher)
         {
-            var normalized = matcher.Split('?', 2)[0];
+            var ignoreTrailingSlash = string.Equals(
+                _options.TrailingSlashPolicy,
+                "ignore",
+                StringComparison.OrdinalIgnoreCase);
 
-            try { normalized = Uri.UnescapeDataString(normalized); }
-            catch { /* keep original if decoding fails */ }
-
-            if (string.Equals(_options.TrailingSlashPolicy, "ignore", StringComparison.OrdinalIgnoreCase))
-            {
-                if (normalized.Length > 1 && normalized.EndsWith('/'))
-                {
-                    normalized = normalized.TrimEnd('/');
-                }
-            }
+            var normalized = MatcherEquivalence.GetPathLookupKey(matcher, ignoreTrailingSlash);
 
             if (!_options.CaseSensitiveMatching)
             {

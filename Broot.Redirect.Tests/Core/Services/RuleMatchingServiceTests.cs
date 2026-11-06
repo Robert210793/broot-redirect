@@ -1175,5 +1175,98 @@ namespace Broot.Redirect.Tests.Core.Services
                 result.Quality.Should().Be(100);
             }
         }
+
+        public class PercentEncodingTests
+        {
+            private static RuleMatchingService Build(params RedirectRule[] rules)
+            {
+                var cache = new RuleCacheService(
+                    Options.Create(new CacheOptions()),
+                    Substitute.For<ILogger<RuleCacheService>>());
+
+                cache.Initialize(rules);
+
+                return new RuleMatchingService(cache);
+            }
+
+            [Theory]
+            [InlineData("/ims/S/11%20IMS%20%28Integr.%29/x.docx", "/ims/S/11%20IMS%20%28Integr.%29/x.docx")]
+            [InlineData("/ims/S/11%20IMS%20%28Integr.%29/x.docx", "/ims/S/11%20IMS%20(Integr.)/x.docx")]
+            [InlineData("/ims/S/11%20IMS%20%28Integr.%29/x.docx", "/ims/S/11 IMS (Integr.)/x.docx")]
+            [InlineData("/ims/S/11 IMS (Integr.)/x.docx", "/ims/S/11%20IMS%20%28Integr.%29/x.docx")]
+            [InlineData("/a/b%20c.docx", "/a/b c.docx")]
+            [InlineData("/a/%C3%A4.docx", "/a/ä.docx")]
+            [InlineData("/a/ä.docx", "/a/%C3%A4.docx")]
+            [InlineData("/a/%c3%a4.docx", "/a/%C3%A4.docx")]
+            [InlineData("/a/%C3%A4.docx", "/a/%c3%a4.docx")]
+            public void ResolveMatch_WildcardEncodingVariants_Match(string matcher, string requestUrl)
+            {
+                var rule = CreateRule(matcher, RedirectType.Wildcard, "https://example.com/new");
+
+                var result = Build(rule).ResolveMatch(requestUrl, DefaultConfig());
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().BeSameAs(rule);
+            }
+
+            [Theory]
+            [InlineData("/ims/S/11%20IMS%20%28Integr.%29/x.docx?a=%20b&c=d", "/ims/S/11 IMS (Integr.)/x.docx?a= b&c=d")]
+            [InlineData("/a/b%20c.aspx?RootFolder=%2Fims%2FA%20B", "/a/b c.aspx?RootFolder=%2Fims%2FA%20B")]
+            public void ResolveMatch_WildcardWithQuery_EncodingVariants_Match(string matcher, string requestUrl)
+            {
+                var rule = CreateRule(matcher, RedirectType.Wildcard, "https://example.com/new");
+
+                var result = Build(rule).ResolveMatch(requestUrl, DefaultConfig());
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().BeSameAs(rule);
+            }
+
+            [Theory]
+            [InlineData("/ims/S/11%20IMS%20%28Integr.%29", "/ims/S/11 IMS (Integr.)/sub/x.docx")]
+            [InlineData("/ims/S/11 IMS (Integr.)", "/ims/S/11%20IMS%20%28Integr.%29/sub/x.docx")]
+            public void ResolveMatch_PartialEncodingVariants_Match(string matcher, string requestUrl)
+            {
+                var rule = CreateRule(matcher, RedirectType.Partial, "https://example.com/new");
+
+                var result = Build(rule).ResolveMatch(requestUrl, DefaultConfig());
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().BeSameAs(rule);
+            }
+
+            [Fact]
+            public void ResolveMatch_EncodedSlashInRequest_DoesNotMatchSeparatorRule()
+            {
+                var rule = CreateRule("/a/b/c.docx", RedirectType.Wildcard, "https://example.com/new");
+
+                var result = Build(rule).ResolveMatch("/a/b%2Fc.docx", DefaultConfig());
+
+                result.Should().BeNull();
+            }
+
+            [Fact]
+            public void ResolveMatch_EncodedSlashInMatcher_MatchesOnlyItsOwnRequest()
+            {
+                var encoded = CreateRule("/a/b%2Fc.docx", RedirectType.Wildcard, "https://example.com/encoded");
+                var separated = CreateRule("/a/b/c.docx", RedirectType.Wildcard, "https://example.com/separated");
+
+                var sut = Build(encoded, separated);
+
+                sut.ResolveMatch("/a/b%2Fc.docx", DefaultConfig())!.Rule.Should().BeSameAs(encoded);
+                sut.ResolveMatch("/a/b/c.docx", DefaultConfig())!.Rule.Should().BeSameAs(separated);
+            }
+
+            [Fact]
+            public void ResolveMatch_LowerCaseEncodedSlash_IsTreatedLikeUpperCase()
+            {
+                var rule = CreateRule("/a/b%2Fc.docx", RedirectType.Wildcard, "https://example.com/new");
+
+                var result = Build(rule).ResolveMatch("/a/b%2fc.docx", DefaultConfig());
+
+                result.Should().NotBeNull();
+                result!.Rule.Should().BeSameAs(rule);
+            }
+        }
     }
 }

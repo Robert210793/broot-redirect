@@ -51,12 +51,10 @@ namespace Broot.Redirect.Core.Services
         private RuleMatchResult? TryWildcardLookup(string requestUrl, RuleMatchingConfig config)
         {
             var parsed = ParseRequestUrl(requestUrl);
-            var path = Uri.UnescapeDataString(parsed.AbsolutePath);
 
-            if (config.TrailingSlashPolicy == TrailingSlashPolicy.Ignore && path.Length > 1 && path.EndsWith('/'))
-            {
-                path = path.TrimEnd('/');
-            }
+            var path = MatcherEquivalence.GetPathLookupKey(
+                parsed.AbsolutePath,
+                config.TrailingSlashPolicy == TrailingSlashPolicy.Ignore);
 
             if (!config.CaseSensitivePath)
             {

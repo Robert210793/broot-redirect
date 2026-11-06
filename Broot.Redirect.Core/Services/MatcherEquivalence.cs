@@ -21,6 +21,34 @@ namespace Broot.Redirect.Core.Services
             return segments;
         }
 
+        public static string GetPathLookupKey(string pathOrMatcher, bool ignoreTrailingSlash)
+        {
+            var path = pathOrMatcher.Trim().Split('?', 2)[0];
+
+            var hasTrailingSlash = path.Length > 1 && path.EndsWith('/');
+
+            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+            if (segments.Length == 0)
+            {
+                return "/";
+            }
+
+            for (var index = 0; index < segments.Length; index++)
+            {
+                var segment = segments[index];
+
+                try { segment = Uri.UnescapeDataString(segment); }
+                catch (UriFormatException) { }
+
+                segments[index] = segment.Replace("/", "%2F");
+            }
+
+            var key = "/" + string.Join('/', segments);
+
+            return !ignoreTrailingSlash && hasTrailingSlash ? key + "/" : key;
+        }
+
         public static HashSet<(string Key, string Value)> ParseQueryPairs(string matcher)
         {
             var pairs = new HashSet<(string Key, string Value)>();

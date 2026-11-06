@@ -63,13 +63,6 @@ namespace Broot.Redirect.Core.Interfaces
         /// 
         IReadOnlyList<(Regex CompiledRegex, RedirectRule Rule)> GetRegexRules();
 
-        /// <summary>
-        /// Checks if a matcher value already exists in the cache (for duplicate validation).
-        /// Optionally excludes a specific rule ID (for update validation).
-        /// </summary>
-        /// 
-        bool MatcherExists(string matcher, Guid? excludeRuleId = null);
-
         RedirectRule? GetByExternalDocumentId(string externalDocumentId);
 
         RedirectRule? FindEquivalentMatcher(

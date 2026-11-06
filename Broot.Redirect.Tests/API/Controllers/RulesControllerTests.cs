@@ -206,7 +206,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                     RedirectType = "partial"
                 };
 
-                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindEquivalentMatcher(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<RuleSource?>()).Returns((RedirectRule?)null);
                 _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>()).Returns((RedirectRule?)null);
 
                 var result = await _sut.Create(request) as CreatedAtActionResult;
@@ -241,7 +241,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                     RedirectType = "partial"
                 };
 
-                _cacheService.MatcherExists("/existing", Arg.Any<Guid?>()).Returns(true);
+                _cacheService.FindEquivalentMatcher("/existing", Arg.Any<Guid?>(), Arg.Any<RuleSource?>()).Returns(CreateRule("/existing"));
 
                 var result = await _sut.Create(request);
 
@@ -257,7 +257,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                     RedirectType = "partial"
                 };
 
-                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindEquivalentMatcher(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<RuleSource?>()).Returns((RedirectRule?)null);
                 _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>())
                     .Returns(CreateRule("/a/b"));
 
@@ -276,7 +276,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                     RedirectType = "wildcard"
                 };
 
-                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindEquivalentMatcher(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<RuleSource?>()).Returns((RedirectRule?)null);
                 _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>())
                     .Returns((RedirectRule?)null);
 
@@ -323,7 +323,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                 var rule = CreateRule("/original");
 
                 _cacheService.GetById(rule.Id).Returns(rule);
-                _cacheService.MatcherExists("/taken", rule.Id).Returns(true);
+                _cacheService.FindEquivalentMatcher("/taken", rule.Id, Arg.Any<RuleSource?>()).Returns(CreateRule("/taken"));
 
                 var request = new UpdateRuleRequest { Matcher = "/taken" };
 
@@ -338,7 +338,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                 var rule = CreateRule("/original");
 
                 _cacheService.GetById(rule.Id).Returns(rule);
-                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindEquivalentMatcher(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<RuleSource?>()).Returns((RedirectRule?)null);
                 _cacheService.FindOverlappingMatcher("/a/b/c", Arg.Any<RedirectType>(), rule.Id).Returns(CreateRule("/a/b"));
 
                 var request = new UpdateRuleRequest { Matcher = "/a/b/c" };
@@ -354,7 +354,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                 var rule = CreateRule("/original", RedirectType.Wildcard);
 
                 _cacheService.GetById(rule.Id).Returns(rule);
-                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindEquivalentMatcher(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<RuleSource?>()).Returns((RedirectRule?)null);
                 _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>())
                     .Returns((RedirectRule?)null);
 
@@ -378,7 +378,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                 var rule = CreateRule("/original", RedirectType.Wildcard);
 
                 _cacheService.GetById(rule.Id).Returns(rule);
-                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindEquivalentMatcher(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<RuleSource?>()).Returns((RedirectRule?)null);
 
                 var request = new UpdateRuleRequest
                 {
@@ -1586,7 +1586,7 @@ namespace Broot.Redirect.Tests.API.Controllers
                 rule.AutoRedirect = false;
 
                 _cacheService.GetById(rule.Id).Returns(rule);
-                _cacheService.MatcherExists(Arg.Any<string>(), Arg.Any<Guid?>()).Returns(false);
+                _cacheService.FindEquivalentMatcher(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<RuleSource?>()).Returns((RedirectRule?)null);
                 _cacheService.FindOverlappingMatcher(Arg.Any<string>(), Arg.Any<RedirectType>(), Arg.Any<Guid?>()).Returns((RedirectRule?)null);
 
                 var request = new UpdateRuleRequest

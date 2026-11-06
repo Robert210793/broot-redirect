@@ -114,9 +114,11 @@ namespace Broot.Redirect.API.Controllers
 
             request.Matcher = RuleImportExportService.NormalizeMatcher(request.Matcher);
 
-            if (_cacheService.MatcherExists(request.Matcher))
+            var duplicate = _cacheService.FindEquivalentMatcher(request.Matcher);
+
+            if (duplicate != null)
             {
-                return BadRequest(new { error = $"A rule with matcher '{request.Matcher}' already exists" });
+                return BadRequest(new { error = $"A rule with matcher '{duplicate.Matcher}' already exists" });
             }
 
             var overlapping = _cacheService.FindOverlappingMatcher(request.Matcher, redirectType);
@@ -196,9 +198,11 @@ namespace Broot.Redirect.API.Controllers
 
             if (request.Matcher != null && request.Matcher != existingRule.Matcher)
             {
-                if (_cacheService.MatcherExists(request.Matcher, excludeRuleId: id))
+                var duplicate = _cacheService.FindEquivalentMatcher(request.Matcher, excludeRuleId: id);
+
+                if (duplicate != null)
                 {
-                    return BadRequest(new { error = $"A rule with matcher '{request.Matcher}' already exists" });
+                    return BadRequest(new { error = $"A rule with matcher '{duplicate.Matcher}' already exists" });
                 }
 
                 // The type may change in this same request, and it decides whether the new

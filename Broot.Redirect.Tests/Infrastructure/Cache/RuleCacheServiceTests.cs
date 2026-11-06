@@ -138,39 +138,56 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
             }
         }
 
-        public class MatcherExistsTests
+        public class FindEquivalentMatcherEncodingTests
         {
-            [Fact]
-            public void MatcherExists_ExistingMatcher_ReturnsTrue()
+            [Theory]
+            [InlineData("/ims/S/11%20IMS%20%28Integr.%29/x.docx", "/ims/S/11 IMS (Integr.)/x.docx")]
+            [InlineData("/ims/S/11%20IMS%20%28Integr.%29/x.docx", "/ims/S/11%20IMS%20(Integr.)/x.docx")]
+            [InlineData("/a/b%20c.docx", "/a/b c.docx")]
+            [InlineData("/a/%C3%A4.docx", "/a/ä.docx")]
+            [InlineData("/a/%c3%a4.docx", "/a/%C3%A4.docx")]
+            [InlineData("/a/b.aspx?x=%20y", "/a/b.aspx?x= y")]
+            public void FindEquivalentMatcher_DifferentEncoding_FindsRule(string stored, string candidate)
             {
                 var sut = CreateService();
-                var rule = CreateRule("/existing", RedirectType.Partial);
+                var rule = CreateRule(stored, RedirectType.Wildcard);
 
                 sut.Initialize(new[] { rule });
 
-                sut.MatcherExists("/existing").Should().BeTrue();
+                sut.FindEquivalentMatcher(candidate).Should().BeSameAs(rule);
             }
 
             [Fact]
-            public void MatcherExists_NonExistent_ReturnsFalse()
+            public void FindEquivalentMatcher_EncodedSlash_IsNotTheSameAsSeparator()
             {
                 var sut = CreateService();
-                var rule = CreateRule("/existing", RedirectType.Partial);
+                var rule = CreateRule("/a/b/c.docx", RedirectType.Wildcard);
 
                 sut.Initialize(new[] { rule });
 
-                sut.MatcherExists("/nonexistent").Should().BeFalse();
+                sut.FindEquivalentMatcher("/a/b%2Fc.docx").Should().BeNull();
             }
 
             [Fact]
-            public void MatcherExists_ExcludedRuleId_ReturnsFalse()
+            public void FindEquivalentMatcher_ExcludedRuleId_ReturnsNull()
             {
                 var sut = CreateService();
                 var rule = CreateRule("/existing", RedirectType.Partial);
 
                 sut.Initialize(new[] { rule });
 
-                sut.MatcherExists("/existing", rule.Id).Should().BeFalse();
+                sut.FindEquivalentMatcher("/existing", rule.Id).Should().BeNull();
+            }
+
+            [Fact]
+            public void FindEquivalentMatcher_NonExistent_ReturnsNull()
+            {
+                var sut = CreateService();
+                var rule = CreateRule("/existing", RedirectType.Partial);
+
+                sut.Initialize(new[] { rule });
+
+                sut.FindEquivalentMatcher("/nonexistent").Should().BeNull();
             }
         }
 
@@ -704,7 +721,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.RuleCount.Should().Be(1);
                 sut.GetAll().Should().ContainSingle().Which.Should().BeSameAs(inactive);
                 sut.GetById(inactive.Id).Should().BeSameAs(inactive);
-                sut.MatcherExists("/inactive/file.docx").Should().BeTrue();
+                sut.FindEquivalentMatcher("/inactive/file.docx").Should().BeSameAs(inactive);
             }
 
             [Fact]
@@ -1030,7 +1047,7 @@ namespace Broot.Redirect.Tests.Infrastructure.Cache
                 sut.LookupWildcardCandidates("/removed").Should().BeEmpty();
                 sut.LookupWildcardCandidates("/added").Should().ContainSingle().Which.Should().BeSameAs(added);
                 sut.GetPartialAndDomainRules().Should().ContainSingle().Which.Should().BeSameAs(replacement);
-                sut.MatcherExists("/kept").Should().BeTrue();
+                sut.FindEquivalentMatcher("/kept").Should().NotBeNull();
             }
 
             [Fact]
