@@ -1,4 +1,6 @@
-﻿namespace Broot.Redirect.API.Dtos
+﻿using Broot.Redirect.Core.Models;
+
+namespace Broot.Redirect.API.Dtos
 {
     /// <summary>
     /// Partial update request for PUT /api/settings.
@@ -54,5 +56,13 @@
         public bool? EnableFeedbackComment { get; set; }
 
         public bool? ShowLinkQualityGauge { get; set; }
+
+        public AutoRedirectMode? AutoRedirectManual { get; set; }
+
+        public AutoRedirectMode? AutoRedirectImport { get; set; }
+
+        public AutoRedirectMode? AutoRedirectQmPro { get; set; }
+
+        public AutoRedirectMode? AutoRedirectAreaList { get; set; }
     }
 }

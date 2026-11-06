@@ -71,7 +71,11 @@ namespace Broot.Redirect.API.Controllers
                 EnableReferrerTracking = request.EnableReferrerTracking ?? existing.EnableReferrerTracking,
                 EnableFeedbackSurvey = request.EnableFeedbackSurvey ?? existing.EnableFeedbackSurvey,
                 EnableFeedbackComment = request.EnableFeedbackComment ?? existing.EnableFeedbackComment,
-                ShowLinkQualityGauge = request.ShowLinkQualityGauge ?? existing.ShowLinkQualityGauge
+                ShowLinkQualityGauge = request.ShowLinkQualityGauge ?? existing.ShowLinkQualityGauge,
+                AutoRedirectManual = request.AutoRedirectManual ?? existing.AutoRedirectManual,
+                AutoRedirectImport = request.AutoRedirectImport ?? existing.AutoRedirectImport,
+                AutoRedirectQmPro = request.AutoRedirectQmPro ?? existing.AutoRedirectQmPro,
+                AutoRedirectAreaList = request.AutoRedirectAreaList ?? existing.AutoRedirectAreaList
             };
 
             var validBehaviors = new[] { "RedirectToDefault", "SmartSearch", "Return404" };

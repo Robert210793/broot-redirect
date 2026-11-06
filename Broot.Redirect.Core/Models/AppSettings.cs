@@ -91,5 +91,37 @@ namespace Broot.Redirect.Core.Models
         /// When true, the match quality gauge (green/yellow/red) is visible on the info page.
         /// </summary>
         public bool ShowLinkQualityGauge { get; set; } = true;
+
+        // -- Auto-redirect per rule source --
+
+        public AutoRedirectMode AutoRedirectManual { get; set; } = AutoRedirectMode.PerRule;
+
+        public AutoRedirectMode AutoRedirectImport { get; set; } = AutoRedirectMode.PerRule;
+
+        public AutoRedirectMode AutoRedirectQmPro { get; set; } = AutoRedirectMode.PerRule;
+
+        public AutoRedirectMode AutoRedirectAreaList { get; set; } = AutoRedirectMode.PerRule;
+
+        public AutoRedirectMode GetAutoRedirectMode(RuleSource source)
+        {
+            return source switch
+            {
+                RuleSource.Manual => AutoRedirectManual,
+                RuleSource.Import => AutoRedirectImport,
+                RuleSource.QmPro => AutoRedirectQmPro,
+                RuleSource.AreaList => AutoRedirectAreaList,
+                _ => AutoRedirectMode.PerRule
+            };
+        }
+
+        public bool ResolveAutoRedirect(RedirectRule rule)
+        {
+            return GetAutoRedirectMode(rule.Source) switch
+            {
+                AutoRedirectMode.Always => true,
+                AutoRedirectMode.Never => false,
+                _ => rule.AutoRedirect
+            };
+        }
     }
 }

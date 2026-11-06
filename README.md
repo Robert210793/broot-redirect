@@ -64,7 +64,7 @@ Die zentrale Entität ([`RedirectRule`](Broot.Redirect.Core/Models/RedirectRule.
 | `ExternalDocumentId` | Optionale externe Kennung. Bei Herkunft `QmPro` die Dokument-ID aus QM Pro (`brtqmSourceId`), bei Herkunft `AreaList` der Identifier des Listeneintrags (`UniqueId`, GUID). Ordnet eine Regel genau einem Dokument bzw. Listeneintrag zu; Lookups filtern nach Herkunft. |
 | `IsActive` | Aktiv-Status, Standard `true`. Deaktivierte Regeln bleiben gespeichert, wirken aber weder bei der Weiterleitung noch auf der Info-Seite noch in der Validierung. |
 | `InfoText` | Regelspezifischer Hinweis auf der Info-Seite. Überschreibt den globalen Hinweistext. |
-| `AutoRedirect` | Wenn `true`, wird die Info-Seite übersprungen und direkt ein 302 gesendet. |
+| `AutoRedirect` | Wenn `true`, wird die Info-Seite übersprungen und direkt ein 302 gesendet. Die Einstellung «Auto-Weiterleitung pro Regelquelle» kann dieses Feld übersteuern (siehe unten). |
 | `DiscardQueryParams` | Verwirft die ursprüngliche Query. |
 | `ForwardQueryParams` | Hängt die ursprüngliche Query an das Ziel an. |
 | `KeptQueryParams` | Regex-basierte Positivliste von Query-Parametern, die übernommen werden (zusammen mit `DiscardQueryParams` verwendet). |
@@ -107,6 +107,22 @@ Die Qualität ist nicht dasselbe wie der **Score** — der Score ist die interne
 - **`AppSettings`** (Table Storage, im Admin-UI editierbar): Standard-Zieldomain, Verhalten ohne Treffer, sämtliche Texte der Info-Seite, Smart-Search-Konfiguration, Feature-Schalter.
 - **`BrootRedirectOptions`** (`appsettings.json` / Umgebungsvariablen, benötigt Neustart): Admin-Passwort, Scoring-Gewichte, Rate Limits, Session-Timeout, Aufbewahrungsdauer.
 
+### Auto-Weiterleitung pro Regelquelle
+
+Ob ein Treffer direkt per 302 weitergeleitet wird oder die Info-Seite erscheint, entscheidet pro Regel das Feld `AutoRedirect`. Für jede Regelquelle lässt sich dieses Feld über eine Einstellung übersteuern ([`AutoRedirectMode`](Broot.Redirect.Core/Models/AutoRedirectMode.cs)):
+
+| Wert | Wirkung für alle Regeln dieser Quelle |
+|---|---|
+| `PerRule` | Standard. Es gilt das Feld `AutoRedirect` der einzelnen Regel. |
+| `Always` | Immer 302, unabhängig vom Feld der Regel. |
+| `Never` | Immer die Info-Seite, unabhängig vom Feld der Regel. |
+
+Je eine Einstellung pro Quelle: `AutoRedirectManual`, `AutoRedirectImport`, `AutoRedirectQmPro`, `AutoRedirectAreaList`. Regeln der Herkunft `Unknown` (Altbestand ohne Herkunft) folgen immer dem Feld der Regel.
+
+Entschieden wird zur Laufzeit in der [`RedirectMiddleware`](Broot.Redirect.API/Middleware/RedirectMiddleware.cs) über `AppSettings.ResolveAutoRedirect`. Eine Änderung wirkt deshalb sofort auf alle bestehenden Regeln der betroffenen Quelle und ist jederzeit umkehrbar: das gespeicherte Feld `AutoRedirect` der einzelnen Regeln wird nie verändert. Schreibende Pfade — QM-Pro-Publizieren, Abgleich der Bereichsliste, Import und der Regeleditor — bleiben unverändert; insbesondere ändert eine Umstellung der Einstellung kein `Unchanged` eines QM-Pro-Aufrufs in ein `Updated`.
+
+Im Admin-Panel zeigt die Regelliste die **wirksame** Auto-Weiterleitung; ist sie durch die Quelle übersteuert, ist sie mit `*` markiert (Tooltip nennt die Quelle). Im Regeleditor ist der Schalter dann deaktiviert, mit Hinweis auf die wirksame Einstellung. Regeln der Herkunft `QmPro` und `AreaList` sind ohnehin nicht bearbeitbar.
+
 ### Verhalten ohne Treffer
 
 Greift keine Regel, entscheidet `AppSettings.NoMatchBehavior`:
@@ -129,7 +145,7 @@ Greift keine Regel, entscheidet `AppSettings.NoMatchBehavior`:
 
 QM Pro 365 schreibt beim Publizieren eines Dokuments die Weiterleitungsregel selbst und deaktiviert sie beim Zurückziehen (`POST /api/qm-pro/publish` bzw. `/unpublish`, siehe Kapitel 10). Die Regel ist über die Dokument-ID (`ExternalDocumentId`) genau einem Dokument zugeordnet:
 
-- **Publizieren:** Matcher ist Pfad und Query der alten On-Premises-URL (Host und Fragment werden verworfen, kanonisiert wie beim Import), Typ `Wildcard`, Ziel die Publikations-URL, `AutoRedirect` aus, Herkunft `QmPro`. Existiert zur Dokument-ID schon eine Regel, werden Matcher und Ziel überschrieben und die Regel aktiviert; ID, Erstelldatum und Herkunft bleiben. Ein Aufruf mit unveränderten Daten für eine aktive Regel schreibt nichts.
+- **Publizieren:** Matcher ist Pfad und Query der alten On-Premises-URL (Host und Fragment werden verworfen, kanonisiert wie beim Import), Typ `Wildcard`, Ziel die Publikations-URL, `AutoRedirect` aus, Herkunft `QmPro`. Ob diese Regeln tatsächlich direkt weiterleiten, entscheidet die Einstellung `AutoRedirectQmPro` (Kapitel 2); das Publizieren selbst schreibt das Feld immer mit `false` und wird von der Einstellung nicht beeinflusst. Existiert zur Dokument-ID schon eine Regel, werden Matcher und Ziel überschrieben und die Regel aktiviert; ID, Erstelldatum und Herkunft bleiben. Ein Aufruf mit unveränderten Daten für eine aktive Regel schreibt nichts.
 - **Zurückziehen:** setzt `IsActive = false`. Bereits deaktivierte oder unbekannte Dokument-IDs sind kein Fehler.
 - **Admin-Panel:** QM-Pro-Regeln sind nicht bearbeitbar (`PUT` → 409 `RULE_MANAGED_BY_QMPRO`), lassen sich aber löschen. Der Import überspringt sie (Kapitel 12).
 
@@ -139,7 +155,7 @@ Zusätzlich erfasst ein SPFx-WebPart (`Broot.Redirect.SPFx/`, ausgeliefert auf d
 
 Der Timer-Trigger `brtqmRedirectRulesSync` in QM Pro übermittelt bei jedem Lauf den vollständigen Stand der Liste (`PUT /api/qm-pro/area-rules`, siehe Kapitel 10): pro Eintrag Identifier (`UniqueId`), Quell-URL ohne Host und Fragment sowie Ziel-URL. Der [`AreaRuleSyncService`](Broot.Redirect.API/Services/AreaRuleSyncService.cs) gleicht ihn ausschliesslich mit den Regeln der Herkunft `AreaList` ab:
 
-- **Anlegen / Aktualisieren:** Matcher ist Pfad und Query der Quell-URL (kanonisiert wie bei QM Pro), Ziel die Ziel-URL, `AutoRedirect` aus. Endet der Pfad vor `?` auf `/`, wird die Regel `Partial` (Ordner samt Inhalt), sonst `Wildcard`. Bei geändertem Matcher, Typ oder Ziel wird die bestehende Regel aktualisiert; ID, Erstelldatum und übrige Einstellungen bleiben. Unveränderte Einträge schreiben nichts.
+- **Anlegen / Aktualisieren:** Matcher ist Pfad und Query der Quell-URL (kanonisiert wie bei QM Pro), Ziel die Ziel-URL, `AutoRedirect` aus (ob diese Regeln direkt weiterleiten, entscheidet die Einstellung `AutoRedirectAreaList`, Kapitel 2). Endet der Pfad vor `?` auf `/`, wird die Regel `Partial` (Ordner samt Inhalt), sonst `Wildcard`. Bei geändertem Matcher, Typ oder Ziel wird die bestehende Regel aktualisiert; ID, Erstelldatum und übrige Einstellungen bleiben. Unveränderte Einträge schreiben nichts.
 - **Löschen:** Regeln, deren Identifier im Stand fehlt, werden gelöscht (nicht deaktiviert). Ein leerer Stand löscht alle Regeln der Herkunft `AreaList`.
 - **Übersprungene Einträge** werden im Ergebnis gemeldet und protokolliert; eine bestehende Regel mit ihrem Identifier bleibt unverändert: ungültige Einträge (`VALIDATION_ERROR` — Identifier leer oder doppelt, Quell-URL leer, kein Pfad oder keine `http(s)`-URL, Pfad `/`, Ziel-URL keine absolute `http(s)`-URL), gleichwertige Quell-URLs mehrerer Einträge (`DUPLICATE_ENTRY` — massgebend bleibt der Eintrag mit bestehender Regel, sonst der erste in der übermittelten Reihenfolge, also der älteste) und Konflikte mit Regeln anderer Herkunft, auch deaktivierten (`MATCHER_DUPLICATE`, `MATCHER_CONFLICT`).
 - **Verschachtelte Ordner:** Zwischen Regeln der Herkunft `AreaList` entfällt die Überlappungsprüfung; `/ims/A/` und `/ims/A/B/` bestehen nebeneinander, der spezifischere Ordner gewinnt über den Score (Kapitel 5). Admin-Endpunkte, Import und QM-Pro-Publizieren prüfen weiterhin gegen alle Regeln.
@@ -246,8 +262,8 @@ Ein eingehender Request auf einen alten Dokument-Link, z. B. `GET /sites/alt/Dok
 
 1. Er ist weder `/api/*` noch eine bekannte SPA-Route, also übernimmt die `RedirectMiddleware`.
 2. `RuleMatchingService.ResolveMatch` ermittelt die beste Regel.
-3. **Regel getroffen und `AutoRedirect` ist true** → `UrlTransformService` baut das Ziel, ein Tracking-Eintrag mit `Feedback = "auto-redirect"` wird geschrieben, ein `302` geht zurück.
-4. **Regel getroffen und `AutoRedirect` ist false** → die Middleware fällt durch, der SPA-Fallback liefert `index.html`, die Angular-Info-Seite lädt. Diese ruft anschliessend `GET /api/redirect/resolve?path=…` auf, um dasselbe Match-Resultat zu holen und darzustellen, und sendet selbst `POST /api/track`.
+3. **Regel getroffen und die wirksame Auto-Weiterleitung ist true** (Feld der Regel, sofern die Einstellung der Quelle auf `PerRule` steht, sonst `Always`/`Never` — Kapitel 2) → `UrlTransformService` baut das Ziel, ein Tracking-Eintrag mit `Feedback = "auto-redirect"` wird geschrieben, ein `302` geht zurück.
+4. **Regel getroffen und die wirksame Auto-Weiterleitung ist false** → die Middleware fällt durch, der SPA-Fallback liefert `index.html`, die Angular-Info-Seite lädt. Diese ruft anschliessend `GET /api/redirect/resolve?path=…` auf, um dasselbe Match-Resultat zu holen und darzustellen, und sendet selbst `POST /api/track`.
 5. **Kein Treffer** → `NoMatchBehavior` entscheidet (Standard-Weiterleitung, Smart Search oder Durchfallen zur Info-Seite).
 
 Die `RedirectMiddleware` überspringt `/`, `/api/*` sowie die fest hinterlegte SPA-Routenliste (`/login`, `/rules`, `/global-rules`, `/settings`, `/import`, `/stats`, `/blocked-ips`, `/validate`).
@@ -405,7 +421,7 @@ Azure Table Storage, vier Tabellen. Nur der Name der Regeltabelle ist konfigurie
 | Tabelle | PartitionKey | RowKey | Anmerkungen |
 |---|---|---|---|
 | `RedirectRules` (konfigurierbar über `AzureTableStorage__TableName`) | `"rule"` — konstant | Regel-GUID (Format `N`) | Einzelne Partition. Komplexe Felder (`KeptQueryParams`, `StaticQueryParams`, `SearchAndReplace`) werden als JSON-Strings abgelegt. `Source` als `manual`/`import`/`qmpro`/`arealist`, fehlend = `unknown`. `ExternalDocumentId` (String; Dokument-ID bei `qmpro`, Listeneintrags-GUID bei `arealist`) und `IsActive` (`bool?`, fehlend = aktiv, beim Schreiben immer gesetzt) sind optional. |
-| `AppSettings` | `"Settings"` | `"default"` | Ein einziger Datensatz. Wird beim ersten Start mit Standardwerten angelegt. |
+| `AppSettings` | `"Settings"` | `"default"` | Ein einziger Datensatz. Wird beim ersten Start mit Standardwerten angelegt. Die vier `AutoRedirect*`-Spalten speichern `PerRule`/`Always`/`Never` als String; fehlende oder unbekannte Werte gelten als `PerRule`, eine Migration ist nicht nötig. |
 | `GlobalRules` | konstant | Regel-GUID | Kleine Tabelle, vollständig gecacht. |
 | `Tracking` | `yyyy-MM-dd` (Datum des Eintrags) | Eintrags-GUID | Nach Datum partitioniert, für effiziente Bereichsabfragen und günstiges Löschen abgelaufener Daten. Kein Cache — schreiblastig, wird selten gelesen. |
 
@@ -538,7 +554,7 @@ Erfolg bei `publish`/`unpublish`: `{ ruleId, result }` (`ruleId` fehlt bei `notF
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | `GET` | `/api/settings` | Öffentlich. |
-| `PUT` | `/api/settings` | Admin. Teil-Merge — nur Felder ungleich `null` werden übernommen. Validiert `NoMatchBehavior` und `PopupMode`. |
+| `PUT` | `/api/settings` | Admin. Teil-Merge — nur Felder ungleich `null` werden übernommen. Validiert `NoMatchBehavior` und `PopupMode`. Die vier Felder `AutoRedirect*` nehmen `perRule`, `always` oder `never` entgegen. |
 
 ### Statistiken (Admin)
 
@@ -596,7 +612,7 @@ Ein dezentes Zahnrad-Symbol prüft den Auth-Status und öffnet entweder das Admi
 - **Validieren** — eine Liste von URLs einfügen und pro URL die getroffene Regel, den Score, die Qualität und einen Schritt-für-Schritt-Trace der Transformation erhalten. Das wichtigste Debugging-Werkzeug.
 - **Import** — Datei-Upload mit Vorschauschritt (Zahlen zu neu/aktualisiert/unverändert/ungültig) vor dem Übernehmen, dazu ein Fortschrittsbalken auf Basis des Job-Pollings.
 - **Statistiken** — Kennzahlen-Kacheln, Zufriedenheits-Trenddiagramm und eine filterbare Eintragstabelle mit Export.
-- **Einstellungen** — alle Laufzeit-Einstellungen inklusive sämtlicher Texte der Info-Seite.
+- **Einstellungen** — alle Laufzeit-Einstellungen inklusive sämtlicher Texte der Info-Seite und der Auto-Weiterleitung pro Regelquelle.
 - **Globale Regeln** und **Blockierte IPs** — einfache CRUD-Tabellen.
 
 ### Erwähnenswerte Frontend-Details

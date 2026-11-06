@@ -188,10 +188,14 @@
                                 <span class="badge" [class]="'badge-' + rule.redirectType">{{ rule.redirectType }}</span>
                             </td>
                             <td>
-                                @if (rule.autoRedirect) {
-                                    <span class="text-success" style="font-size: 0.8rem">302</span>
+                                @if (effectiveAutoRedirect(rule)) {
+                                    <span class="text-success" style="font-size: 0.8rem" [title]="autoRedirectTitle(rule)">
+                                        302@if (isAutoRedirectOverridden(rule)) {<span class="text-tertiary">*</span>}
+                                    </span>
                                 } @else {
-                                    <span class="text-tertiary" style="font-size: 0.8rem">Info</span>
+                                    <span class="text-tertiary" style="font-size: 0.8rem" [title]="autoRedirectTitle(rule)">
+                                        Info@if (isAutoRedirectOverridden(rule)) {<span>*</span>}
+                                    </span>
                                 }
                             </td>
                             <td>
@@ -281,6 +285,7 @@
 <app-rule-modal
     [isOpen]="showRuleModal()"
     [rule]="editingRule()"
+    [settings]="appSettings()"
     (saved)="onRuleModalSaved($event)"
     (closed)="onRuleModalClosed()"
 />

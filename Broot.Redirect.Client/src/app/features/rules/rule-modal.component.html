@@ -95,11 +95,17 @@
                         <label class="form-label">Auto-Weiterleitung</label>
                         <div class="toggle-wrapper" style="margin-top: 4px">
                             <label class="toggle">
-                                <input type="checkbox" [(ngModel)]="autoRedirect" />
+                                <input type="checkbox" [(ngModel)]="autoRedirect" [disabled]="isAutoRedirectForced" />
                                 <span class="toggle-track"></span>
                             </label>
                             <span class="toggle-label">{{ autoRedirect ? 'HTTP 302 Weiterleitung' : 'Infoseite anzeigen' }}</span>
                         </div>
+                        @if (autoRedirectNotice) {
+                            <span class="form-hint">
+                                {{ autoRedirectNotice }}
+                                Aktuell wirksam: {{ effectiveAutoRedirect ? 'HTTP 302 Weiterleitung' : 'Infoseite anzeigen' }}.
+                            </span>
+                        }
                     </div>
 
                     <div class="form-group" style="display: flex; flex-direction: column; gap: 8px">

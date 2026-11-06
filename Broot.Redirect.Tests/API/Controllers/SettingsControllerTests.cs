@@ -124,5 +124,68 @@ namespace Broot.Redirect.Tests.API.Controllers
 
             result.Should().BeOfType<OkObjectResult>();
         }
+
+        [Fact]
+        public async Task Update_AutoRedirectModes_ArePersisted()
+        {
+            var request = new UpdateSettingsRequest
+            {
+                AutoRedirectManual = AutoRedirectMode.Always,
+                AutoRedirectImport = AutoRedirectMode.Never,
+                AutoRedirectQmPro = AutoRedirectMode.Always,
+                AutoRedirectAreaList = AutoRedirectMode.Never
+            };
+
+            var result = await _sut.Update(request) as OkObjectResult;
+
+            result.Should().NotBeNull();
+
+            await _settingsCache.Received(1).UpdateSettingsAsync(
+                Arg.Is<AppSettings>(s =>
+                    s.AutoRedirectManual == AutoRedirectMode.Always
+                    && s.AutoRedirectImport == AutoRedirectMode.Never
+                    && s.AutoRedirectQmPro == AutoRedirectMode.Always
+                    && s.AutoRedirectAreaList == AutoRedirectMode.Never),
+                Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task Update_OmittedAutoRedirectModes_KeepExistingValues()
+        {
+            var existing = new AppSettings
+            {
+                AutoRedirectQmPro = AutoRedirectMode.Always,
+                AutoRedirectImport = AutoRedirectMode.Never
+            };
+
+            _settingsCache.GetSettings().Returns(existing);
+
+            var request = new UpdateSettingsRequest { HeaderTitle = "Neuer Titel" };
+
+            await _sut.Update(request);
+
+            await _settingsCache.Received(1).UpdateSettingsAsync(
+                Arg.Is<AppSettings>(s =>
+                    s.AutoRedirectQmPro == AutoRedirectMode.Always
+                    && s.AutoRedirectImport == AutoRedirectMode.Never
+                    && s.AutoRedirectManual == AutoRedirectMode.PerRule
+                    && s.AutoRedirectAreaList == AutoRedirectMode.PerRule),
+                Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public void Get_ReturnsAutoRedirectModes()
+        {
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                AutoRedirectQmPro = AutoRedirectMode.Always
+            });
+
+            var result = _sut.Get() as OkObjectResult;
+
+            result.Should().NotBeNull();
+            result!.Value.Should().BeOfType<AppSettings>()
+                .Which.AutoRedirectQmPro.Should().Be(AutoRedirectMode.Always);
+        }
     }
 }

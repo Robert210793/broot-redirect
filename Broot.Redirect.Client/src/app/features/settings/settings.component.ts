@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../shared/services/settings.service';
 import { ToastService } from '../../shared/services/toast.service';
-import { AppSettings } from '../../shared/models/app-settings';
+import { AppSettings, AutoRedirectMode } from '../../shared/models/app-settings';
 
 @Component({
     selector: 'app-settings',
@@ -60,6 +60,12 @@ export class SettingsComponent implements OnInit {
     enableFeedbackComment = false;
     showLinkQualityGauge = true;
 
+    // -- Auto-redirect per rule source --
+    autoRedirectManual: AutoRedirectMode = 'perRule';
+    autoRedirectImport: AutoRedirectMode = 'perRule';
+    autoRedirectQmPro: AutoRedirectMode = 'perRule';
+    autoRedirectAreaList: AutoRedirectMode = 'perRule';
+
     ngOnInit(): void {
         this.loadSettings();
     }
@@ -91,7 +97,11 @@ export class SettingsComponent implements OnInit {
             enableReferrerTracking: this.enableReferrerTracking,
             enableFeedbackSurvey: this.enableFeedbackSurvey,
             enableFeedbackComment: this.enableFeedbackComment,
-            showLinkQualityGauge: this.showLinkQualityGauge
+            showLinkQualityGauge: this.showLinkQualityGauge,
+            autoRedirectManual: this.autoRedirectManual,
+            autoRedirectImport: this.autoRedirectImport,
+            autoRedirectQmPro: this.autoRedirectQmPro,
+            autoRedirectAreaList: this.autoRedirectAreaList
         };
 
         this.settingsService.updateSettings(payload).subscribe({
@@ -156,5 +166,9 @@ export class SettingsComponent implements OnInit {
         this.enableFeedbackSurvey = settings.enableFeedbackSurvey;
         this.enableFeedbackComment = settings.enableFeedbackComment;
         this.showLinkQualityGauge = settings.showLinkQualityGauge;
+        this.autoRedirectManual = settings.autoRedirectManual ?? 'perRule';
+        this.autoRedirectImport = settings.autoRedirectImport ?? 'perRule';
+        this.autoRedirectQmPro = settings.autoRedirectQmPro ?? 'perRule';
+        this.autoRedirectAreaList = settings.autoRedirectAreaList ?? 'perRule';
     }
 }

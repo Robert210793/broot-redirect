@@ -453,6 +453,65 @@ namespace Broot.Redirect.Tests.Infrastructure.Persistence
             restored.SmartSearchSkipEncoding.Should().Be(original.SmartSearchSkipEncoding);
             restored.EnableFeedbackComment.Should().Be(original.EnableFeedbackComment);
         }
+
+        [Fact]
+        public void RoundTrip_PreservesAutoRedirectModes()
+        {
+            var original = new AppSettings
+            {
+                AutoRedirectManual = AutoRedirectMode.Always,
+                AutoRedirectImport = AutoRedirectMode.Never,
+                AutoRedirectQmPro = AutoRedirectMode.Always,
+                AutoRedirectAreaList = AutoRedirectMode.Never
+            };
+
+            var entity = AppSettingsEntity.FromDomainModel(original);
+
+            entity.AutoRedirectManual.Should().Be("Always");
+            entity.AutoRedirectImport.Should().Be("Never");
+
+            var restored = entity.ToDomainModel();
+
+            restored.AutoRedirectManual.Should().Be(AutoRedirectMode.Always);
+            restored.AutoRedirectImport.Should().Be(AutoRedirectMode.Never);
+            restored.AutoRedirectQmPro.Should().Be(AutoRedirectMode.Always);
+            restored.AutoRedirectAreaList.Should().Be(AutoRedirectMode.Never);
+        }
+
+        [Fact]
+        public void ToDomainModel_DefaultEntity_UsesPerRule()
+        {
+            var settings = new AppSettingsEntity().ToDomainModel();
+
+            settings.AutoRedirectManual.Should().Be(AutoRedirectMode.PerRule);
+            settings.AutoRedirectImport.Should().Be(AutoRedirectMode.PerRule);
+            settings.AutoRedirectQmPro.Should().Be(AutoRedirectMode.PerRule);
+            settings.AutoRedirectAreaList.Should().Be(AutoRedirectMode.PerRule);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("bogus")]
+        public void ToDomainModel_LegacyOrInvalidValue_FallsBackToPerRule(string stored)
+        {
+            var entity = new AppSettingsEntity
+            {
+                AutoRedirectQmPro = stored
+            };
+
+            entity.ToDomainModel().AutoRedirectQmPro.Should().Be(AutoRedirectMode.PerRule);
+        }
+
+        [Fact]
+        public void ToDomainModel_IsCaseInsensitive()
+        {
+            var entity = new AppSettingsEntity
+            {
+                AutoRedirectQmPro = "always"
+            };
+
+            entity.ToDomainModel().AutoRedirectQmPro.Should().Be(AutoRedirectMode.Always);
+        }
     }
 
     public class GlobalRuleEntityTests

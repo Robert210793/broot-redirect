@@ -66,6 +66,78 @@
                 </div>
             </section>
 
+            <!-- Auto-Redirect per rule source -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>Auto-Weiterleitung pro Regelquelle</h2>
+                </div>
+                <div class="card-body settings-card-body">
+                    <span class="form-hint">
+                        Legt je Regelquelle fest, ob ein Treffer direkt per HTTP 302 weitergeleitet wird oder die Infoseite erscheint.
+                        «Pro Regel entscheiden» verwendet die Auto-Weiterleitung der einzelnen Regel.
+                        «Immer» und «Nie» übersteuern die einzelnen Regeln und wirken sofort auf alle bestehenden Regeln dieser Quelle.
+                    </span>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="autoRedirectManual">Manuell erstellte Regeln</label>
+                            <select
+                                id="autoRedirectManual"
+                                class="form-select"
+                                [(ngModel)]="autoRedirectManual"
+                            >
+                                <option value="perRule">Pro Regel entscheiden</option>
+                                <option value="always">Immer weiterleiten (302)</option>
+                                <option value="never">Nie weiterleiten (Infoseite)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="autoRedirectImport">Importierte Regeln</label>
+                            <select
+                                id="autoRedirectImport"
+                                class="form-select"
+                                [(ngModel)]="autoRedirectImport"
+                            >
+                                <option value="perRule">Pro Regel entscheiden</option>
+                                <option value="always">Immer weiterleiten (302)</option>
+                                <option value="never">Nie weiterleiten (Infoseite)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="autoRedirectQmPro">QM-Pro-Regeln</label>
+                            <select
+                                id="autoRedirectQmPro"
+                                class="form-select"
+                                [(ngModel)]="autoRedirectQmPro"
+                            >
+                                <option value="perRule">Pro Regel entscheiden</option>
+                                <option value="always">Immer weiterleiten (302)</option>
+                                <option value="never">Nie weiterleiten (Infoseite)</option>
+                            </select>
+                            <span class="form-hint">QM Pro legt neue Regeln ohne Auto-Weiterleitung an; «Immer» leitet sie trotzdem direkt weiter.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="autoRedirectAreaList">Regeln aus der Bereichsliste</label>
+                            <select
+                                id="autoRedirectAreaList"
+                                class="form-select"
+                                [(ngModel)]="autoRedirectAreaList"
+                            >
+                                <option value="perRule">Pro Regel entscheiden</option>
+                                <option value="always">Immer weiterleiten (302)</option>
+                                <option value="never">Nie weiterleiten (Infoseite)</option>
+                            </select>
+                            <span class="form-hint">Gilt für Regeln aus der Liste «Redirect Regeln»; diese werden ebenfalls ohne Auto-Weiterleitung angelegt.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Info Page: Header -->
             <section class="card">
                 <div class="card-header">

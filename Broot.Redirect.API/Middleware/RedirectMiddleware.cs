@@ -62,9 +62,11 @@ namespace Broot.Redirect.API.Middleware
                 }
 
                 _logger.LogDebug(
-                    "Info page fallthrough: {SourcePath} matched rule {RuleId}, AutoRedirect=false",
+                    "Info page fallthrough: {SourcePath} matched rule {RuleId}, effective AutoRedirect=false (source {Source}, mode {Mode})",
                     path,
-                    matchResult.Rule.Id);
+                    matchResult.Rule.Id,
+                    matchResult.Rule.Source,
+                    appSettings.GetAutoRedirectMode(matchResult.Rule.Source));
 
                 await _next(context);
 
@@ -95,8 +97,7 @@ namespace Broot.Redirect.API.Middleware
         {
             var rule = matchResult.Rule;
 
-            // Only check the per-rule AutoRedirect flag
-            if (!rule.AutoRedirect)
+            if (!appSettings.ResolveAutoRedirect(rule))
             {
                 return false;
             }

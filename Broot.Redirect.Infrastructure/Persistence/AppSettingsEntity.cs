@@ -76,6 +76,14 @@ namespace Broot.Redirect.Infrastructure.Persistence
 
         public bool ShowLinkQualityGauge { get; set; } = true;
 
+        public string AutoRedirectManual { get; set; } = nameof(AutoRedirectMode.PerRule);
+
+        public string AutoRedirectImport { get; set; } = nameof(AutoRedirectMode.PerRule);
+
+        public string AutoRedirectQmPro { get; set; } = nameof(AutoRedirectMode.PerRule);
+
+        public string AutoRedirectAreaList { get; set; } = nameof(AutoRedirectMode.PerRule);
+
         /// <summary>
         /// Maps a domain AppSettings to a Table Storage entity.
         /// </summary>
@@ -109,7 +117,11 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 EnableReferrerTracking = settings.EnableReferrerTracking,
                 EnableFeedbackSurvey = settings.EnableFeedbackSurvey,
                 EnableFeedbackComment = settings.EnableFeedbackComment,
-                ShowLinkQualityGauge = settings.ShowLinkQualityGauge
+                ShowLinkQualityGauge = settings.ShowLinkQualityGauge,
+                AutoRedirectManual = settings.AutoRedirectManual.ToString(),
+                AutoRedirectImport = settings.AutoRedirectImport.ToString(),
+                AutoRedirectQmPro = settings.AutoRedirectQmPro.ToString(),
+                AutoRedirectAreaList = settings.AutoRedirectAreaList.ToString()
             };
         }
 
@@ -144,8 +156,19 @@ namespace Broot.Redirect.Infrastructure.Persistence
                 EnableReferrerTracking = EnableReferrerTracking,
                 EnableFeedbackSurvey = EnableFeedbackSurvey,
                 EnableFeedbackComment = EnableFeedbackComment,
-                ShowLinkQualityGauge = ShowLinkQualityGauge
+                ShowLinkQualityGauge = ShowLinkQualityGauge,
+                AutoRedirectManual = ParseAutoRedirectMode(AutoRedirectManual),
+                AutoRedirectImport = ParseAutoRedirectMode(AutoRedirectImport),
+                AutoRedirectQmPro = ParseAutoRedirectMode(AutoRedirectQmPro),
+                AutoRedirectAreaList = ParseAutoRedirectMode(AutoRedirectAreaList)
             };
+        }
+
+        private static AutoRedirectMode ParseAutoRedirectMode(string value)
+        {
+            return Enum.TryParse<AutoRedirectMode>(value, ignoreCase: true, out var mode)
+                ? mode
+                : AutoRedirectMode.PerRule;
         }
     }
 }

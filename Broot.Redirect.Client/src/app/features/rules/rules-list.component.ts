@@ -2,8 +2,10 @@ import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { RulesService, ExportFormat, StreamProgress } from '../../shared/services/rules.service';
+import { SettingsService } from '../../shared/services/settings.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { RedirectRule, RulesQueryParams } from '../../shared/models/redirect-rule';
+import { AppSettings, autoRedirectModeFor, resolveAutoRedirect } from '../../shared/models/app-settings';
 import { RuleModalComponent } from './rule-modal.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ResizableColumnsDirective } from '../../shared/directives/resizable-columns.directive';
@@ -17,6 +19,7 @@ import { ResizableColumnsDirective } from '../../shared/directives/resizable-col
 export class RulesListComponent implements OnInit, OnDestroy {
 
     private readonly rulesService = inject(RulesService);
+    private readonly settingsService = inject(SettingsService);
     private readonly toastService = inject(ToastService);
 
     private readonly destroy$ = new Subject<void>();
@@ -33,6 +36,7 @@ export class RulesListComponent implements OnInit, OnDestroy {
     };
 
     rules = signal<RedirectRule[]>([]);
+    appSettings = signal<AppSettings | null>(null);
     total = signal(0);
     totalPages = signal(0);
     isLoading = signal(false);
@@ -98,6 +102,10 @@ export class RulesListComponent implements OnInit, OnDestroy {
         });
 
         this.loadRules();
+
+        this.settingsService.getSettings().pipe(takeUntil(this.destroy$)).subscribe({
+            next: (settings) => this.appSettings.set(settings)
+        });
     }
 
     ngOnDestroy(): void {
@@ -313,6 +321,24 @@ export class RulesListComponent implements OnInit, OnDestroy {
                 this.toastService.show('Export fehlgeschlagen.', 'error');
             }
         });
+    }
+
+    effectiveAutoRedirect(rule: RedirectRule): boolean {
+        return resolveAutoRedirect(this.appSettings(), rule);
+    }
+
+    isAutoRedirectOverridden(rule: RedirectRule): boolean {
+        return autoRedirectModeFor(this.appSettings(), rule.source) !== 'perRule';
+    }
+
+    autoRedirectTitle(rule: RedirectRule): string {
+        if (!this.isAutoRedirectOverridden(rule)) {
+            return rule.autoRedirect ? 'HTTP 302 Weiterleitung' : 'Infoseite anzeigen';
+        }
+
+        const forced = this.effectiveAutoRedirect(rule) ? 'immer weiterleiten' : 'nie weiterleiten';
+
+        return `Durch die Einstellung für die Quelle «${this.sourceLabel(rule.source)}» übersteuert: ${forced}.`;
     }
 
     sourceLabel(source: RedirectRule['source']): string {

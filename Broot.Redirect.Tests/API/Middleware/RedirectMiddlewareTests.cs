@@ -365,5 +365,111 @@ namespace Broot.Redirect.Tests.API.Middleware
 
             nextCalled.Should().BeTrue();
         }
+
+        [Fact]
+        public async Task InvokeAsync_SourceModeAlways_Returns302AlthoughRuleFlagIsFalse()
+        {
+            ArrangeMatch(RuleSource.QmPro, autoRedirect: false);
+
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                AutoRedirectQmPro = AutoRedirectMode.Always
+            });
+
+            var (nextCalled, context) = await InvokeMiddleware("/old-page");
+
+            nextCalled.Should().BeFalse();
+            context.Response.StatusCode.Should().Be(302);
+            context.Response.Headers.Location.ToString().Should().Be("https://new.com/page");
+        }
+
+        [Fact]
+        public async Task InvokeAsync_SourceModeNever_FallsThroughAlthoughRuleFlagIsTrue()
+        {
+            ArrangeMatch(RuleSource.Manual, autoRedirect: true);
+
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                AutoRedirectManual = AutoRedirectMode.Never
+            });
+
+            var (nextCalled, context) = await InvokeMiddleware("/old-page");
+
+            nextCalled.Should().BeTrue();
+            context.Response.StatusCode.Should().NotBe(302);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_SourceModeAlways_DoesNotAffectOtherSources()
+        {
+            ArrangeMatch(RuleSource.Import, autoRedirect: false);
+
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                AutoRedirectQmPro = AutoRedirectMode.Always
+            });
+
+            var (nextCalled, context) = await InvokeMiddleware("/old-page");
+
+            nextCalled.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task InvokeAsync_SourceModeNever_DoesNotAffectOtherSources()
+        {
+            ArrangeMatch(RuleSource.AreaList, autoRedirect: true);
+
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                AutoRedirectQmPro = AutoRedirectMode.Never
+            });
+
+            var (nextCalled, context) = await InvokeMiddleware("/old-page");
+
+            nextCalled.Should().BeFalse();
+            context.Response.StatusCode.Should().Be(302);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_SourceModePerRule_KeepsRuleFlag()
+        {
+            ArrangeMatch(RuleSource.QmPro, autoRedirect: true);
+
+            _settingsCache.GetSettings().Returns(new AppSettings
+            {
+                AutoRedirectQmPro = AutoRedirectMode.PerRule
+            });
+
+            var (nextCalled, context) = await InvokeMiddleware("/old-page");
+
+            nextCalled.Should().BeFalse();
+            context.Response.StatusCode.Should().Be(302);
+        }
+
+        private void ArrangeMatch(RuleSource source, bool autoRedirect)
+        {
+            var rule = new RedirectRule
+            {
+                Matcher = "/old-page",
+                Source = source,
+                AutoRedirect = autoRedirect
+            };
+
+            var matchResult = new RuleMatchResult
+            {
+                Rule = rule,
+                Score = 1000,
+                Quality = 100,
+                Level = MatchQualityLevel.Green
+            };
+
+            _ruleMatchingService
+                .ResolveMatch(Arg.Any<string>(), Arg.Any<RuleMatchingConfig>())
+                .Returns(matchResult);
+
+            _urlTransformService
+                .ResolveTargetUrl(Arg.Any<string>(), Arg.Any<RedirectRule>(), Arg.Any<string>())
+                .Returns("https://new.com/page");
+        }
     }
 }

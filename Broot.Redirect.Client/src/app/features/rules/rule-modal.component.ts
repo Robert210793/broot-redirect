@@ -11,6 +11,7 @@ import {
     StaticQueryParam,
     SearchAndReplaceEntry
 } from '../../shared/models/redirect-rule';
+import { AppSettings, AutoRedirectMode, autoRedirectModeFor } from '../../shared/models/app-settings';
 
 // Matches Node.js shared/schema.ts URL_MATCHER_PATTERN
 const MATCHER_PATTERN = /^(\/|[a-zA-Z0-9])([a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]*)$/;
@@ -33,6 +34,7 @@ export class RuleModalComponent {
     // Inputs / Outputs
     isOpen = input.required<boolean>();
     rule = input<RedirectRule | null>(null);
+    settings = input<AppSettings | null>(null);
 
     saved = output<RedirectRule>();
     closed = output<void>();
@@ -84,6 +86,36 @@ export class RuleModalComponent {
                 return 'Regel wird von QM Pro verwaltet und kann nicht bearbeitet werden.';
             case 'areaList':
                 return 'Regel wird über die Liste «Redirect Regeln» verwaltet und kann nicht bearbeitet werden.';
+            default:
+                return null;
+        }
+    }
+
+    get autoRedirectMode(): AutoRedirectMode {
+        return autoRedirectModeFor(this.settings(), this.rule()?.source ?? 'manual');
+    }
+
+    get isAutoRedirectForced(): boolean {
+        return this.autoRedirectMode !== 'perRule';
+    }
+
+    get effectiveAutoRedirect(): boolean {
+        switch (this.autoRedirectMode) {
+            case 'always':
+                return true;
+            case 'never':
+                return false;
+            default:
+                return this.autoRedirect;
+        }
+    }
+
+    get autoRedirectNotice(): string | null {
+        switch (this.autoRedirectMode) {
+            case 'always':
+                return 'Die Einstellung für diese Regelquelle leitet alle Treffer direkt weiter (HTTP 302). Der Schalter dieser Regel wird ignoriert.';
+            case 'never':
+                return 'Die Einstellung für diese Regelquelle zeigt für alle Treffer die Infoseite. Der Schalter dieser Regel wird ignoriert.';
             default:
                 return null;
         }
