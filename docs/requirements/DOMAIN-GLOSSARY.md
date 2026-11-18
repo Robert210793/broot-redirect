@@ -10,7 +10,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Aktiv-Wert (Abgleich) | `AreaRuleSyncEntry.Active` (`active`) | Boolescher Wert pro Eintrag im Stand des Abgleichs; `true` nur für Status «aktiv», übersetzt vom Timer-Trigger in QM Pro; fehlend oder `null` gilt als aktiv (ADR-005). Statuswechsel bestehender Regeln zählt das Ergebnis in `activated` und `deactivated` (Teilmengen von `updated`) |
 | Alte URL | `OldUrl` | Ursprüngliche On-Premises-URL eines Dokuments aus der Migration; ihr Pfad inklusive Query wird zum Matcher |
 | Ampelstufe | `MatchQualityLevel` | Grün (ab 90), Gelb (ab 60) oder Rot — Darstellung der Match-Qualität |
-| Archiv (RedirectExport) | `Archiv` | Unterordner der Bibliothek «RedirectExport», in den ersetzte und ältere URL-Mapping-CSV unter `url-mapping_JJJJ-MM-TT_HHMM.csv` (Schweizer Ortszeit) abgelegt werden; nie überschrieben (ADR-006) |
+| Archiv (RedirectExport) | `Archiv` | Unterordner der Bibliothek «RedirectExport», in den ersetzte und ältere URL-Mapping-CSV unter `url-mapping_JJJJ-MM-TT.csv` (Schweizer Ortszeit) abgelegt werden; nie überschrieben (ADR-006) |
 | API-Key (QM Pro) | `QmProApiKey` | Geheimer Schlüssel aus der Startkonfiguration, den QM Pro im Header `X-Api-Key` sendet |
 | Aufbewahrungsdauer | `TrackingRetentionDays` | Anzahl Tage, nach denen Tracking-Einträge automatisch gelöscht werden |
 | Aufwärmen (Cache) | `CacheWarmupService` | Laden von Regeln, Einstellungen und globalen Regeln in den Arbeitsspeicher beim Start |
@@ -52,7 +52,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Tracking-Eintrag | `TrackingEntry` | Datensatz pro Aufruf der Info-Seite oder automatischer Weiterleitung |
 | Transformations-Trace | `UrlTraceStep` | Schrittweise Aufzeichnung, wie die Ziel-URL entstanden ist (Validierungswerkzeug) |
 | Übersprungener Eintrag (Abgleich) | `AreaRuleSyncSkippedEntry` | Eintrag der Liste «Redirect Regeln», den der Abgleich nicht übernimmt, mit Identifier, Code (`VALIDATION_ERROR`, `DUPLICATE_ENTRY`, `MATCHER_DUPLICATE`; `MATCHER_CONFLICT` bis US-13.005) und Grund; eine bestehende Regel des Eintrags bleibt unverändert, ausser ein nicht aktiver Eintrag deaktiviert seine aktive Regel |
-| URL-Mapping-CSV | `url-mapping.csv` | Datei für das lokale IIS-Rewrite des Kunden mit allen Quell-URLs ausser «vorbereitet» (Kopfzeile `source-url`), täglich vom Timer `brtqmRedirectUrlMappingExport` und manuell im WebPart erzeugt (ADR-006) |
+| URL-Mapping-CSV | `url-mapping.csv` | Datei für das lokale IIS-Rewrite des Kunden mit allen Quell-URLs ausser «vorbereitet» (Kopfzeile `source-url`), einmal täglich vom Abgleich `brtqmRedirectRulesSync` und manuell im WebPart erzeugt (ADR-006) |
 | Validierung (Trockenlauf) | `POST /api/rules/validate` | Prüfung einer URL-Liste gegen das Regelwerk, ohne Aufrufe zu erfassen |
 | Verhalten ohne Treffer | `NoMatchBehavior` | `RedirectToDefault`, `SmartSearch` oder `Return404` |
 | Vorgeschlagene URL | `UserProposedUrl` | Vom Benutzer im Feedback angegebene korrekte URL |

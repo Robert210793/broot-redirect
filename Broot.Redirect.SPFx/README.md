@@ -43,10 +43,10 @@ Die Schaltfläche «Als CSV exportieren» lädt die Liste «Redirect Regeln» al
 
 ## URL-Mapping-CSV
 
-Die Schaltfläche «URL-Mapping-CSV erzeugen» legt die Datei `url-mapping.csv` für das IIS-Rewrite des Kunden im Stammverzeichnis von «RedirectExport» ab — mit denselben Regeln wie der tägliche Timer `brtqmRedirectUrlMappingExport` der QM-Pro-Function-App ([ADR-006](../docs/technical/adr/ADR-006-url-mapping-csv-in-redirectexport.md), US-13.006).
+Die Schaltfläche «URL-Mapping-CSV erzeugen» legt die Datei `url-mapping.csv` für das IIS-Rewrite des Kunden im Stammverzeichnis von «RedirectExport» ab — mit denselben Regeln wie die tägliche Erzeugung im Abgleich `brtqmRedirectRulesSync` der QM-Pro-Function-App ([ADR-006](../docs/technical/adr/ADR-006-url-mapping-csv-in-redirectexport.md), US-13.006).
 
 - Format: Kopfzeile `source-url`, je Zeile eine Quell-URL unverändert (nur Leerraum am Rand entfernt), sortiert nach Listeneintrags-ID; UTF-8 ohne BOM, CRLF zwischen den Zeilen, kein Zeilenende nach der letzten Zeile. Einträge, die als «vorbereitet» gelten, sowie leere und mehrzeilige Quell-URLs fehlen; die übersprungenen werden gemeldet.
-- Ablauf: Die bisherige `url-mapping.csv` wird als `Archiv/url-mapping_JJJJ-MM-TT_HHMM.csv` (Schweizer Ortszeit der letzten Änderung, bei Konflikt `_2` …) kopiert, danach an Ort und Stelle ersetzt; erst dann werden weitere `url-mapping*.csv` des Stammverzeichnisses ins Archiv verschoben. Schlägt ein Schritt fehl, bleibt die bisherige `url-mapping.csv` unverändert; der Ordner «Archiv» wird bei Bedarf angelegt, die Bibliothek nicht.
+- Ablauf: Die bisherige `url-mapping.csv` wird als `Archiv/url-mapping_JJJJ-MM-TT.csv` (Schweizer Datum der letzten Änderung, bei Konflikt `_2` …) kopiert, danach an Ort und Stelle ersetzt; erst dann werden weitere `url-mapping*.csv` des Stammverzeichnisses ins Archiv verschoben. Schlägt ein Schritt fehl, bleibt die bisherige `url-mapping.csv` unverändert; der Ordner «Archiv» wird bei Bedarf angelegt, die Bibliothek nicht.
 - Rechte: Auslösen kann, wer in «RedirectExport» Dateien hinzufügen, bearbeiten und löschen darf; andernfalls meldet das WebPart fehlende Rechte.
 
 ## Entwicklung

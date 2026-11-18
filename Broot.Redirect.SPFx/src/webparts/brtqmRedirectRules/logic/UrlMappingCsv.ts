@@ -56,7 +56,7 @@ export function isCurrentUrlMappingFile(name: string): boolean {
 export function urlMappingArchiveFileName(timeLastModified: string): string {
   const stamp = swissDateTime(new Date(timeLastModified));
 
-  return `url-mapping_${stamp.date}_${stamp.time}.csv`;
+  return `url-mapping_${stamp.date}.csv`;
 }
 
 export function uniqueFileName(baseName: string, attempt: number): string {

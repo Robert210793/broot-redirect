@@ -79,7 +79,7 @@ describe('UrlMappingCsv', () => {
     ['url-mapping.csv', true],
     ['URL-Mapping.CSV', true],
     ['url-mapping (1).csv', true],
-    ['url-mapping_2026-01-01_0600.csv', true],
+    ['url-mapping_2026-01-01.csv', true],
     ['Beispieldatei url-mapping.csv', false],
     ['url-mapping.csv.bak', false],
     ['Redirect-Regeln_2026-01-01_0600.csv', false]
@@ -93,13 +93,13 @@ describe('UrlMappingCsv', () => {
   });
 
   it.each([
-    ['2026-01-15T05:00:00Z', 'url-mapping_2026-01-15_0600.csv'],
-    ['2026-07-15T04:00:00Z', 'url-mapping_2026-07-15_0600.csv'],
-    ['2026-03-29T00:30:00Z', 'url-mapping_2026-03-29_0130.csv'],
-    ['2026-03-29T01:30:00Z', 'url-mapping_2026-03-29_0330.csv'],
-    ['2026-10-25T00:30:00Z', 'url-mapping_2026-10-25_0230.csv'],
-    ['2026-10-25T01:30:00Z', 'url-mapping_2026-10-25_0230.csv'],
-    ['2026-12-31T23:30:00Z', 'url-mapping_2027-01-01_0030.csv']
+    ['2026-01-15T05:00:00Z', 'url-mapping_2026-01-15.csv'],
+    ['2026-07-15T04:00:00Z', 'url-mapping_2026-07-15.csv'],
+    ['2026-03-29T00:30:00Z', 'url-mapping_2026-03-29.csv'],
+    ['2026-03-29T01:30:00Z', 'url-mapping_2026-03-29.csv'],
+    ['2026-10-25T00:30:00Z', 'url-mapping_2026-10-25.csv'],
+    ['2026-10-25T01:30:00Z', 'url-mapping_2026-10-25.csv'],
+    ['2026-12-31T23:30:00Z', 'url-mapping_2027-01-01.csv']
   ])('names the archive file of %s in Swiss time as %s', (modified, expected) => {
     expect(urlMappingArchiveFileName(modified)).toBe(expected);
   });
@@ -109,8 +109,8 @@ describe('UrlMappingCsv', () => {
   });
 
   it('adds a numbered suffix before the extension from the second attempt on', () => {
-    expect(uniqueFileName('url-mapping_2026-01-15_0600.csv', 1)).toBe('url-mapping_2026-01-15_0600.csv');
-    expect(uniqueFileName('url-mapping_2026-01-15_0600.csv', 2)).toBe('url-mapping_2026-01-15_0600_2.csv');
+    expect(uniqueFileName('url-mapping_2026-01-15.csv', 1)).toBe('url-mapping_2026-01-15.csv');
+    expect(uniqueFileName('url-mapping_2026-01-15.csv', 2)).toBe('url-mapping_2026-01-15_2.csv');
     expect(uniqueFileName('Redirect-Regeln_2026-01-15_0600.csv', 99)).toBe('Redirect-Regeln_2026-01-15_0600_99.csv');
   });
 });

@@ -82,14 +82,14 @@ describe('RedirectExportLibrary', () => {
 
   it('never overwrites when adding with a unique name and retries with a suffix on conflict', async () => {
     const { recorded, library } = setup();
-    recorded.addFailures['url-mapping_2026-11-17_0600.csv'] = { status: 400, message: 'A file with the name already exists' };
+    recorded.addFailures['url-mapping_2026-11-17.csv'] = { status: 400, message: 'A file with the name already exists' };
 
-    const name = await library.addFileWithUniqueName('archive', 'url-mapping_2026-11-17_0600.csv', 'x');
+    const name = await library.addFileWithUniqueName('archive', 'url-mapping_2026-11-17.csv', 'x');
 
-    expect(name).toBe('url-mapping_2026-11-17_0600_2.csv');
+    expect(name).toBe('url-mapping_2026-11-17_2.csv');
     expect(recorded.calls).toEqual([
-      'add /sites/qm/RedirectExport/Archiv/url-mapping_2026-11-17_0600.csv overwrite=false',
-      'add /sites/qm/RedirectExport/Archiv/url-mapping_2026-11-17_0600_2.csv overwrite=false'
+      'add /sites/qm/RedirectExport/Archiv/url-mapping_2026-11-17.csv overwrite=false',
+      'add /sites/qm/RedirectExport/Archiv/url-mapping_2026-11-17_2.csv overwrite=false'
     ]);
   });
 
@@ -114,11 +114,11 @@ describe('RedirectExportLibrary', () => {
   it('replaces a file with overwrite and moves files into the archive without overwriting', async () => {
     const { recorded, library } = setup();
     await library.addFile('root', 'url-mapping.csv', 'x', true);
-    await library.moveToArchiveWithUniqueName({ name: 'url-mapping (1).csv', serverRelativeUrl: '/sites/qm/RedirectExport/url-mapping (1).csv', timeLastModified: '' }, 'url-mapping_2026-11-10_0600.csv');
+    await library.moveToArchiveWithUniqueName({ name: 'url-mapping (1).csv', serverRelativeUrl: '/sites/qm/RedirectExport/url-mapping (1).csv', timeLastModified: '' }, 'url-mapping_2026-11-10.csv');
 
     expect(recorded.calls).toEqual([
       'add /sites/qm/RedirectExport/url-mapping.csv overwrite=true',
-      'move /sites/qm/RedirectExport/url-mapping (1).csv -> /sites/qm/RedirectExport/Archiv/url-mapping_2026-11-10_0600.csv overwrite=false'
+      'move /sites/qm/RedirectExport/url-mapping (1).csv -> /sites/qm/RedirectExport/Archiv/url-mapping_2026-11-10.csv overwrite=false'
     ]);
   });
 

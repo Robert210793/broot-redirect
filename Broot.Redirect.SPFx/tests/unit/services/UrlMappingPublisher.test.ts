@@ -144,21 +144,21 @@ describe('UrlMappingPublisher', () => {
 
     const result = await publisher.publish();
 
-    expect(result).toEqual({ kind: 'published', sourceUrlCount: 1, skippedCount: 0, archivedFiles: ['url-mapping_2026-11-17_0600.csv'] });
-    expect(library.archive!['url-mapping_2026-11-17_0600.csv'].content).toBe(PREVIOUS.content);
+    expect(result).toEqual({ kind: 'published', sourceUrlCount: 1, skippedCount: 0, archivedFiles: ['url-mapping_2026-11-17.csv'] });
+    expect(library.archive!['url-mapping_2026-11-17.csv'].content).toBe(PREVIOUS.content);
     expect(library.root['url-mapping.csv'].content).toBe('source-url\r\nhttp://old/a/');
-    expect(library.calls).toEqual(['add archive/url-mapping_2026-11-17_0600.csv', 'add root/url-mapping.csv overwrite']);
+    expect(library.calls).toEqual(['add archive/url-mapping_2026-11-17.csv', 'add root/url-mapping.csv overwrite']);
   });
 
   it('adds a suffix when the archive name is taken', async () => {
     const { library, publisher } = setup();
     library.root['url-mapping.csv'] = PREVIOUS;
-    library.archive!['url-mapping_2026-11-17_0600.csv'] = { content: 'older', modified: '' };
+    library.archive!['url-mapping_2026-11-17.csv'] = { content: 'older', modified: '' };
 
     const result = await publisher.publish();
 
-    expect(result.kind === 'published' && result.archivedFiles).toEqual(['url-mapping_2026-11-17_0600_2.csv']);
-    expect(library.archive!['url-mapping_2026-11-17_0600.csv'].content).toBe('older');
+    expect(result.kind === 'published' && result.archivedFiles).toEqual(['url-mapping_2026-11-17_2.csv']);
+    expect(library.archive!['url-mapping_2026-11-17.csv'].content).toBe('older');
   });
 
   it('creates the archive folder when it is missing', async () => {
@@ -219,10 +219,10 @@ describe('UrlMappingPublisher', () => {
       kind: 'partial',
       sourceUrlCount: 1,
       skippedCount: 0,
-      archivedFiles: ['url-mapping_2026-11-17_0600.csv', 'url-mapping_2026-11-10_0600.csv'],
+      archivedFiles: ['url-mapping_2026-11-17.csv', 'url-mapping_2026-11-10.csv'],
       notMovedFiles: ['URL-Mapping_alt.csv']
     });
-    expect(library.calls.indexOf('add root/url-mapping.csv overwrite')).toBeLessThan(library.calls.indexOf('move url-mapping (1).csv -> archive/url-mapping_2026-11-10_0600.csv'));
+    expect(library.calls.indexOf('add root/url-mapping.csv overwrite')).toBeLessThan(library.calls.indexOf('move url-mapping (1).csv -> archive/url-mapping_2026-11-10.csv'));
     expect(library.root['URL-Mapping_alt.csv'].content).toBe('alt');
   });
 
