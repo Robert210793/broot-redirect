@@ -45,6 +45,8 @@ define([], function() {
     "AreaNoLongerExists": "Der Bereich hat keine Einträge mehr.",
     "UnexpectedError": "Beim Zugriff auf die Liste «Redirect Regeln» ist ein Fehler aufgetreten: {0}",
     "ExportCsv": "Als CSV exportieren",
+    "ExportCsvFull": "Vollständig (alle Spalten)",
+    "ExportCsvSourceUrls": "Nur Quell-URLs",
     "Exporting": "Wird exportiert …",
     "Exported": "{0} Einträge wurden als CSV exportiert."
   };

@@ -13,7 +13,7 @@ import {
 import * as strings from 'BrtqmRedirectRulesWebPartStrings';
 import { areaCompareValue } from '../logic/AreaName';
 import { buildAreaSnapshot } from '../logic/AreaSavePlanner';
-import { buildRedirectRulesCsv, exportFileName } from '../logic/RedirectRulesCsv';
+import { buildExportCsv, exportFileName, ExportVariant } from '../logic/RedirectRulesCsv';
 import { AreaSaveCoordinator } from '../services/AreaSaveCoordinator';
 import { downloadTextFile } from '../services/FileDownload';
 import { IRedirectRulesService } from '../services/RedirectRulesService';
@@ -230,13 +230,13 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
     });
   };
 
-  const onExport = (): void => {
+  const onExport = (variant: ExportVariant): void => {
     setFeedback(undefined);
     setExporting(true);
     run(async () => {
       try {
         const entries = await service.getAllEntries();
-        downloadTextFile(exportFileName(new Date()), buildRedirectRulesCsv(entries), 'text/csv;charset=utf-8');
+        downloadTextFile(exportFileName(new Date(), variant), buildExportCsv(entries, variant), 'text/csv;charset=utf-8');
         setFeedback({ type: MessageBarType.success, text: format(strings.Exported, String(entries.length)) });
       } finally {
         setExporting(false);
@@ -308,7 +308,17 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
       <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
         <PrimaryButton text={strings.Save} disabled={busy || selectedKey === undefined} onClick={onSave} />
         <DefaultButton text={strings.Reload} disabled={busy} onClick={onReload} />
-        <DefaultButton text={strings.ExportCsv} iconProps={{ iconName: 'Download' }} disabled={busy} onClick={onExport} />
+        <DefaultButton
+          text={strings.ExportCsv}
+          iconProps={{ iconName: 'Download' }}
+          disabled={busy}
+          menuProps={{
+            items: [
+              { key: 'full', text: strings.ExportCsvFull, onClick: () => onExport('full') },
+              { key: 'sourceUrls', text: strings.ExportCsvSourceUrls, onClick: () => onExport('sourceUrls') }
+            ]
+          }}
+        />
         {busy && <Spinner size={SpinnerSize.small} label={exporting ? strings.Exporting : strings.Saving} labelPosition="right" />}
       </Stack>
     </Stack>

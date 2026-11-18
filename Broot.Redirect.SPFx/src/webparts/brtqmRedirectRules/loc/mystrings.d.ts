@@ -44,6 +44,8 @@ declare interface IBrtqmRedirectRulesWebPartStrings {
   AreaNoLongerExists: string;
   UnexpectedError: string;
   ExportCsv: string;
+  ExportCsvFull: string;
+  ExportCsvSourceUrls: string;
   Exporting: string;
   Exported: string;
 }

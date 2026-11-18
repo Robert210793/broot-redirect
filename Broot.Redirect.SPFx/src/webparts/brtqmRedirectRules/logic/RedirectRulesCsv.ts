@@ -1,7 +1,10 @@
 import { ExportEntry } from '../types';
 
+export type ExportVariant = 'full' | 'sourceUrls';
+
 export const CSV_DELIMITER: string = ';';
 export const CSV_HEADERS: string[] = ['Bereich', 'Quell-URL', 'Ziel-URL', 'Geändert am', 'Geändert von', 'UniqueId'];
+export const SOURCE_URLS_CSV_HEADERS: string[] = ['Quell-URL'];
 
 const BYTE_ORDER_MARK: string = '﻿';
 const LINE_BREAK: string = '\r\n';
@@ -10,6 +13,10 @@ const NEEDS_QUOTES: RegExp = /[";\r\n]/;
 
 function pad(value: number): string {
   return value < 10 ? `0${value}` : String(value);
+}
+
+function toCsv(rows: string[][]): string {
+  return BYTE_ORDER_MARK + rows.map((row) => row.map(csvField).join(CSV_DELIMITER)).join(LINE_BREAK) + LINE_BREAK;
 }
 
 export function formatDateTime(value: string): string {
@@ -34,18 +41,26 @@ export function sortForExport(entries: ExportEntry[]): ExportEntry[] {
 }
 
 export function buildRedirectRulesCsv(entries: ExportEntry[]): string {
-  const rows = [CSV_HEADERS].concat(sortForExport(entries).map((entry) => [
+  return toCsv([CSV_HEADERS].concat(sortForExport(entries).map((entry) => [
     entry.area.trim(),
     entry.sourceUrl,
     entry.targetUrl,
     formatDateTime(entry.modified),
     entry.modifiedBy,
     entry.uniqueId
-  ]));
-
-  return BYTE_ORDER_MARK + rows.map((row) => row.map(csvField).join(CSV_DELIMITER)).join(LINE_BREAK) + LINE_BREAK;
+  ])));
 }
 
-export function exportFileName(now: Date): string {
-  return `Redirect-Regeln_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.csv`;
+export function buildSourceUrlsCsv(entries: ExportEntry[]): string {
+  return toCsv([SOURCE_URLS_CSV_HEADERS].concat(sortForExport(entries).map((entry) => [entry.sourceUrl])));
+}
+
+export function buildExportCsv(entries: ExportEntry[], variant: ExportVariant): string {
+  return variant === 'sourceUrls' ? buildSourceUrlsCsv(entries) : buildRedirectRulesCsv(entries);
+}
+
+export function exportFileName(now: Date, variant: ExportVariant = 'full'): string {
+  const suffix = variant === 'sourceUrls' ? '_Quell-URLs' : '';
+
+  return `Redirect-Regeln${suffix}_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.csv`;
 }

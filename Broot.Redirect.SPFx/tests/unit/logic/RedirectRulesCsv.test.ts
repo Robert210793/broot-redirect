@@ -1,5 +1,7 @@
 import {
+  buildExportCsv,
   buildRedirectRulesCsv,
+  buildSourceUrlsCsv,
   csvField,
   exportFileName,
   formatDateTime,
@@ -94,5 +96,28 @@ describe('RedirectRulesCsv', () => {
 
   it('names the file with the local date', () => {
     expect(exportFileName(new Date(2026, 0, 5, 23, 59))).toBe('Redirect-Regeln_2026-01-05.csv');
+  });
+
+  it('marks the file name of the source URL export', () => {
+    expect(exportFileName(new Date(2026, 0, 5, 23, 59), 'sourceUrls')).toBe('Redirect-Regeln_Quell-URLs_2026-01-05.csv');
+  });
+
+  it('writes only the source URLs, sorted like the complete export', () => {
+    const csv = buildSourceUrlsCsv([
+      exportEntry(5, { area: 'IT' }),
+      exportEntry(2, { area: 'Finanzen', sourceUrl: 'http://old/a;b' })
+    ]);
+
+    expect(csv.charAt(0)).toBe('﻿');
+    expect(csv.slice(1)).toBe('Quell-URL\r\n"http://old/a;b"\r\nhttp://old.example/ims/5/\r\n');
+  });
+
+  it.each([
+    ['full', buildRedirectRulesCsv],
+    ['sourceUrls', buildSourceUrlsCsv]
+  ] as const)('builds the %s export for the chosen variant', (variant, build) => {
+    const entries = [exportEntry(1), exportEntry(2)];
+
+    expect(buildExportCsv(entries, variant)).toBe(build(entries));
   });
 });
