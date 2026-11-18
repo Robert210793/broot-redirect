@@ -87,7 +87,7 @@ export class AreaSaveCoordinator {
     const results = await this.service.execute(operations);
     const applied = applySaveResults(
       expectedEntries,
-      prepared.rows.map((row) => ({ rowId: row.rowId, itemId: row.itemId, sourceUrl: row.sourceUrl, removed: row.removed })),
+      prepared.rows.map((row) => ({ rowId: row.rowId, itemId: row.itemId, sourceUrl: row.sourceUrl, removed: row.removed, status: row.status })),
       results
     );
 

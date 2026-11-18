@@ -48,6 +48,20 @@ declare interface IBrtqmRedirectRulesWebPartStrings {
   ExportCsvSourceUrls: string;
   Exporting: string;
   Exported: string;
+  StatusLabel: string;
+  StatusForAllLabel: string;
+  StatusForAllPlaceholder: string;
+  Comments: string;
+  CommentsWithCount: string;
+  CommentsPanelTitle: string;
+  CommentsLoading: string;
+  CommentsEmpty: string;
+  CommentInputLabel: string;
+  CommentSend: string;
+  CommentsDisabled: string;
+  CommentsForbidden: string;
+  CommentsLoadFailed: string;
+  CommentSendFailed: string;
 }
 
 declare module 'BrtqmRedirectRulesWebPartStrings' {

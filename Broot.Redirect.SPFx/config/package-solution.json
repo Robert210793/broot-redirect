@@ -3,7 +3,7 @@
   "solution": {
     "name": "broot-redirect-spfx-client-side-solution",
     "id": "5c1c6f19-faea-49e3-817d-2e754f0a3f39",
-    "version": "1.1.0.0",
+    "version": "1.2.0.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
@@ -30,7 +30,7 @@
         "title": "broot-redirect-spfx Feature",
         "description": "Aktiviert das WebPart «Redirect Regeln».",
         "id": "0304173b-0588-4331-9d96-86bbc1dfa2aa",
-        "version": "1.1.0.0"
+        "version": "1.2.0.0"
       }
     ]
   },

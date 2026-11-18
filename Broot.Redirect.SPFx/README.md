@@ -20,11 +20,21 @@ provisioning/
 tests/unit/                          Jest-Tests (Logik und Service gegen eine In-Memory-Liste)
 ```
 
+## Status und Kommentare
+
+Jeder Eintrag führt einen Status (`brtqmStatus`, [ADR-004](../docs/technical/adr/ADR-004-status-pro-eintrag-liste-redirect-regeln.md), US-13.004): «vorbereitet», «IIS-Umleitung offen», «Testing», «Fehlerhaft» oder «aktiv».
+
+- Standardwert der Liste ist «vorbereitet»; er greift für Einträge aus dem WebPart, direkt aus der Liste und aus dem Import-Skript. Ein leerer oder unbekannter Wert gilt überall als «vorbereitet».
+- Im WebPart hat jede Quell-URL ein Auswahlfeld für den Status; «Status für alle Quell-URLs» oberhalb setzt ihn für alle Zeilen des Bereichs. Statusänderungen werden mit «Speichern» geschrieben, mit denselben Prüfungen wie die übrigen Änderungen. Unberührte Einträge ohne Status bleiben leer.
+- Kommentare sind die SharePoint-Kommentare des Listeneintrags. Jede gespeicherte Quell-URL zeigt ein Kommentar-Symbol mit der Anzahl; ein Klick öffnet ein Seitenpanel zum Lesen und Schreiben. Kommentare werden sofort gesendet, unabhängig von «Speichern», und als Klartext ohne Erwähnungen geschrieben.
+- Sind Kommentare für die Liste oder den Mandanten deaktiviert, meldet das Panel dies; Status, Speichern und Export bleiben nutzbar.
+
 ## CSV-Export
 
-Die Schaltfläche «Als CSV exportieren» lädt die ganze Liste «Redirect Regeln» als `Redirect-Regeln_JJJJ-MM-TT.csv` herunter, für alle Benutzer mit Lesezugriff auf die Liste. Die Einträge werden seitenweise gelesen (auch über 5'000) und nach Bereich, danach nach Listeneintrags-ID sortiert.
+Die Schaltfläche «Als CSV exportieren» lädt die Liste «Redirect Regeln» als `Redirect-Regeln_JJJJ-MM-TT.csv` herunter, für alle Benutzer mit Lesezugriff auf die Liste. Die Einträge werden seitenweise gelesen (auch über 5'000) und nach Bereich, danach nach Listeneintrags-ID sortiert. Einträge mit Status «vorbereitet» oder ohne Status werden nicht exportiert.
 
-- Spalten: `Bereich`, `Quell-URL`, `Ziel-URL`, `Geändert am` (lokale Zeit, `TT.MM.JJJJ HH:MM`), `Geändert von`, `UniqueId` (Identifier für den Abgleich, US-13.003)
+- Variante «Vollständig»: Spalten `Bereich`, `Quell-URL`, `Ziel-URL`, `Status`, `Geändert am` (lokale Zeit, `TT.MM.JJJJ HH:MM`), `Geändert von`, `UniqueId` (Identifier für den Abgleich, US-13.003)
+- Variante «Nur Quell-URLs»: eine Spalte `Quell-URL`, Datei `Redirect-Regeln_Quell-URLs_JJJJ-MM-TT.csv`
 - Format für Excel mit Schweizer Einstellungen: Semikolon als Trennzeichen, UTF-8 mit BOM, Zeilenende CRLF; Felder mit `;`, `"` oder Zeilenumbruch in Anführungszeichen
 - Werte, die mit `=`, `+`, `-` oder `@` beginnen, erhalten ein vorangestelltes `'`, damit Excel sie nicht als Formel ausführt (wie der Export von broot-redirect)
 
@@ -46,7 +56,7 @@ npx gulp serve --nobrowser
    ./provisioning/Initialize-BrtqmRedirectRulesList.ps1 -SiteUrl https://<tenant>.sharepoint.com/sites/<qm-pro> -ClientId <app-id>
    ```
 
-   Das Skript legt Liste, Felder (feste Feld-GUIDs), Indizes und Standardansicht nur an, wenn sie fehlen. Es verändert keine Einträge und keine bestehenden Felder; Abweichungen wie ein anderer Feldtyp werden als Fehler gemeldet. Wiederholtes Ausführen ist unbedenklich.
+   Das Skript legt Liste, Felder (feste Feld-GUIDs), Indizes und Standardansicht nur an, wenn sie fehlen. Es verändert keine Einträge und keine bestehenden Felder; Abweichungen wie ein anderer Feldtyp, eine abweichende Wertemenge oder ein anderer Standardwert des Status werden als Fehler gemeldet. Wiederholtes Ausführen ist unbedenklich. Bei einem Update auf eine neue Version (z. B. für das Feld `brtqmStatus`) das Skript vor dem Hochladen des Pakets erneut ausführen; neu angelegte Felder werden der Standardansicht hinzugefügt.
 
 2. Paket bauen:
 

@@ -1,3 +1,5 @@
+export type RedirectRuleStatus = 'vorbereitet' | 'IIS-Umleitung offen' | 'Testing' | 'Fehlerhaft' | 'aktiv';
+
 export interface RedirectRuleEntry {
   id: number;
   uniqueId: string;
@@ -6,6 +8,7 @@ export interface RedirectRuleEntry {
   sourceUrl: string;
   targetUrl: string;
   sourceKey: string;
+  status: string;
 }
 
 export interface ExportEntry {
@@ -14,9 +17,25 @@ export interface ExportEntry {
   area: string;
   sourceUrl: string;
   targetUrl: string;
+  status: string;
   modified: string;
   modifiedBy: string;
 }
+
+export interface RedirectRuleComment {
+  id: string;
+  text: string;
+  authorName: string;
+  created: string;
+}
+
+export type CommentsLoadResult =
+  | { kind: 'loaded'; comments: RedirectRuleComment[] }
+  | { kind: 'disabled' }
+  | { kind: 'forbidden' }
+  | { kind: 'failed' };
+
+export type AddCommentResult = 'added' | 'disabled' | 'forbidden' | 'failed';
 
 export interface AreaSnapshot {
   area: string;
@@ -39,6 +58,7 @@ export interface SourceUrlRow {
   itemId?: number;
   sourceUrl: string;
   removed: boolean;
+  status?: RedirectRuleStatus;
 }
 
 export interface PreparedRow extends SourceUrlRow {
@@ -50,6 +70,7 @@ export interface RedirectRuleFields {
   brtqmSourceUrl: string;
   brtqmTargetUrl: string;
   brtqmSourceKey: string;
+  brtqmStatus?: RedirectRuleStatus;
 }
 
 export interface CreateOperation {

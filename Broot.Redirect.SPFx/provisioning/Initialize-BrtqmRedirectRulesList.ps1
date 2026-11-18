@@ -16,7 +16,9 @@ $ErrorActionPreference = 'Stop'
 
 $ListUrl = 'Lists/brtqmRedirectRules'
 $ListTitle = 'Redirect Regeln'
-$ViewFields = @('brtqmArea', 'brtqmSourceUrl', 'brtqmTargetUrl')
+$ViewFields = @('brtqmArea', 'brtqmSourceUrl', 'brtqmTargetUrl', 'brtqmStatus')
+$StatusChoices = @('vorbereitet', 'IIS-Umleitung offen', 'Testing', 'Fehlerhaft', 'aktiv')
+$StatusDefault = 'vorbereitet'
 
 $FieldDefinitions = @(
     [pscustomobject]@{
@@ -34,6 +36,11 @@ $FieldDefinitions = @(
     [pscustomobject]@{
         InternalName = 'brtqmSourceKey'; DisplayName = 'Quell-Schlüssel'; Id = '495bb033-9f26-4537-9bef-5232709201b1'
         Type = 'Text'; Required = $false; Indexed = $true; HiddenInForms = $true
+    },
+    [pscustomobject]@{
+        InternalName = 'brtqmStatus'; DisplayName = 'Status'; Id = '8d2aa9d1-d1d8-4ed4-9edb-8cd16653b2c6'
+        Type = 'Choice'; Required = $false; Indexed = $true; HiddenInForms = $false
+        Choices = $StatusChoices; Default = $StatusDefault
     }
 )
 
@@ -48,6 +55,12 @@ function Get-FieldXml {
 
     if ($Definition.Type -eq 'Note') {
         return "<Field Type=`"Note`" $common NumLines=`"6`" RichText=`"FALSE`" RichTextMode=`"Compatible`" AppendOnly=`"FALSE`" />"
+    }
+
+    if ($Definition.Type -eq 'Choice') {
+        $choices = ($Definition.Choices | ForEach-Object { "<CHOICE>$([System.Security.SecurityElement]::Escape($_))</CHOICE>" }) -join ''
+        $default = [System.Security.SecurityElement]::Escape($Definition.Default)
+        return "<Field Type=`"Choice`" $common Format=`"Dropdown`" FillInChoice=`"FALSE`"><Default>$default</Default><CHOICES>$choices</CHOICES></Field>"
     }
 
     return "<Field Type=`"Text`" $common MaxLength=`"255`" />"
@@ -69,6 +82,21 @@ function Test-FieldMatchesDefinition {
         }
     }
 
+    if ($Definition.Type -eq 'Choice' -and $Field.TypeAsString -eq 'Choice') {
+        $schema = [xml] $Field.SchemaXml
+        $actualChoices = @($schema.Field.CHOICES.CHOICE | ForEach-Object { if ($_ -is [System.Xml.XmlElement]) { $_.InnerText } else { [string] $_ } })
+        if (($actualChoices -join '|') -cne ($Definition.Choices -join '|')) {
+            $issues += "Feld '$($Definition.InternalName)' hat die Werte '$($actualChoices -join ', ')' statt '$($Definition.Choices -join ', ')'."
+        }
+        $actualDefault = [string] $schema.Field.Default
+        if ($actualDefault -cne $Definition.Default) {
+            $issues += "Feld '$($Definition.InternalName)' hat den Standardwert '$actualDefault' statt '$($Definition.Default)'."
+        }
+        if ($schema.Field.FillInChoice -eq 'TRUE') {
+            $issues += "Feld '$($Definition.InternalName)' erlaubt Freitextwerte."
+        }
+    }
+
     return $issues
 }
 
@@ -82,6 +110,7 @@ if (-not $UseExistingConnection) {
 $deviations = @()
 $list = Get-PnPList -Identity $ListUrl -ErrorAction SilentlyContinue
 $listCreated = $false
+$createdFields = @()
 
 if ($null -eq $list) {
     Write-Host "Liste '$ListTitle' ($ListUrl) wird angelegt."
@@ -110,6 +139,7 @@ foreach ($definition in $FieldDefinitions) {
         Write-Host "Feld '$($definition.InternalName)' wird angelegt."
         $field = Add-PnPFieldFromXml -List $list -FieldXml (Get-FieldXml -Definition $definition)
         Set-PnPField -List $list -Identity $definition.InternalName -Values @{ Title = $definition.DisplayName } | Out-Null
+        $createdFields += $definition.InternalName
     }
     else {
         $issues = @(Test-FieldMatchesDefinition -Field $field -Definition $definition)
@@ -133,6 +163,14 @@ if ($listCreated) {
     $defaultView = Get-PnPView -List $list | Where-Object { $_.DefaultView } | Select-Object -First 1
     Write-Host "Standardansicht '$($defaultView.Title)' wird eingerichtet."
     Set-PnPView -List $list -Identity $defaultView.Id -Fields $ViewFields | Out-Null
+}
+elseif ($createdFields.Count -gt 0) {
+    $defaultView = Get-PnPView -List $list -Includes ViewFields | Where-Object { $_.DefaultView } | Select-Object -First 1
+    $missingInView = @($createdFields | Where-Object { $ViewFields -contains $_ -and $defaultView.ViewFields -notcontains $_ })
+    if ($missingInView.Count -gt 0) {
+        Write-Host "Standardansicht '$($defaultView.Title)' wird um $($missingInView -join ', ') ergänzt."
+        Set-PnPView -List $list -Identity $defaultView.Id -Fields (@($defaultView.ViewFields) + $missingInView) | Out-Null
+    }
 }
 
 if ($deviations.Count -gt 0) {

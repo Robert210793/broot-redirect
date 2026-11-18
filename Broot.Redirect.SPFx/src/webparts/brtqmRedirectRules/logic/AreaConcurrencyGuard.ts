@@ -22,6 +22,19 @@ export function detectConcurrentChanges(expected: RedirectRuleEntry[], current: 
   };
 }
 
+function hasSameContent(left: RedirectRuleEntry, right: RedirectRuleEntry): boolean {
+  return left.id === right.id
+    && left.area === right.area
+    && left.sourceUrl === right.sourceUrl
+    && left.targetUrl === right.targetUrl
+    && left.sourceKey === right.sourceKey
+    && left.status === right.status;
+}
+
+export function adoptEtagAfterOwnComment(expected: RedirectRuleEntry[], fresh: RedirectRuleEntry): RedirectRuleEntry[] {
+  return expected.map((entry) => (hasSameContent(entry, fresh) ? { ...entry, etag: fresh.etag } : entry));
+}
+
 export function hasConcurrentChanges(changes: ConcurrentChanges): boolean {
   return changes.added.length > 0 || changes.removed.length > 0 || changes.modified.length > 0;
 }

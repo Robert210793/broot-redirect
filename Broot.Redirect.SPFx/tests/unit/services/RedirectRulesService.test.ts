@@ -1,5 +1,6 @@
 import {
   BATCH_SIZE,
+  COMMENT_PAGE_SIZE,
   listUrlForSite,
   odataString,
   PAGE_SIZE,
@@ -60,7 +61,7 @@ describe('RedirectRulesService', () => {
       brtqmSourceUrl: `https://old/${index}`,
       brtqmTargetUrl: 'https://new/target'
     })));
-    fake.seed([{ brtqmArea: 'IT', brtqmSourceUrl: 'https://old/it/', brtqmTargetUrl: 'https://new/it', Modified: '2026-10-28T12:30:00Z', Editor: { Title: 'Anna Muster' } }]);
+    fake.seed([{ brtqmArea: 'IT', brtqmSourceUrl: 'https://old/it/', brtqmTargetUrl: 'https://new/it', brtqmStatus: 'Testing', Modified: '2026-10-28T12:30:00Z', Editor: { Title: 'Anna Muster' } }]);
 
     const entries = await service.getAllEntries();
 
@@ -71,6 +72,7 @@ describe('RedirectRulesService', () => {
       area: 'IT',
       sourceUrl: 'https://old/it/',
       targetUrl: 'https://new/it',
+      status: 'Testing',
       modified: '2026-10-28T12:30:00Z',
       modifiedBy: 'Anna Muster'
     });
@@ -87,7 +89,7 @@ describe('RedirectRulesService', () => {
   it('reads the entries of an area through the indexed area field', async () => {
     const { fake, service } = setup();
     fake.seed([
-      { brtqmArea: 'Finanzen', brtqmSourceUrl: 'https://old/a', brtqmTargetUrl: 'https://new/f', brtqmSourceKey: 'v1:a' },
+      { brtqmArea: 'Finanzen', brtqmSourceUrl: 'https://old/a', brtqmTargetUrl: 'https://new/f', brtqmSourceKey: 'v1:a', brtqmStatus: 'aktiv' },
       { brtqmArea: 'Audit' },
       { brtqmArea: 'finanzen', brtqmSourceUrl: 'https://old/b' }
     ]);
@@ -102,7 +104,8 @@ describe('RedirectRulesService', () => {
       area: 'Finanzen',
       sourceUrl: 'https://old/a',
       targetUrl: 'https://new/f',
-      sourceKey: 'v1:a'
+      sourceKey: 'v1:a',
+      status: 'aktiv'
     });
   });
 
@@ -210,5 +213,147 @@ describe('RedirectRulesService', () => {
     expect(result.succeeded).toBe(true);
     expect(fake.writes).toEqual([{ kind: 'recycle', itemId: 1 }]);
     expect(fake.items).toHaveLength(0);
+  });
+
+  describe('status', () => {
+    it('reads an empty status of an existing entry as empty', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen' }]);
+
+      const [entry] = await service.getAreaEntries('Finanzen');
+
+      expect(entry.status).toBe('');
+    });
+
+    it('updates only the status of an entry and keeps its identifier', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen', brtqmSourceUrl: 'https://old/a', brtqmStatus: 'Testing' }]);
+
+      const [result] = await service.execute([
+        { kind: 'update', rowId: 'a', itemId: 1, etag: '"1"', fields: { brtqmStatus: 'aktiv' } }
+      ]);
+
+      expect(fake.writes).toEqual([{ kind: 'update', itemId: 1, fields: { brtqmStatus: 'aktiv' } }]);
+      expect(result.entry).toMatchObject({ id: 1, uniqueId: 'guid-1', sourceUrl: 'https://old/a', status: 'aktiv' });
+    });
+
+    it('lets the list default apply to a created entry without status', async () => {
+      const { fake, service } = setup();
+
+      const [result] = await service.execute([{
+        kind: 'create',
+        rowId: 'a',
+        fields: { brtqmArea: 'Finanzen', brtqmSourceUrl: 'https://old/a', brtqmTargetUrl: 'https://new/f', brtqmSourceKey: 'v1:a' }
+      }]);
+
+      expect(result.entry && result.entry.status).toBe('vorbereitet');
+      expect(fake.items[0].brtqmStatus).toBe('vorbereitet');
+    });
+
+    it('reads a single entry and reports a missing one as undefined', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen', brtqmStatus: 'aktiv' }]);
+
+      expect(await service.getEntry(1)).toMatchObject({ id: 1, status: 'aktiv', etag: '"1"' });
+      expect(await service.getEntry(99)).toBeUndefined();
+    });
+  });
+
+  describe('comments', () => {
+    it('reads the comment counts of the given entries in batches and counts none as zero', async () => {
+      const { fake, service } = setup();
+      fake.seed(Array.from({ length: BATCH_SIZE + 1 }, () => ({ brtqmArea: 'Finanzen' })));
+      fake.comments[1] = [
+        { id: '1', text: 'a', createdDate: '', author: { name: 'A' } },
+        { id: '2', text: 'b', createdDate: '', author: { name: 'B' } }
+      ];
+
+      const counts = await service.getCommentCounts(Array.from({ length: BATCH_SIZE + 1 }, (_, index) => index + 1));
+
+      expect(counts[1]).toBe(2);
+      expect(counts[2]).toBe(0);
+      expect(Object.keys(counts)).toHaveLength(BATCH_SIZE + 1);
+      expect(fake.batchSizes).toEqual([BATCH_SIZE, 1]);
+    });
+
+    it('leaves comment counts unknown when they cannot be read', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen' }]);
+      fake.commentCountFailure = true;
+
+      expect(await service.getCommentCounts([1])).toEqual({});
+    });
+
+    it('loads all comments page by page with author, time and resolved mentions', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen' }]);
+      fake.comments[1] = Array.from({ length: COMMENT_PAGE_SIZE + 1 }, (_, index) => ({
+        id: String(index + 1),
+        text: index === 0 ? 'Bitte prüfen @mention{0}' : `Kommentar ${index + 1}`,
+        createdDate: '2026-11-18T09:15:00Z',
+        author: { name: 'Anna Muster' },
+        mentions: index === 0 ? [{ name: 'Ben Beispiel' }] : null
+      }));
+
+      const result = await service.getComments(1);
+
+      expect(result.kind).toBe('loaded');
+      const comments = result.kind === 'loaded' ? result.comments : [];
+      expect(comments).toHaveLength(COMMENT_PAGE_SIZE + 1);
+      expect(comments[0]).toEqual({ id: '1', text: 'Bitte prüfen @Ben Beispiel', authorName: 'Anna Muster', created: '2026-11-18T09:15:00Z' });
+      expect(fake.commentQueries.map((query) => query.skip)).toEqual([0, COMMENT_PAGE_SIZE]);
+    });
+
+    it('adds a comment as plain text', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen' }]);
+
+      expect(await service.addComment(1, 'IIS-Regel eingetragen')).toBe('added');
+      expect(fake.comments[1].map((comment) => comment.text)).toEqual(['IIS-Regel eingetragen']);
+    });
+
+    it('reports disabled comments from the list setting without calling the comment API', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen' }]);
+      fake.commentingDisabled = true;
+
+      expect(await service.getComments(1)).toEqual({ kind: 'disabled' });
+      expect(await service.addComment(1, 'x')).toBe('disabled');
+      expect(fake.commentQueries).toHaveLength(0);
+      expect(fake.comments[1]).toBeUndefined();
+    });
+
+    it('recognises comments disabled for the tenant from the error of the comment API', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen' }]);
+      fake.commentingDisabled = undefined;
+      fake.commentFailure = httpError(400, 'Commenting is disabled for this list.');
+
+      expect(await service.getComments(1)).toEqual({ kind: 'disabled' });
+      expect(await service.addComment(1, 'x')).toBe('disabled');
+    });
+
+    it('continues when the list setting cannot be read', async () => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen' }]);
+      fake.listSettingsFailure = httpError(500);
+
+      expect(await service.isCommentingDisabled()).toBeUndefined();
+      expect(await service.getComments(1)).toEqual({ kind: 'loaded', comments: [] });
+    });
+
+    it.each([
+      [403, 'forbidden'],
+      [401, 'forbidden'],
+      [500, 'failed'],
+      [404, 'failed']
+    ] as const)('maps status %d of the comment API to %s', async (status, expected) => {
+      const { fake, service } = setup();
+      fake.seed([{ brtqmArea: 'Finanzen' }]);
+      fake.commentFailure = httpError(status);
+
+      expect(await service.getComments(1)).toEqual({ kind: expected });
+      expect(await service.addComment(1, 'x')).toBe(expected);
+    });
   });
 });

@@ -3,6 +3,7 @@ import {
   buildRedirectRulesCsv,
   buildSourceUrlsCsv,
   csvField,
+  exportableEntries,
   exportFileName,
   formatDateTime,
   sortForExport
@@ -16,6 +17,7 @@ function exportEntry(id: number, overrides: Partial<ExportEntry> = {}): ExportEn
     area: 'Finanzen',
     sourceUrl: `http://old.example/ims/${id}/`,
     targetUrl: 'https://tenant.sharepoint.com/sites/qm/SitePages/Prozess.aspx?ProzessId=1#Finanzen',
+    status: 'aktiv',
     modified: '2026-10-29T07:05:00Z',
     modifiedBy: 'Anna Muster',
     ...overrides
@@ -33,17 +35,18 @@ describe('RedirectRulesCsv', () => {
     const csv = buildRedirectRulesCsv([]);
 
     expect(csv.charAt(0)).toBe('﻿');
-    expect(csv.slice(1)).toBe('Bereich;Quell-URL;Ziel-URL;Geändert am;Geändert von;UniqueId\r\n');
+    expect(csv.slice(1)).toBe('Bereich;Quell-URL;Ziel-URL;Status;Geändert am;Geändert von;UniqueId\r\n');
   });
 
-  it('writes one row per entry with area, source, target, modified, editor and unique id', () => {
-    const csv = buildRedirectRulesCsv([exportEntry(3)]);
+  it('writes one row per entry with area, source, target, status, modified, editor and unique id', () => {
+    const csv = buildRedirectRulesCsv([exportEntry(3, { status: 'IIS-Umleitung offen' })]);
     const lines = csv.slice(1).split('\r\n');
 
     expect(lines[1]).toBe([
       'Finanzen',
       'http://old.example/ims/3/',
       'https://tenant.sharepoint.com/sites/qm/SitePages/Prozess.aspx?ProzessId=1#Finanzen',
+      'IIS-Umleitung offen',
       localDateTime('2026-10-29T07:05:00Z'),
       'Anna Muster',
       '00000000-0000-0000-0000-000000000003'
@@ -119,5 +122,28 @@ describe('RedirectRulesCsv', () => {
     const entries = [exportEntry(1), exportEntry(2)];
 
     expect(buildExportCsv(entries, variant)).toBe(build(entries));
+  });
+
+  it.each(['full', 'sourceUrls'] as const)('leaves out prepared, empty and unknown statuses in the %s export', (variant) => {
+    const csv = buildExportCsv([
+      exportEntry(1, { status: 'vorbereitet', sourceUrl: 'http://old/vorbereitet' }),
+      exportEntry(2, { status: '', sourceUrl: 'http://old/leer' }),
+      exportEntry(3, { status: 'unbekannt', sourceUrl: 'http://old/unbekannt' }),
+      exportEntry(4, { status: 'IIS-Umleitung offen', sourceUrl: 'http://old/iis' }),
+      exportEntry(5, { status: 'Testing', sourceUrl: 'http://old/testing' }),
+      exportEntry(6, { status: 'Fehlerhaft', sourceUrl: 'http://old/fehlerhaft' }),
+      exportEntry(7, { status: 'aktiv', sourceUrl: 'http://old/aktiv' })
+    ], variant);
+
+    ['vorbereitet', 'leer', 'unbekannt'].forEach((name) => expect(csv).not.toContain(`http://old/${name}`));
+    ['iis', 'testing', 'fehlerhaft', 'aktiv'].forEach((name) => expect(csv).toContain(`http://old/${name}`));
+  });
+
+  it('counts only exportable entries', () => {
+    expect(exportableEntries([exportEntry(1, { status: 'vorbereitet' }), exportEntry(2)]).map((entry) => entry.id)).toEqual([2]);
+  });
+
+  it('writes only the header when no entry is exportable', () => {
+    expect(buildExportCsv([exportEntry(1, { status: 'vorbereitet' })], 'sourceUrls').slice(1)).toBe('Quell-URL\r\n');
   });
 });

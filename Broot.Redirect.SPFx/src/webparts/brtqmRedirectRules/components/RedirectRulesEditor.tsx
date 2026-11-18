@@ -11,14 +11,17 @@ import {
   TextField
 } from '@fluentui/react';
 import * as strings from 'BrtqmRedirectRulesWebPartStrings';
+import { adoptEtagAfterOwnComment } from '../logic/AreaConcurrencyGuard';
 import { areaCompareValue } from '../logic/AreaName';
 import { buildAreaSnapshot } from '../logic/AreaSavePlanner';
-import { buildExportCsv, exportFileName, ExportVariant } from '../logic/RedirectRulesCsv';
+import { applyStatusToAll, DEFAULT_REDIRECT_RULE_STATUS } from '../logic/RedirectRuleStatus';
+import { buildExportCsv, exportableEntries, exportFileName, ExportVariant } from '../logic/RedirectRulesCsv';
 import { AreaSaveCoordinator } from '../services/AreaSaveCoordinator';
 import { downloadTextFile } from '../services/FileDownload';
 import { IRedirectRulesService } from '../services/RedirectRulesService';
 import { AreaInputValidation, AreaOption, AreaSnapshot, RowIssue, SaveResult, SourceUrlRow } from '../types';
 import { AreaPicker, NEW_AREA_KEY } from './AreaPicker';
+import { CommentsPanel } from './CommentsPanel';
 import { SourceUrlTable } from './SourceUrlTable';
 import { format, targetUrlIssueText } from './text';
 import styles from './RedirectRulesEditor.module.scss';
@@ -42,7 +45,13 @@ let rowCounter: number = 0;
 
 function newRow(): SourceUrlRow {
   rowCounter += 1;
-  return { rowId: `new-${rowCounter}`, sourceUrl: '', removed: false };
+  return { rowId: `new-${rowCounter}`, sourceUrl: '', removed: false, status: DEFAULT_REDIRECT_RULE_STATUS };
+}
+
+function statusesOf(snapshot: AreaSnapshot | undefined): Record<number, string> {
+  const statuses: Record<number, string> = {};
+  (snapshot ? snapshot.entries : []).forEach((entry) => { statuses[entry.id] = entry.status; });
+  return statuses;
 }
 
 function rowsFromSnapshot(snapshot: AreaSnapshot): SourceUrlRow[] {
@@ -87,6 +96,28 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
   const [feedback, setFeedback] = React.useState<Feedback | undefined>(undefined);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [exporting, setExporting] = React.useState<boolean>(false);
+  const [commentCounts, setCommentCounts] = React.useState<Record<number, number>>({});
+  const [commentRow, setCommentRow] = React.useState<SourceUrlRow | undefined>(undefined);
+
+  const loadCommentCounts = (snapshot: AreaSnapshot): void => {
+    service.getCommentCounts(snapshot.entries.map((entry) => entry.id))
+      .then((counts) => setCommentCounts((current) => ({ ...current, ...counts })))
+      .catch(() => undefined);
+  };
+
+  const onCommentsLoaded = React.useCallback((itemId: number, count: number): void => {
+    setCommentCounts((current) => ({ ...current, [itemId]: count }));
+  }, []);
+
+  const onCommentAdded = React.useCallback((itemId: number): void => {
+    service.getEntry(itemId)
+      .then((fresh) => {
+        if (fresh) {
+          setExpected((current) => (current ? { ...current, entries: adoptEtagAfterOwnComment(current.entries, fresh) } : current));
+        }
+      })
+      .catch(() => undefined);
+  }, [service]);
 
   const resetForm = (): void => {
     setExpected(undefined);
@@ -95,6 +126,7 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
     setRows([]);
     setValidation(NO_VALIDATION_ISSUES);
     setRowIssues({});
+    setCommentRow(undefined);
   };
 
   const showArea = (snapshot: AreaSnapshot): void => {
@@ -104,6 +136,8 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
     setRows(rowsFromSnapshot(snapshot));
     setValidation(NO_VALIDATION_ISSUES);
     setRowIssues({});
+    setCommentRow(undefined);
+    loadCommentCounts(snapshot);
   };
 
   const loadAreas = async (): Promise<AreaOption[]> => {
@@ -222,6 +256,7 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
       } else {
         setExpected(result.snapshot);
         setSelectedKey(areaCompareValue(areaName));
+        loadCommentCounts(result.snapshot);
       }
 
       setFeedback(failedRows.length > 0
@@ -237,7 +272,7 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
       try {
         const entries = await service.getAllEntries();
         downloadTextFile(exportFileName(new Date(), variant), buildExportCsv(entries, variant), 'text/csv;charset=utf-8');
-        setFeedback({ type: MessageBarType.success, text: format(strings.Exported, String(entries.length)) });
+        setFeedback({ type: MessageBarType.success, text: format(strings.Exported, String(exportableEntries(entries).length)) });
       } finally {
         setExporting(false);
       }
@@ -295,8 +330,13 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
           <SourceUrlTable
             rows={rows}
             rowIssues={rowIssues}
+            storedStatuses={statusesOf(expected)}
+            commentCounts={commentCounts}
             disabled={busy}
             onChange={(rowId, sourceUrl) => updateRows((current) => current.map((row) => (row.rowId === rowId ? { ...row, sourceUrl } : row)))}
+            onStatusChange={(rowId, status) => updateRows((current) => current.map((row) => (row.rowId === rowId ? { ...row, status } : row)))}
+            onStatusForAll={(status) => updateRows((current) => applyStatusToAll(current, status))}
+            onOpenComments={(row) => setCommentRow(row)}
             onRemove={(rowId) => updateRows((current) => current
               .filter((row) => row.rowId !== rowId || row.itemId !== undefined)
               .map((row) => (row.rowId === rowId ? { ...row, removed: true } : row)))}
@@ -321,6 +361,16 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
         />
         {busy && <Spinner size={SpinnerSize.small} label={exporting ? strings.Exporting : strings.Saving} labelPosition="right" />}
       </Stack>
+      {commentRow && commentRow.itemId !== undefined && (
+        <CommentsPanel
+          service={service}
+          itemId={commentRow.itemId}
+          sourceUrl={commentRow.sourceUrl}
+          onDismiss={() => setCommentRow(undefined)}
+          onCommentsLoaded={onCommentsLoaded}
+          onCommentAdded={onCommentAdded}
+        />
+      )}
     </Stack>
   );
 };

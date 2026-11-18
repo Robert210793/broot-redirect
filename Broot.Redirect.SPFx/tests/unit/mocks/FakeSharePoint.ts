@@ -8,8 +8,17 @@ export interface FakeItem {
   brtqmSourceUrl: string;
   brtqmTargetUrl: string;
   brtqmSourceKey: string;
+  brtqmStatus: string;
   Modified: string;
   Editor: { Title: string };
+}
+
+export interface FakeComment {
+  id: string;
+  text: string;
+  createdDate: string;
+  author: { name: string };
+  mentions?: { name: string }[] | null;
 }
 
 export interface FakeError {
@@ -69,6 +78,12 @@ export class FakeSharePoint {
   public writes: WriteRequest[] = [];
   public queries: string[] = [];
   public expands: string[] = [];
+  public comments: Record<number, FakeComment[]> = {};
+  public commentingDisabled: boolean | undefined = false;
+  public listSettingsFailure: FakeError | undefined = undefined;
+  public commentFailure: FakeError | undefined = undefined;
+  public commentCountFailure: boolean = false;
+  public commentQueries: { itemId: number; top: number; skip: number }[] = [];
   private nextId: number = 1;
 
   public seed(values: Partial<FakeItem>[]): FakeItem[] {
@@ -81,6 +96,7 @@ export class FakeSharePoint {
         brtqmSourceUrl: '',
         brtqmTargetUrl: '',
         brtqmSourceKey: '',
+        brtqmStatus: '',
         Modified: '2026-10-29T07:00:00Z',
         Editor: { Title: 'Test Benutzer' },
         ...value
@@ -113,6 +129,13 @@ export class FakeSharePoint {
     const source = item as unknown as Record<string, unknown>;
     (fields.length > 0 ? fields : Object.keys(item)).forEach((field) => {
       const name = field.split('/')[0];
+      if (name === '_CommentCount') {
+        if (this.commentCountFailure) {
+          throw httpError(400, 'The field _CommentCount is not supported');
+        }
+        raw.OData__CommentCount = (this.comments[item.Id] || []).length || null;
+        return;
+      }
       raw[name] = source[name];
     });
     return raw;
@@ -153,8 +176,14 @@ export class FakeSharePoint {
 
   private createList(gate: Promise<void> | undefined, count: () => void): unknown {
     const list = (): Promise<unknown> => this.run(gate, () => ({ Id: 'list-id' }));
+    const settings = (): Promise<unknown> => this.run(gate, () => {
+      if (this.listSettingsFailure) {
+        throw this.listSettingsFailure;
+      }
+      return this.commentingDisabled === undefined ? {} : { DisableCommenting: this.commentingDisabled };
+    });
     const selectable = Object.assign(list, {
-      select: () => list,
+      select: (...fields: string[]) => (fields.indexOf('DisableCommenting') >= 0 ? settings : list),
       currentUserHasPermissions: (permission: number) => this.run(gate, () => this.permissions.indexOf(permission) >= 0),
       items: this.createItems(gate, count)
     });
@@ -190,7 +219,7 @@ export class FakeSharePoint {
       add: (fields: Record<string, unknown>) => {
         count();
         return this.run(gate, () => this.write({ kind: 'add', fields }, () => {
-          const [item] = this.seed([fields as Partial<FakeItem>]);
+          const [item] = this.seed([{ brtqmStatus: 'vorbereitet', ...fields } as Partial<FakeItem>]);
           return this.toRaw(item, ['Id']);
         }));
       },
@@ -213,6 +242,7 @@ export class FakeSharePoint {
               return { etag: `"${item.etagVersion}"` };
             }));
           },
+          comments: this.createComments(gate, itemId),
           recycle: () => {
             count();
             return this.run(gate, () => this.write({ kind: 'recycle', itemId }, () => {
@@ -225,6 +255,42 @@ export class FakeSharePoint {
       }
     });
 
+    return builder;
+  }
+
+  private createComments(gate: Promise<void> | undefined, itemId: number): unknown {
+    const page = { top: 30, skip: 0 };
+    const read = (): Promise<unknown> => {
+      const snapshot = { ...page };
+      this.commentQueries.push({ itemId, ...snapshot });
+      return this.run(gate, () => {
+        if (this.commentFailure) {
+          throw this.commentFailure;
+        }
+        this.find(itemId);
+        return (this.comments[itemId] || []).slice(snapshot.skip, snapshot.skip + snapshot.top);
+      });
+    };
+    const builder = Object.assign(read, {
+      top: (top: number) => { page.top = top; return builder; },
+      skip: (skip: number) => { page.skip = skip; return builder; },
+      add: (text: string) => this.run(gate, () => {
+        if (this.commentFailure) {
+          throw this.commentFailure;
+        }
+        const item = this.find(itemId);
+        const existing = this.comments[itemId] || [];
+        const comment: FakeComment = {
+          id: String(existing.length + 1),
+          text,
+          createdDate: '2026-11-18T09:15:00Z',
+          author: { name: 'Test Benutzer' }
+        };
+        this.comments[itemId] = existing.concat(comment);
+        item.etagVersion += 1;
+        return comment;
+      })
+    });
     return builder;
   }
 

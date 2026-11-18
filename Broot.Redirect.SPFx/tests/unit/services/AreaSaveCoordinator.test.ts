@@ -1,7 +1,8 @@
+import { adoptEtagAfterOwnComment } from '../../../src/webparts/brtqmRedirectRules/logic/AreaConcurrencyGuard';
 import { computeSourceKey } from '../../../src/webparts/brtqmRedirectRules/logic/SourceKeyNormalizer';
 import { AreaSaveCoordinator, AreaSaveRequest } from '../../../src/webparts/brtqmRedirectRules/services/AreaSaveCoordinator';
 import { RedirectRulesService } from '../../../src/webparts/brtqmRedirectRules/services/RedirectRulesService';
-import { AreaSnapshot, SaveResult, SourceUrlRow } from '../../../src/webparts/brtqmRedirectRules/types';
+import { AreaSnapshot, RedirectRuleStatus, SaveResult, SourceUrlRow } from '../../../src/webparts/brtqmRedirectRules/types';
 import { FakeItem, FakeSharePoint, httpError } from '../mocks/FakeSharePoint';
 
 const origin = 'https://tenant.sharepoint.com';
@@ -333,6 +334,125 @@ describe('AreaSaveCoordinator', () => {
       });
 
       expect(result).toEqual({ kind: 'forbidden' });
+    });
+  });
+
+  describe('status', () => {
+    function withStatus(rows: SourceUrlRow[], status: RedirectRuleStatus): SourceUrlRow[] {
+      return rows.map((row) => ({ ...row, status }));
+    }
+
+    it('saves the status of one source URL without touching other fields or the identifier', async () => {
+      const context = setup();
+      await seedArea(context.fake, 'Finanzen', ['https://old/a', 'https://old/b']);
+      const loaded = await load(context, 'Finanzen');
+      const before = context.fake.items.map((item) => ({ ...item }));
+
+      const result = completed(await context.coordinator.save({
+        expected: loaded.expected, areaName: 'Finanzen', targetUrl: target, rows: [{ ...loaded.rows[0], status: 'Testing' }, loaded.rows[1]]
+      }));
+
+      expect(context.fake.writes).toEqual([{ kind: 'update', itemId: 1, fields: { brtqmStatus: 'Testing' } }]);
+      expect(context.fake.items[0]).toMatchObject({ ...before[0], brtqmStatus: 'Testing', etagVersion: 2 });
+      expect(context.fake.items[1]).toEqual(before[1]);
+      expect(result.snapshot.entries.map((entry) => entry.status)).toEqual(['Testing', '']);
+      expect(result.rows[0].status).toBe('Testing');
+    });
+
+    it('sets the status of all source URLs of the area, new ones included', async () => {
+      const context = setup();
+      await seedArea(context.fake, 'Finanzen', ['https://old/a', 'https://old/b']);
+      const loaded = await load(context, 'Finanzen');
+
+      completed(await context.coordinator.save({
+        expected: loaded.expected,
+        areaName: 'Finanzen',
+        targetUrl: target,
+        rows: withStatus(loaded.rows.concat(newRow('n', 'https://old/n')), 'aktiv')
+      }));
+
+      expect(context.fake.items.map((item) => item.brtqmStatus)).toEqual(['aktiv', 'aktiv', 'aktiv']);
+    });
+
+    it('creates a new source URL with «vorbereitet»', async () => {
+      const context = setup();
+
+      completed(await context.coordinator.save({
+        areaName: 'Finanzen', targetUrl: target, rows: [{ ...newRow('n', 'https://old/n'), status: 'vorbereitet' }]
+      }));
+
+      expect(context.fake.items[0].brtqmStatus).toBe('vorbereitet');
+    });
+
+    it('reports status changes that were not saved and completes them on the next save', async () => {
+      const context = setup();
+      await seedArea(context.fake, 'Finanzen', ['https://old/a', 'https://old/b']);
+      const loaded = await load(context, 'Finanzen');
+      context.fake.failWrite = (request) => (request.itemId === 2 ? httpError(503) : undefined);
+      const request: AreaSaveRequest = { expected: loaded.expected, areaName: 'Finanzen', targetUrl: target, rows: withStatus(loaded.rows, 'aktiv') };
+
+      const first = completed(await context.coordinator.save(request));
+
+      expect(first.rowIssues).toEqual({ 'row-2': { kind: 'notSaved', reason: 'error' } });
+      context.fake.failWrite = () => undefined;
+      completed(await context.coordinator.save({ ...request, expected: first.snapshot, rows: first.rows }));
+
+      expect(context.fake.items.map((item) => item.brtqmStatus)).toEqual(['aktiv', 'aktiv']);
+    });
+
+    it('rejects a status change when someone else changed the area since loading', async () => {
+      const context = setup();
+      await seedArea(context.fake, 'Finanzen', ['https://old/a']);
+      const loaded = await load(context, 'Finanzen');
+      context.fake.modify(1, { brtqmStatus: 'Fehlerhaft' });
+
+      const result = await context.coordinator.save({
+        expected: loaded.expected, areaName: 'Finanzen', targetUrl: target, rows: withStatus(loaded.rows, 'aktiv')
+      });
+
+      expect(result).toEqual({ kind: 'concurrentChange' });
+      expect(context.fake.items[0].brtqmStatus).toBe('Fehlerhaft');
+    });
+
+    it('marks a status change as conflict when the entry changes between check and write', async () => {
+      const context = setup();
+      await seedArea(context.fake, 'Finanzen', ['https://old/a']);
+      const loaded = await load(context, 'Finanzen');
+      context.fake.failWrite = () => httpError(412);
+
+      const result = completed(await context.coordinator.save({
+        expected: loaded.expected, areaName: 'Finanzen', targetUrl: target, rows: withStatus(loaded.rows, 'aktiv')
+      }));
+
+      expect(result.rowIssues).toEqual({ 'row-1': { kind: 'notSaved', reason: 'conflict' } });
+    });
+
+    it('rejects a status change without edit permission', async () => {
+      const context = setup();
+      await seedArea(context.fake, 'Finanzen', ['https://old/a']);
+      const loaded = await load(context, 'Finanzen');
+      context.fake.permissions = [2, 4];
+
+      const result = await context.coordinator.save({
+        expected: loaded.expected, areaName: 'Finanzen', targetUrl: target, rows: withStatus(loaded.rows, 'aktiv')
+      });
+
+      expect(result).toEqual({ kind: 'forbidden' });
+      expect(context.fake.writes).toHaveLength(0);
+    });
+
+    it('does not reject the next save after an own comment once the new etag is adopted', async () => {
+      const context = setup();
+      await seedArea(context.fake, 'Finanzen', ['https://old/a']);
+      const loaded = await load(context, 'Finanzen');
+      await context.service.addComment(1, 'Erledigt');
+      const fresh = await context.service.getEntry(1);
+      const expected = { ...loaded.expected, entries: adoptEtagAfterOwnComment(loaded.expected.entries, fresh!) };
+
+      const result = await context.coordinator.save({ expected, areaName: 'Finanzen', targetUrl: target, rows: withStatus(loaded.rows, 'aktiv') });
+
+      expect(result.kind).toBe('completed');
+      expect(context.fake.items[0].brtqmStatus).toBe('aktiv');
     });
   });
 });

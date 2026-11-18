@@ -4,13 +4,18 @@ import '@pnp/sp/lists';
 import '@pnp/sp/items';
 import '@pnp/sp/batching';
 import '@pnp/sp/security';
+import '@pnp/sp/comments';
 import { IList } from '@pnp/sp/lists';
 import { PermissionKind } from '@pnp/sp/security';
 import { groupAreas } from '../logic/AreaName';
+import { commentDisplayText } from '../logic/CommentText';
 import {
+  AddCommentResult,
   AreaEntryReference,
   AreaOption,
+  CommentsLoadResult,
   ExportEntry,
+  RedirectRuleComment,
   RedirectRuleEntry,
   SaveFailureReason,
   SaveOperation,
@@ -20,9 +25,11 @@ import {
 export const LIST_RELATIVE_URL: string = 'Lists/brtqmRedirectRules';
 export const PAGE_SIZE: number = 5000;
 export const BATCH_SIZE: number = 100;
+export const COMMENT_PAGE_SIZE: number = 100;
 
-const ENTRY_FIELDS: string[] = ['Id', 'UniqueId', 'brtqmArea', 'brtqmSourceUrl', 'brtqmTargetUrl', 'brtqmSourceKey'];
-const EXPORT_FIELDS: string[] = ['Id', 'UniqueId', 'brtqmArea', 'brtqmSourceUrl', 'brtqmTargetUrl', 'Modified', 'Editor/Title'];
+const ENTRY_FIELDS: string[] = ['Id', 'UniqueId', 'brtqmArea', 'brtqmSourceUrl', 'brtqmTargetUrl', 'brtqmSourceKey', 'brtqmStatus'];
+const EXPORT_FIELDS: string[] = ['Id', 'UniqueId', 'brtqmArea', 'brtqmSourceUrl', 'brtqmTargetUrl', 'brtqmStatus', 'Modified', 'Editor/Title'];
+const COMMENTING_DISABLED_MESSAGE: RegExp = /comment\w* (is |are )?(disabled|turned off|not enabled)|disabled comment|kommentar\w* .*deaktiviert/i;
 const THROTTLING_MESSAGE: RegExp = /SPQueryThrottledException|list view threshold|Schwellenwert/i;
 
 interface RawItem {
@@ -32,10 +39,24 @@ interface RawItem {
   brtqmSourceUrl?: string;
   brtqmTargetUrl?: string;
   brtqmSourceKey?: string;
+  brtqmStatus?: string;
+  OData__CommentCount?: number;
   Modified?: string;
   Editor?: { Title?: string };
   'odata.etag'?: string;
   __metadata?: { etag?: string };
+}
+
+interface RawComment {
+  id?: string | number;
+  text?: string;
+  createdDate?: string;
+  author?: { name?: string };
+  mentions?: { name?: string }[];
+}
+
+interface RawListSettings {
+  DisableCommenting?: boolean;
 }
 
 interface SentOperation {
@@ -59,6 +80,11 @@ export interface IRedirectRulesService {
   findEntriesBySourceKeys(sourceKeys: string[]): Promise<Record<string, AreaEntryReference[]>>;
   canExecute(operations: SaveOperation[]): Promise<boolean>;
   execute(operations: SaveOperation[]): Promise<SaveOperationResult[]>;
+  getEntry(itemId: number): Promise<RedirectRuleEntry | undefined>;
+  getCommentCounts(itemIds: number[]): Promise<Record<number, number>>;
+  isCommentingDisabled(): Promise<boolean | undefined>;
+  getComments(itemId: number): Promise<CommentsLoadResult>;
+  addComment(itemId: number, text: string): Promise<AddCommentResult>;
 }
 
 export function odataString(value: string): string {
@@ -87,7 +113,8 @@ function toEntry(item: RawItem): RedirectRuleEntry {
     area: item.brtqmArea || '',
     sourceUrl: item.brtqmSourceUrl || '',
     targetUrl: item.brtqmTargetUrl || '',
-    sourceKey: item.brtqmSourceKey || ''
+    sourceKey: item.brtqmSourceKey || '',
+    status: item.brtqmStatus || ''
   };
 }
 
@@ -98,6 +125,7 @@ function toExportEntry(item: RawItem): ExportEntry {
     area: item.brtqmArea || '',
     sourceUrl: item.brtqmSourceUrl || '',
     targetUrl: item.brtqmTargetUrl || '',
+    status: item.brtqmStatus || '',
     modified: item.Modified || '',
     modifiedBy: (item.Editor && item.Editor.Title) || ''
   };
@@ -110,6 +138,27 @@ function statusOf(error: unknown): number | undefined {
 function isThrottled(error: unknown): boolean {
   const message = error && typeof error === 'object' ? (error as RequestError).message : undefined;
   return THROTTLING_MESSAGE.test(message || '');
+}
+
+function messageOf(error: unknown): string {
+  return error && typeof error === 'object' ? (error as RequestError).message || '' : '';
+}
+
+function commentFailure(error: unknown): 'disabled' | 'forbidden' | 'failed' {
+  if (COMMENTING_DISABLED_MESSAGE.test(messageOf(error))) {
+    return 'disabled';
+  }
+  const status = statusOf(error);
+  return status === 401 || status === 403 ? 'forbidden' : 'failed';
+}
+
+function toComment(raw: RawComment): RedirectRuleComment {
+  return {
+    id: raw.id === undefined ? '' : String(raw.id),
+    text: commentDisplayText(raw.text || '', raw.mentions),
+    authorName: (raw.author && raw.author.name) || '',
+    created: raw.createdDate || ''
+  };
 }
 
 function failureReason(error: unknown): SaveFailureReason {
@@ -279,6 +328,78 @@ export class RedirectRulesService implements IRedirectRulesService {
     }
 
     return results;
+  }
+
+  public async getEntry(itemId: number): Promise<RedirectRuleEntry | undefined> {
+    try {
+      const item: RawItem = await this.list().items.getById(itemId).select(...ENTRY_FIELDS)();
+      return toEntry(item);
+    } catch (error) {
+      if (statusOf(error) === 404) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  public async getCommentCounts(itemIds: number[]): Promise<Record<number, number>> {
+    const counts: Record<number, number> = {};
+
+    for (const ids of chunk(itemIds, BATCH_SIZE)) {
+      const [batchedSp, execute] = this.sp.batched();
+      const batchedList = batchedSp.web.getList(this.listUrl);
+      const requests = ids.map((itemId) => (batchedList.items.getById(itemId).select('Id', '_CommentCount')() as Promise<RawItem>)
+        .then((item) => { counts[itemId] = item.OData__CommentCount || 0; })
+        .catch(() => undefined));
+
+      await execute();
+      await Promise.all(requests);
+    }
+
+    return counts;
+  }
+
+  public async isCommentingDisabled(): Promise<boolean | undefined> {
+    try {
+      const settings: RawListSettings = await this.list().select('DisableCommenting')();
+      return settings.DisableCommenting === undefined ? undefined : settings.DisableCommenting === true;
+    } catch {
+      return undefined;
+    }
+  }
+
+  public async getComments(itemId: number): Promise<CommentsLoadResult> {
+    if ((await this.isCommentingDisabled()) === true) {
+      return { kind: 'disabled' };
+    }
+
+    try {
+      const comments: RedirectRuleComment[] = [];
+
+      for (let skip = 0; ; skip += COMMENT_PAGE_SIZE) {
+        const page: RawComment[] = await this.list().items.getById(itemId).comments.top(COMMENT_PAGE_SIZE).skip(skip)();
+        page.forEach((raw) => comments.push(toComment(raw)));
+
+        if (page.length < COMMENT_PAGE_SIZE) {
+          return { kind: 'loaded', comments };
+        }
+      }
+    } catch (error) {
+      return { kind: commentFailure(error) };
+    }
+  }
+
+  public async addComment(itemId: number, text: string): Promise<AddCommentResult> {
+    if ((await this.isCommentingDisabled()) === true) {
+      return 'disabled';
+    }
+
+    try {
+      await this.list().items.getById(itemId).comments.add(text);
+      return 'added';
+    } catch (error) {
+      return commentFailure(error);
+    }
   }
 
   private list(): IList {

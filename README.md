@@ -881,7 +881,7 @@ Das Paket enthält einen persönlichen Tab «Regeln», der `https://<host>/rules
 
 Das SPFx-WebPart wird unabhängig vom Container ausgeliefert (Details in [`Broot.Redirect.SPFx/README.md`](Broot.Redirect.SPFx/README.md)):
 
-1. Liste «Redirect Regeln» mit `Broot.Redirect.SPFx/provisioning/Initialize-BrtqmRedirectRulesList.ps1` auf der QM-Pro-Site bereitstellen (Besitzerrechte, PnP.PowerShell; wiederholbar).
+1. Liste «Redirect Regeln» mit `Broot.Redirect.SPFx/provisioning/Initialize-BrtqmRedirectRulesList.ps1` auf der QM-Pro-Site bereitstellen (Besitzerrechte, PnP.PowerShell; wiederholbar). Bei jedem Update vor dem Hochladen des Pakets erneut ausführen, damit neue Felder wie `brtqmStatus` ergänzt werden.
 2. `npx gulp bundle --ship` und `npx gulp package-solution --ship` in `Broot.Redirect.SPFx/` ausführen.
 3. `broot-redirect-spfx.sppkg` in den App Catalog der QM-Pro-Site hochladen und das WebPart auf einer Seite einbinden.
 

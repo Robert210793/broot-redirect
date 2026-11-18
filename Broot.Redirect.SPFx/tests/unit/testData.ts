@@ -9,6 +9,7 @@ export function entry(id: number, overrides: Partial<RedirectRuleEntry> = {}): R
     sourceUrl: `https://old.example/ims/${id}.aspx`,
     targetUrl: 'https://tenant.sharepoint.com/sites/qm/finanzen',
     sourceKey: `v1:key-${id}`,
+    status: '',
     ...overrides
   };
 }

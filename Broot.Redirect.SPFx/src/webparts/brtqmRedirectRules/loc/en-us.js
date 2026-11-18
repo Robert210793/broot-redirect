@@ -48,6 +48,20 @@ define([], function() {
     "ExportCsvFull": "Complete (all columns)",
     "ExportCsvSourceUrls": "Source URLs only",
     "Exporting": "Exporting …",
-    "Exported": "{0} entries were exported as CSV."
+    "Exported": "{0} entries were exported as CSV.",
+    "StatusLabel": "Status",
+    "StatusForAllLabel": "Status for all source URLs",
+    "StatusForAllPlaceholder": "Mixed",
+    "Comments": "Comments",
+    "CommentsWithCount": "Comments ({0})",
+    "CommentsPanelTitle": "Comments",
+    "CommentsLoading": "Loading comments …",
+    "CommentsEmpty": "There are no comments for this source URL yet.",
+    "CommentInputLabel": "New comment",
+    "CommentSend": "Send",
+    "CommentsDisabled": "Comments are disabled in SharePoint.",
+    "CommentsForbidden": "Permission to the comments of this source URL is missing.",
+    "CommentsLoadFailed": "The comments could not be loaded.",
+    "CommentSendFailed": "The comment could not be sent."
   };
 });

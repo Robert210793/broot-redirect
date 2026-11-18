@@ -17,3 +17,26 @@
   padding-left: 20px;
   word-break: break-all;
 }
+
+.status {
+  width: 190px;
+}
+
+.statusForAll {
+  max-width: 260px;
+}
+
+.panelSourceUrl {
+  color: "[theme:neutralSecondary, default: #605e5c]";
+  word-break: break-all;
+}
+
+.comment {
+  border-bottom: 1px solid "[theme:neutralLight, default: #edebe9]";
+  padding-bottom: 8px;
+}
+
+.commentText {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

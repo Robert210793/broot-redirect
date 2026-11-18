@@ -64,6 +64,47 @@ describe('AreaSavePlanner', () => {
     ]);
   });
 
+  it('updates only the status for a pure status change', () => {
+    const operations = planAreaSave([entry(1, { status: 'Testing' })], 'Finanzen', target, [prepared('a', 1, { status: 'aktiv' })]);
+
+    expect(operations).toEqual([{ kind: 'update', rowId: 'a', itemId: 1, etag: '"1"', fields: { brtqmStatus: 'aktiv' } }]);
+  });
+
+  it('leaves an untouched empty status of an existing entry unchanged', () => {
+    expect(planAreaSave([entry(1, { status: '' })], 'Finanzen', target, [prepared('a', 1)])).toEqual([]);
+  });
+
+  it('writes a status set by the user even when it is the default for an empty entry', () => {
+    const operations = planAreaSave([entry(1, { status: '' }), entry(2, { status: 'vorbereitet' })], 'Finanzen', target, [
+      prepared('a', 1, { status: 'vorbereitet' }),
+      prepared('b', 2, { status: 'vorbereitet' })
+    ]);
+
+    expect(operations).toEqual([{ kind: 'update', rowId: 'a', itemId: 1, etag: '"1"', fields: { brtqmStatus: 'vorbereitet' } }]);
+  });
+
+  it('creates a new entry with the status of its row', () => {
+    const [operation] = planAreaSave([], 'Finanzen', target, [prepared('a', undefined, { status: 'vorbereitet' })]);
+
+    expect(operation).toEqual({
+      kind: 'create',
+      rowId: 'a',
+      fields: { brtqmArea: 'Finanzen', brtqmSourceUrl: 'https://old.example/new.aspx', brtqmTargetUrl: target, brtqmSourceKey: 'v1:key-new', brtqmStatus: 'vorbereitet' }
+    });
+  });
+
+  it('combines a status change with renaming the area in one update', () => {
+    const operations = planAreaSave([entry(1)], 'Neu', target, [prepared('a', 1, { status: 'Testing' })]);
+
+    expect(operations).toEqual([{ kind: 'update', rowId: 'a', itemId: 1, etag: '"1"', fields: { brtqmArea: 'Neu', brtqmStatus: 'Testing' } }]);
+  });
+
+  it('combines a status change with a new target URL in one update', () => {
+    const operations = planAreaSave([entry(1, { status: 'Testing' })], 'Finanzen', 'https://new/target', [prepared('a', 1, { status: 'aktiv' })]);
+
+    expect(operations).toEqual([{ kind: 'update', rowId: 'a', itemId: 1, etag: '"1"', fields: { brtqmTargetUrl: 'https://new/target', brtqmStatus: 'aktiv' } }]);
+  });
+
   it('ignores a removed row that was never saved', () => {
     expect(planAreaSave([], 'Finanzen', target, [prepared('a', undefined, { removed: true })])).toEqual([]);
   });

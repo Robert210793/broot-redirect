@@ -1,9 +1,10 @@
 import { ExportEntry } from '../types';
+import { isExportable } from './RedirectRuleStatus';
 
 export type ExportVariant = 'full' | 'sourceUrls';
 
 export const CSV_DELIMITER: string = ';';
-export const CSV_HEADERS: string[] = ['Bereich', 'Quell-URL', 'Ziel-URL', 'Geändert am', 'Geändert von', 'UniqueId'];
+export const CSV_HEADERS: string[] = ['Bereich', 'Quell-URL', 'Ziel-URL', 'Status', 'Geändert am', 'Geändert von', 'UniqueId'];
 export const SOURCE_URLS_CSV_HEADERS: string[] = ['Quell-URL'];
 
 const BYTE_ORDER_MARK: string = '﻿';
@@ -45,6 +46,7 @@ export function buildRedirectRulesCsv(entries: ExportEntry[]): string {
     entry.area.trim(),
     entry.sourceUrl,
     entry.targetUrl,
+    entry.status,
     formatDateTime(entry.modified),
     entry.modifiedBy,
     entry.uniqueId
@@ -55,8 +57,14 @@ export function buildSourceUrlsCsv(entries: ExportEntry[]): string {
   return toCsv([SOURCE_URLS_CSV_HEADERS].concat(sortForExport(entries).map((entry) => [entry.sourceUrl])));
 }
 
+export function exportableEntries(entries: ExportEntry[]): ExportEntry[] {
+  return entries.filter((entry) => isExportable(entry.status));
+}
+
 export function buildExportCsv(entries: ExportEntry[], variant: ExportVariant): string {
-  return variant === 'sourceUrls' ? buildSourceUrlsCsv(entries) : buildRedirectRulesCsv(entries);
+  const exportable = exportableEntries(entries);
+
+  return variant === 'sourceUrls' ? buildSourceUrlsCsv(exportable) : buildRedirectRulesCsv(exportable);
 }
 
 export function exportFileName(now: Date, variant: ExportVariant = 'full'): string {

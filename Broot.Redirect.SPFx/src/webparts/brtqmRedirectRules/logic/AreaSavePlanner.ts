@@ -30,6 +30,9 @@ function changedFields(entry: RedirectRuleEntry, desired: RedirectRuleFields): P
   if (entry.sourceKey !== desired.brtqmSourceKey) {
     fields.brtqmSourceKey = desired.brtqmSourceKey;
   }
+  if (desired.brtqmStatus !== undefined && entry.status !== desired.brtqmStatus) {
+    fields.brtqmStatus = desired.brtqmStatus;
+  }
 
   return fields;
 }
@@ -61,6 +64,10 @@ export function planAreaSave(
       brtqmTargetUrl: targetUrl,
       brtqmSourceKey: row.sourceKey
     };
+
+    if (row.status !== undefined) {
+      desired.brtqmStatus = row.status;
+    }
 
     if (!entry) {
       operations.push({ kind: 'create', rowId: row.rowId, fields: desired });
