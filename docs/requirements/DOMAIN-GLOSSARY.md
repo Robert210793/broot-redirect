@@ -42,6 +42,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Smart Search | `SmartSearchService` | Fallback ohne Treffer: Weiterleitung auf eine Suche mit einem aus dem Pfad abgeleiteten Suchbegriff |
 | Standard-Zieldomain | `DefaultNewDomain` | Basis der neuen Ablage; Ziel ohne Treffer und Ergänzung relativer Ziel-URLs |
 | Startkonfiguration | `BrootRedirectOptions` | Konfiguration aus `appsettings.json` bzw. Umgebungsvariablen; Änderungen erfordern einen Neustart |
+| Status (Quell-URL) | `brtqmStatus` | Fortschritt eines Eintrags der Liste «Redirect Regeln»: vorbereitet, IIS-Umleitung offen, Testing, Fehlerhaft, aktiv; Standard und leerer Wert gelten als «vorbereitet» (ADR-004); nicht zu verwechseln mit dem Aktiv-Status einer Regel (`IsActive`) |
 | Statische Query-Parameter | `StaticQueryParam` | Feste Key/Value-Paare, die an jede Ziel-URL einer Regel angehängt werden |
 | Suchen und Ersetzen | `SearchAndReplaceEntry` | Regelspezifische literale Ersetzung in der erzeugten Ziel-URL |
 | Teilweise (Regeltyp) | `RedirectType.Partial` | Regel für einen Pfadabschnitt, die alle darunterliegenden URLs abdeckt; Standardtyp |

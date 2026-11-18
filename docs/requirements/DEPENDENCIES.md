@@ -106,6 +106,9 @@ Epic 01 und Epic 09 hängen gegenseitig voneinander ab: Die automatische Weiterl
 | US-13.001 | Regeln aus QM Pro schreiben und deaktivieren | US-01.002, US-03.002, US-05.001, US-05.002, US-05.003, US-05.004, US-05.005, US-05.006, US-07.002, US-07.003, US-07.005, US-08.001, US-11.005, US-11.006, US-11.007 |
 | US-13.002 | Regeln pro Bereich in einem SPFx-WebPart erfassen | — |
 | US-13.003 | Regeln aus der Liste «Redirect Regeln» periodisch abgleichen | US-13.002, US-13.001, US-05.004, US-03.001, US-03.002, US-03.006 |
+| US-13.004 | Status und Kommentare pro Quell-URL im WebPart führen | US-13.002 |
+| US-13.005 | Nur aktive Einträge als Wildcard-Regeln abgleichen | US-13.003, US-13.004, US-03.002 |
+| US-13.006 | Exporte und URL-Mapping-CSV in der Bibliothek «RedirectExport» ablegen | US-13.002, US-13.004 |
 
 ---
 
@@ -183,3 +186,6 @@ Die Stories der Bestandsaufnahme sind bereits umgesetzt. Die Reihenfolge zeigt, 
 1. US-13.001 Regeln aus QM Pro beim Publizieren schreiben und beim Zurückziehen deaktivieren
 2. US-13.002 Regeln pro Bereich in einem SPFx-WebPart erfassen
 3. US-13.003 Regeln aus der Liste «Redirect Regeln» periodisch abgleichen
+4. US-13.004 Status und Kommentare pro Quell-URL im WebPart führen
+5. US-13.005 Nur aktive Einträge als Wildcard-Regeln abgleichen
+6. US-13.006 Exporte und URL-Mapping-CSV in der Bibliothek «RedirectExport» ablegen
