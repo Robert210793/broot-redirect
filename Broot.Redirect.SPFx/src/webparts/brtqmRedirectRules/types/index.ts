@@ -37,6 +37,27 @@ export type CommentsLoadResult =
 
 export type AddCommentResult = 'added' | 'disabled' | 'forbidden' | 'failed';
 
+export type LibraryFailure = 'notFound' | 'forbidden' | 'conflict' | 'failed';
+
+export type LibraryFolder = 'root' | 'archive';
+
+export interface LibraryFile {
+  name: string;
+  serverRelativeUrl: string;
+  timeLastModified: string;
+}
+
+export type UrlMappingStep = 'read' | 'library' | 'archive' | 'replace';
+
+export type UrlMappingResult =
+  | { kind: 'published'; sourceUrlCount: number; skippedCount: number; archivedFiles: string[] }
+  | { kind: 'partial'; sourceUrlCount: number; skippedCount: number; archivedFiles: string[]; notMovedFiles: string[] }
+  | { kind: 'failed'; step: UrlMappingStep; reason: LibraryFailure };
+
+export type ExportArchiveResult =
+  | { kind: 'archived'; fileName: string }
+  | { kind: 'failed'; reason: LibraryFailure };
+
 export interface AreaSnapshot {
   area: string;
   targetUrl: string;

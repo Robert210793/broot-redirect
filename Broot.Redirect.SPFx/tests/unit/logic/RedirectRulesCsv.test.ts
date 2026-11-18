@@ -97,12 +97,12 @@ describe('RedirectRulesCsv', () => {
     expect(formatDateTime(value)).toBe('');
   });
 
-  it('names the file with the local date', () => {
-    expect(exportFileName(new Date(2026, 0, 5, 23, 59))).toBe('Redirect-Regeln_2026-01-05.csv');
+  it('names the file with date and time in Swiss time', () => {
+    expect(exportFileName(new Date(Date.UTC(2026, 0, 5, 22, 59)))).toBe('Redirect-Regeln_2026-01-05_2359.csv');
   });
 
   it('marks the file name of the source URL export', () => {
-    expect(exportFileName(new Date(2026, 0, 5, 23, 59), 'sourceUrls')).toBe('Redirect-Regeln_Quell-URLs_2026-01-05.csv');
+    expect(exportFileName(new Date(Date.UTC(2026, 6, 5, 21, 59)), 'sourceUrls')).toBe('Redirect-Regeln_Quell-URLs_2026-07-05_2359.csv');
   });
 
   it('writes only the source URLs, sorted like the complete export', () => {

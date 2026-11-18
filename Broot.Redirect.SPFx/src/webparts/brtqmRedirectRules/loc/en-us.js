@@ -62,6 +62,23 @@ define([], function() {
     "CommentsDisabled": "Comments are disabled in SharePoint.",
     "CommentsForbidden": "Permission to the comments of this source URL is missing.",
     "CommentsLoadFailed": "The comments could not be loaded.",
-    "CommentSendFailed": "The comment could not be sent."
+    "CommentSendFailed": "The comment could not be sent.",
+    "ExportedArchived": "{0} entries were exported as CSV and stored in «RedirectExport» as «{1}».",
+    "ExportedNotArchived": "{0} entries were exported as CSV, but the file was not archived in «RedirectExport»: {1}.",
+    "PublishUrlMapping": "Create URL mapping CSV",
+    "PublishingUrlMapping": "Creating URL mapping CSV …",
+    "UrlMappingPublished": "«url-mapping.csv» was stored in «RedirectExport» with {0} source URLs.",
+    "UrlMappingPartial": "«url-mapping.csv» was stored in «RedirectExport» with {0} source URLs. The following older files could not be moved to the archive; the next run tries again:",
+    "UrlMappingFailed": "«url-mapping.csv» was not created ({0}: {1}). The previous «url-mapping.csv» is unchanged.",
+    "UrlMappingSkipped": "{0} entries without a usable source URL were skipped.",
+    "UrlMappingArchived": "Moved to the archive: {0}",
+    "UrlMappingStepRead": "reading the list",
+    "UrlMappingStepLibrary": "library «RedirectExport»",
+    "UrlMappingStepArchive": "archiving",
+    "UrlMappingStepReplace": "replacing",
+    "LibraryNotFound": "the library «RedirectExport» or the file does not exist",
+    "LibraryForbidden": "no permission to store files in «RedirectExport»",
+    "LibraryConflict": "no free file name",
+    "LibraryFailed": "error accessing «RedirectExport»"
   };
 });

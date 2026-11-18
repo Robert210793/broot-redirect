@@ -62,6 +62,23 @@ declare interface IBrtqmRedirectRulesWebPartStrings {
   CommentsForbidden: string;
   CommentsLoadFailed: string;
   CommentSendFailed: string;
+  ExportedArchived: string;
+  ExportedNotArchived: string;
+  PublishUrlMapping: string;
+  PublishingUrlMapping: string;
+  UrlMappingPublished: string;
+  UrlMappingPartial: string;
+  UrlMappingFailed: string;
+  UrlMappingSkipped: string;
+  UrlMappingArchived: string;
+  UrlMappingStepRead: string;
+  UrlMappingStepLibrary: string;
+  UrlMappingStepArchive: string;
+  UrlMappingStepReplace: string;
+  LibraryNotFound: string;
+  LibraryForbidden: string;
+  LibraryConflict: string;
+  LibraryFailed: string;
 }
 
 declare module 'BrtqmRedirectRulesWebPartStrings' {

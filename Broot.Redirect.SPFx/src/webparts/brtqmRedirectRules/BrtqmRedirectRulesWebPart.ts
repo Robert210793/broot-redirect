@@ -8,13 +8,16 @@ import { SPFx } from '@pnp/sp/behaviors/spfx';
 import * as strings from 'BrtqmRedirectRulesWebPartStrings';
 import { IRedirectRulesEditorProps, RedirectRulesEditor } from './components/RedirectRulesEditor';
 import { AreaSaveCoordinator } from './services/AreaSaveCoordinator';
+import { libraryUrlForSite, RedirectExportLibrary } from './services/RedirectExportLibrary';
 import { listUrlForSite, RedirectRulesService } from './services/RedirectRulesService';
+import { UrlMappingPublisher } from './services/UrlMappingPublisher';
 
 export interface IBrtqmRedirectRulesWebPartProps {}
 
 export default class BrtqmRedirectRulesWebPart extends BaseClientSideWebPart<IBrtqmRedirectRulesWebPartProps> {
   private service!: RedirectRulesService;
   private coordinator!: AreaSaveCoordinator;
+  private publisher!: UrlMappingPublisher;
 
   protected async onInit(): Promise<void> {
     await super.onInit();
@@ -24,12 +27,14 @@ export default class BrtqmRedirectRulesWebPart extends BaseClientSideWebPart<IBr
 
     this.service = new RedirectRulesService(sp, listUrlForSite(site.serverRelativeUrl));
     this.coordinator = new AreaSaveCoordinator(this.service, new URL(site.absoluteUrl).origin);
+    this.publisher = new UrlMappingPublisher(this.service, new RedirectExportLibrary(sp, libraryUrlForSite(site.serverRelativeUrl)));
   }
 
   public render(): void {
     const element: React.ReactElement<IRedirectRulesEditorProps> = React.createElement(RedirectRulesEditor, {
       service: this.service,
-      coordinator: this.coordinator
+      coordinator: this.coordinator,
+      publisher: this.publisher
     });
 
     ReactDom.render(element, this.domElement);

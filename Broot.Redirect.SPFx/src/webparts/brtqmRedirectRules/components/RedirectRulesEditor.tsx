@@ -19,16 +19,18 @@ import { buildExportCsv, exportableEntries, exportFileName, ExportVariant } from
 import { AreaSaveCoordinator } from '../services/AreaSaveCoordinator';
 import { downloadTextFile } from '../services/FileDownload';
 import { IRedirectRulesService } from '../services/RedirectRulesService';
-import { AreaInputValidation, AreaOption, AreaSnapshot, RowIssue, SaveResult, SourceUrlRow } from '../types';
+import { UrlMappingPublisher } from '../services/UrlMappingPublisher';
+import { AreaInputValidation, AreaOption, AreaSnapshot, RowIssue, SaveResult, SourceUrlRow, UrlMappingResult } from '../types';
 import { AreaPicker, NEW_AREA_KEY } from './AreaPicker';
 import { CommentsPanel } from './CommentsPanel';
 import { SourceUrlTable } from './SourceUrlTable';
-import { format, targetUrlIssueText } from './text';
+import { format, libraryFailureText, targetUrlIssueText, urlMappingStepText } from './text';
 import styles from './RedirectRulesEditor.module.scss';
 
 export interface IRedirectRulesEditorProps {
   service: IRedirectRulesService;
   coordinator: AreaSaveCoordinator;
+  publisher: UrlMappingPublisher;
 }
 
 type LoadState = 'loading' | 'listMissing' | 'failed' | 'ready';
@@ -62,6 +64,24 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function urlMappingFeedback(result: UrlMappingResult): Feedback {
+  if (result.kind === 'failed') {
+    return {
+      type: MessageBarType.error,
+      text: format(strings.UrlMappingFailed, urlMappingStepText(result.step), libraryFailureText(result.reason))
+    };
+  }
+
+  const details = result.archivedFiles.map((name) => format(strings.UrlMappingArchived, name));
+  if (result.skippedCount > 0) {
+    details.push(format(strings.UrlMappingSkipped, String(result.skippedCount)));
+  }
+
+  return result.kind === 'partial'
+    ? { type: MessageBarType.warning, text: format(strings.UrlMappingPartial, String(result.sourceUrlCount)), details: result.notMovedFiles.concat(details) }
+    : { type: MessageBarType.success, text: format(strings.UrlMappingPublished, String(result.sourceUrlCount)), details: details.length > 0 ? details : undefined };
+}
+
 function rejectionFeedback(result: SaveResult): Feedback {
   switch (result.kind) {
     case 'invalid':
@@ -83,7 +103,7 @@ function rejectionFeedback(result: SaveResult): Feedback {
   }
 }
 
-export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ service, coordinator }) => {
+export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ service, coordinator, publisher }) => {
   const [loadState, setLoadState] = React.useState<LoadState>('loading');
   const [areas, setAreas] = React.useState<AreaOption[]>([]);
   const [selectedKey, setSelectedKey] = React.useState<string | undefined>(undefined);
@@ -95,7 +115,7 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
   const [rowIssues, setRowIssues] = React.useState<Record<string, RowIssue>>({});
   const [feedback, setFeedback] = React.useState<Feedback | undefined>(undefined);
   const [busy, setBusy] = React.useState<boolean>(false);
-  const [exporting, setExporting] = React.useState<boolean>(false);
+  const [busyLabel, setBusyLabel] = React.useState<string | undefined>(undefined);
   const [commentCounts, setCommentCounts] = React.useState<Record<number, number>>({});
   const [commentRow, setCommentRow] = React.useState<SourceUrlRow | undefined>(undefined);
 
@@ -267,14 +287,34 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
 
   const onExport = (variant: ExportVariant): void => {
     setFeedback(undefined);
-    setExporting(true);
+    setBusyLabel(strings.Exporting);
     run(async () => {
       try {
         const entries = await service.getAllEntries();
-        downloadTextFile(exportFileName(new Date(), variant), buildExportCsv(entries, variant), 'text/csv;charset=utf-8');
-        setFeedback({ type: MessageBarType.success, text: format(strings.Exported, String(exportableEntries(entries).length)) });
+        const fileName = exportFileName(new Date(), variant);
+        const content = buildExportCsv(entries, variant);
+        const count = String(exportableEntries(entries).length);
+
+        downloadTextFile(fileName, content, 'text/csv;charset=utf-8');
+        const archived = await publisher.archiveExport(fileName, content);
+
+        setFeedback(archived.kind === 'archived'
+          ? { type: MessageBarType.success, text: format(strings.ExportedArchived, count, archived.fileName) }
+          : { type: MessageBarType.warning, text: format(strings.ExportedNotArchived, count, libraryFailureText(archived.reason)) });
       } finally {
-        setExporting(false);
+        setBusyLabel(undefined);
+      }
+    });
+  };
+
+  const onPublishUrlMapping = (): void => {
+    setFeedback(undefined);
+    setBusyLabel(strings.PublishingUrlMapping);
+    run(async () => {
+      try {
+        setFeedback(urlMappingFeedback(await publisher.publish()));
+      } finally {
+        setBusyLabel(undefined);
       }
     });
   };
@@ -359,7 +399,8 @@ export const RedirectRulesEditor: React.FC<IRedirectRulesEditorProps> = ({ servi
             ]
           }}
         />
-        {busy && <Spinner size={SpinnerSize.small} label={exporting ? strings.Exporting : strings.Saving} labelPosition="right" />}
+        <DefaultButton text={strings.PublishUrlMapping} iconProps={{ iconName: 'CloudUpload' }} disabled={busy} onClick={onPublishUrlMapping} />
+        {busy && <Spinner size={SpinnerSize.small} label={busyLabel || strings.Saving} labelPosition="right" />}
       </Stack>
       {commentRow && commentRow.itemId !== undefined && (
         <CommentsPanel

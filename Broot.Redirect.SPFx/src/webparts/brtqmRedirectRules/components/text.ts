@@ -1,5 +1,31 @@
 import * as strings from 'BrtqmRedirectRulesWebPartStrings';
-import { RowIssue, SaveFailureReason, TargetUrlIssue } from '../types';
+import { LibraryFailure, RowIssue, SaveFailureReason, TargetUrlIssue, UrlMappingStep } from '../types';
+
+export function libraryFailureText(reason: LibraryFailure): string {
+  switch (reason) {
+    case 'notFound':
+      return strings.LibraryNotFound;
+    case 'forbidden':
+      return strings.LibraryForbidden;
+    case 'conflict':
+      return strings.LibraryConflict;
+    default:
+      return strings.LibraryFailed;
+  }
+}
+
+export function urlMappingStepText(step: UrlMappingStep): string {
+  switch (step) {
+    case 'read':
+      return strings.UrlMappingStepRead;
+    case 'library':
+      return strings.UrlMappingStepLibrary;
+    case 'archive':
+      return strings.UrlMappingStepArchive;
+    default:
+      return strings.UrlMappingStepReplace;
+  }
+}
 
 export function format(template: string, ...values: string[]): string {
   return template.replace(/\{(\d+)\}/g, (placeholder: string, index: string) => {

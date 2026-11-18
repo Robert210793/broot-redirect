@@ -62,6 +62,23 @@ define([], function() {
     "CommentsDisabled": "Kommentare sind in SharePoint deaktiviert.",
     "CommentsForbidden": "Für die Kommentare dieser Quell-URL fehlt die Berechtigung.",
     "CommentsLoadFailed": "Die Kommentare konnten nicht geladen werden.",
-    "CommentSendFailed": "Der Kommentar konnte nicht gesendet werden."
+    "CommentSendFailed": "Der Kommentar konnte nicht gesendet werden.",
+    "ExportedArchived": "{0} Einträge wurden als CSV exportiert und in «RedirectExport» als «{1}» abgelegt.",
+    "ExportedNotArchived": "{0} Einträge wurden als CSV exportiert, die Datei wurde aber nicht in «RedirectExport» archiviert: {1}.",
+    "PublishUrlMapping": "URL-Mapping-CSV erzeugen",
+    "PublishingUrlMapping": "URL-Mapping-CSV wird erzeugt …",
+    "UrlMappingPublished": "«url-mapping.csv» wurde mit {0} Quell-URLs in «RedirectExport» abgelegt.",
+    "UrlMappingPartial": "«url-mapping.csv» wurde mit {0} Quell-URLs in «RedirectExport» abgelegt. Folgende ältere Dateien konnten nicht ins Archiv verschoben werden; der nächste Lauf versucht es erneut:",
+    "UrlMappingFailed": "«url-mapping.csv» wurde nicht erzeugt ({0}: {1}). Die bisherige «url-mapping.csv» ist unverändert.",
+    "UrlMappingSkipped": "{0} Einträge ohne verwendbare Quell-URL wurden übersprungen.",
+    "UrlMappingArchived": "Ins Archiv verschoben: {0}",
+    "UrlMappingStepRead": "Lesen der Liste",
+    "UrlMappingStepLibrary": "Bibliothek «RedirectExport»",
+    "UrlMappingStepArchive": "Archivieren",
+    "UrlMappingStepReplace": "Ersetzen",
+    "LibraryNotFound": "die Bibliothek «RedirectExport» oder die Datei existiert nicht",
+    "LibraryForbidden": "keine Berechtigung, in «RedirectExport» abzulegen",
+    "LibraryConflict": "kein freier Dateiname",
+    "LibraryFailed": "Fehler beim Zugriff auf «RedirectExport»"
   };
 });

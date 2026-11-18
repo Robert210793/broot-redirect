@@ -1,5 +1,6 @@
 import { ExportEntry } from '../types';
 import { isExportable } from './RedirectRuleStatus';
+import { swissDateTime } from './SwissTime';
 
 export type ExportVariant = 'full' | 'sourceUrls';
 
@@ -69,6 +70,7 @@ export function buildExportCsv(entries: ExportEntry[], variant: ExportVariant): 
 
 export function exportFileName(now: Date, variant: ExportVariant = 'full'): string {
   const suffix = variant === 'sourceUrls' ? '_Quell-URLs' : '';
+  const stamp = swissDateTime(now);
 
-  return `Redirect-Regeln${suffix}_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.csv`;
+  return `Redirect-Regeln${suffix}_${stamp.date}_${stamp.time}.csv`;
 }
