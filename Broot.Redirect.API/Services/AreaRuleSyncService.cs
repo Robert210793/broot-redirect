@@ -11,7 +11,6 @@ namespace Broot.Redirect.API.Services
         public const string ValidationErrorCode = "VALIDATION_ERROR";
         public const string DuplicateEntryCode = "DUPLICATE_ENTRY";
         public const string MatcherDuplicateCode = "MATCHER_DUPLICATE";
-        public const string MatcherConflictCode = "MATCHER_CONFLICT";
 
         private readonly IRedirectRuleRepository _repository;
         private readonly IRuleCacheService _cacheService;
@@ -55,6 +54,7 @@ namespace Broot.Redirect.API.Services
             var skipped = new List<(int Index, AreaRuleSyncSkippedEntry Entry)>();
             var submittedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var candidates = new List<AreaRuleCandidate>();
+            var invalidInactiveIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (var index = 0; index < entries.Count; index++)
             {
@@ -78,6 +78,11 @@ namespace Broot.Redirect.API.Services
                 if (!TryBuildCandidate(index, id, entry!, out var candidate, out var error))
                 {
                     skipped.Add((index, Skip(id, ValidationErrorCode, error)));
+
+                    if (!IsActive(entry!))
+                    {
+                        invalidInactiveIds.Add(id);
+                    }
 
                     continue;
                 }
@@ -109,23 +114,39 @@ namespace Broot.Redirect.API.Services
 
             var upsertedRules = new List<RedirectRule>();
 
+            void Deactivate(RedirectRule rule)
+            {
+                upsertedRules.Add(Copy(rule, rule.Matcher, rule.RedirectType, rule.TargetUrl, isActive: false));
+
+                response.Updated++;
+                response.Deactivated++;
+            }
+
             foreach (var group in candidates.GroupBy(candidate => MatcherEquivalence.GetKey(candidate.Matcher)))
             {
-                var members = group.ToList();
+                var winner = group
+                    .OrderByDescending(candidate => candidate.IsActive)
+                    .ThenByDescending(candidate => HasRuleOnMatcher(existingById, candidate))
+                    .ThenBy(candidate => candidate.Index)
+                    .First();
 
-                var winner = members.FirstOrDefault(candidate =>
-                        existingById.TryGetValue(candidate.Id, out var rule)
-                        && MatcherEquivalence.AreEquivalent(rule.Matcher, candidate.Matcher))
-                    ?? members[0];
-
-                foreach (var duplicate in members.Where(candidate => !ReferenceEquals(candidate, winner)))
+                foreach (var duplicate in group.Where(candidate => !ReferenceEquals(candidate, winner)))
                 {
                     skipped.Add((duplicate.Index, Skip(
                         duplicate.Id,
                         DuplicateEntryCode,
                         $"Die Quell-URL ist gleichwertig mit der Quell-URL des Eintrags {winner.Id}",
                         existingById.GetValueOrDefault(winner.Id)?.Id)));
+
+                    if (existingById.TryGetValue(duplicate.Id, out var duplicateRule)
+                        && duplicateRule.IsActive
+                        && (!duplicate.IsActive || MatcherEquivalence.AreEquivalent(duplicateRule.Matcher, winner.Matcher)))
+                    {
+                        Deactivate(duplicateRule);
+                    }
                 }
+
+                existingById.TryGetValue(winner.Id, out var existingRule);
 
                 var conflictingRule = _cacheService.FindEquivalentMatcher(winner.Matcher, excludedSource: RuleSource.AreaList);
 
@@ -137,34 +158,26 @@ namespace Broot.Redirect.API.Services
                         "Die Quell-URL ist bereits Matcher einer Regel anderer Herkunft",
                         conflictingRule.Id)));
 
-                    continue;
-                }
-
-                var overlappingRule = _cacheService.FindOverlappingMatcher(winner.Matcher, winner.RedirectType, excludedSource: RuleSource.AreaList);
-
-                if (overlappingRule != null)
-                {
-                    skipped.Add((winner.Index, Skip(
-                        winner.Id,
-                        MatcherConflictCode,
-                        "Der Ordner überschneidet sich mit einer Ordnerregel («Teilweise») anderer Herkunft",
-                        overlappingRule.Id)));
+                    if (existingRule is { IsActive: true } && !winner.IsActive)
+                    {
+                        Deactivate(existingRule);
+                    }
 
                     continue;
                 }
 
-                if (!existingById.TryGetValue(winner.Id, out var existingRule))
+                if (existingRule == null)
                 {
                     upsertedRules.Add(new RedirectRule
                     {
                         Id = Guid.NewGuid(),
                         Matcher = winner.Matcher,
                         TargetUrl = winner.TargetUrl,
-                        RedirectType = winner.RedirectType,
+                        RedirectType = RedirectType.Wildcard,
                         Source = RuleSource.AreaList,
                         AutoRedirect = false,
                         ExternalDocumentId = winner.Id,
-                        IsActive = true,
+                        IsActive = winner.IsActive,
                         CreatedAt = DateTimeOffset.UtcNow
                     });
 
@@ -180,9 +193,29 @@ namespace Broot.Redirect.API.Services
                     continue;
                 }
 
-                upsertedRules.Add(CopyWithChanges(existingRule, winner));
+                upsertedRules.Add(Copy(existingRule, winner.Matcher, RedirectType.Wildcard, winner.TargetUrl, winner.IsActive));
 
                 response.Updated++;
+
+                if (existingRule.IsActive != winner.IsActive)
+                {
+                    if (winner.IsActive)
+                    {
+                        response.Activated++;
+                    }
+                    else
+                    {
+                        response.Deactivated++;
+                    }
+                }
+            }
+
+            foreach (var id in invalidInactiveIds)
+            {
+                if (existingById.TryGetValue(id, out var rule) && rule.IsActive)
+                {
+                    Deactivate(rule);
+                }
             }
 
             response.Deleted = removedRuleIds.Count;
@@ -204,10 +237,12 @@ namespace Broot.Redirect.API.Services
             }
 
             _logger.LogInformation(
-                "Area list sync of {EntryCount} entries: {Created} created, {Updated} updated, {Deleted} deleted, {Unchanged} unchanged, {Skipped} skipped.",
+                "Area list sync of {EntryCount} entries: {Created} created, {Updated} updated ({Activated} activated, {Deactivated} deactivated), {Deleted} deleted, {Unchanged} unchanged, {Skipped} skipped.",
                 entries.Count,
                 response.Created,
                 response.Updated,
+                response.Activated,
+                response.Deactivated,
                 response.Deleted,
                 response.Unchanged,
                 response.Skipped.Count);
@@ -306,7 +341,6 @@ namespace Broot.Redirect.API.Services
                 return false;
             }
 
-            var redirectType = path.EndsWith('/') ? RedirectType.Partial : RedirectType.Wildcard;
             var matcher = RuleImportExportService.CanonicalizeMatcher(pathAndQuery);
             var targetUrl = RuleImportExportService.PercentEncodePreservingSlashes(entry.TargetUrl.Trim());
 
@@ -314,7 +348,7 @@ namespace Broot.Redirect.API.Services
             {
                 Matcher = matcher,
                 TargetUrl = targetUrl,
-                RedirectType = redirectType.ToString().ToLowerInvariant()
+                RedirectType = RedirectType.Wildcard.ToString().ToLowerInvariant()
             });
 
             if (validationErrors.Count > 0)
@@ -324,7 +358,7 @@ namespace Broot.Redirect.API.Services
                 return false;
             }
 
-            candidate = new AreaRuleCandidate(index, id, matcher, redirectType, targetUrl);
+            candidate = new AreaRuleCandidate(index, id, matcher, targetUrl, IsActive(entry));
             error = null;
 
             return true;
@@ -355,21 +389,38 @@ namespace Broot.Redirect.API.Services
             return false;
         }
 
+        private static bool IsActive(AreaRuleSyncEntry entry)
+        {
+            return entry.Active ?? true;
+        }
+
+        private static bool HasRuleOnMatcher(Dictionary<string, RedirectRule> existingById, AreaRuleCandidate candidate)
+        {
+            return existingById.TryGetValue(candidate.Id, out var rule)
+                && MatcherEquivalence.AreEquivalent(rule.Matcher, candidate.Matcher);
+        }
+
         private static bool IsUnchanged(RedirectRule rule, AreaRuleCandidate candidate)
         {
             return string.Equals(RuleImportExportService.CanonicalizeMatcher(rule.Matcher), candidate.Matcher, StringComparison.Ordinal)
-                && rule.RedirectType == candidate.RedirectType
-                && string.Equals(rule.TargetUrl, candidate.TargetUrl, StringComparison.Ordinal);
+                && rule.RedirectType == RedirectType.Wildcard
+                && string.Equals(rule.TargetUrl, candidate.TargetUrl, StringComparison.Ordinal)
+                && rule.IsActive == candidate.IsActive;
         }
 
-        private static RedirectRule CopyWithChanges(RedirectRule rule, AreaRuleCandidate candidate)
+        private static RedirectRule Copy(
+            RedirectRule rule,
+            string matcher,
+            RedirectType redirectType,
+            string targetUrl,
+            bool isActive)
         {
             return new RedirectRule
             {
                 Id = rule.Id,
-                Matcher = candidate.Matcher,
-                TargetUrl = candidate.TargetUrl,
-                RedirectType = candidate.RedirectType,
+                Matcher = matcher,
+                TargetUrl = targetUrl,
+                RedirectType = redirectType,
                 Source = rule.Source,
                 InfoText = rule.InfoText,
                 AutoRedirect = rule.AutoRedirect,
@@ -380,7 +431,7 @@ namespace Broot.Redirect.API.Services
                 SearchAndReplace = rule.SearchAndReplace,
                 CreatedAt = rule.CreatedAt,
                 ExternalDocumentId = rule.ExternalDocumentId,
-                IsActive = rule.IsActive
+                IsActive = isActive
             };
         }
 
@@ -411,7 +462,7 @@ namespace Broot.Redirect.API.Services
             int Index,
             string Id,
             string Matcher,
-            RedirectType RedirectType,
-            string TargetUrl);
+            string TargetUrl,
+            bool IsActive);
     }
 }

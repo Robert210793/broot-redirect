@@ -33,6 +33,8 @@ namespace Broot.Redirect.API.Dtos
         public string? SourceUrl { get; set; }
 
         public string? TargetUrl { get; set; }
+
+        public bool? Active { get; set; }
     }
 
     public class AreaRuleSyncResponse
@@ -44,6 +46,10 @@ namespace Broot.Redirect.API.Dtos
         public int Deleted { get; set; }
 
         public int Unchanged { get; set; }
+
+        public int Activated { get; set; }
+
+        public int Deactivated { get; set; }
 
         public List<AreaRuleSyncSkippedEntry> Skipped { get; set; } = new();
     }

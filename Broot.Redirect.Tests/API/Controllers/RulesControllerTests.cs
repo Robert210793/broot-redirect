@@ -4,6 +4,7 @@ using Broot.Redirect.API.Dtos;
 using Broot.Redirect.API.Services;
 using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Models;
+using Broot.Redirect.Infrastructure.Cache;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -1778,6 +1779,57 @@ namespace Broot.Redirect.Tests.API.Controllers
 
                 response!.Counts.Invalid.Should().Be(1);
                 response.Counts.Update.Should().Be(0);
+                response.Preview[0].Reason.Should().Be(RuleImportExportService.AreaListManagedImportError);
+            }
+
+            [Fact]
+            public async Task Create_MatcherOfDeactivatedAreaListRule_IsRejectedAndDoesNotWrite()
+            {
+                var cache = new RuleCacheService(
+                    Options.Create(new CacheOptions()),
+                    Substitute.For<ILogger<RuleCacheService>>());
+                var areaRule = CreateAreaListRule("/ims/KVP/Dokument.docx");
+                areaRule.RedirectType = RedirectType.Wildcard;
+                areaRule.IsActive = false;
+                cache.Initialize(new List<RedirectRule> { areaRule });
+                var sut = new RulesController(
+                    _repository,
+                    cache,
+                    _ruleMatchingService,
+                    _urlTransformService,
+                    _settingsCache,
+                    new RuleValidationService(),
+                    Options.Create(new BrootRedirectOptions()),
+                    Substitute.For<ILogger<RulesController>>());
+
+                var result = await sut.Create(new CreateRuleRequest
+                {
+                    Matcher = "/IMS/KVP/Dokument.docx",
+                    TargetUrl = "https://tenant.sharepoint.com/other",
+                    RedirectType = "wildcard"
+                });
+
+                result.Should().BeOfType<BadRequestObjectResult>();
+                await _repository.DidNotReceive().CreateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
+                cache.GetById(areaRule.Id)!.IsActive.Should().BeFalse();
+            }
+
+            [Fact]
+            public async Task ImportPreview_EntryMatchingDeactivatedAreaListRule_IsInvalid()
+            {
+                var rule = CreateAreaListRule("/ims/KVP/Dokument.docx");
+                rule.RedirectType = RedirectType.Wildcard;
+                rule.IsActive = false;
+                _cacheService.GetAll().Returns(new List<RedirectRule> { rule });
+
+                SetJsonBody(new[]
+                {
+                    new ImportRuleEntry { Matcher = rule.Matcher, TargetUrl = "https://tenant.sharepoint.com/other", RedirectType = "wildcard" }
+                });
+
+                var response = (await _sut.ImportPreview() as OkObjectResult)!.Value as ImportPreviewResponse;
+
+                response!.Counts.Invalid.Should().Be(1);
                 response.Preview[0].Reason.Should().Be(RuleImportExportService.AreaListManagedImportError);
             }
 

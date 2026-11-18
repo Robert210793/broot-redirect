@@ -4,9 +4,10 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 
 | Deutsch      | Code-Begriff                    | Beschreibung                        |
 |--------------|---------------------------------|-------------------------------------|
-| Abgleich (Bereichsliste) | `AreaRuleSyncService` | Übernahme des vollständigen Stands der Liste «Redirect Regeln» als Regeln der Herkunft «Bereichsliste» (anlegen, aktualisieren, löschen); ausgelöst durch den Timer-Trigger `brtqmRedirectRulesSync` in QM Pro |
+| Abgleich (Bereichsliste) | `AreaRuleSyncService` | Übernahme des vollständigen Stands der Liste «Redirect Regeln» als Regeln der Herkunft «Bereichsliste» vom Typ «Wildcard» (anlegen, aktualisieren, aktivieren, deaktivieren, löschen; US-13.005); ausgelöst durch den Timer-Trigger `brtqmRedirectRulesSync` in QM Pro |
 | Admin-Session | `admin_session` | Session-Cookie nach erfolgreicher Anmeldung mit dem gemeinsamen Admin-Passwort |
 | Aktiv-Status / deaktivierte Regel | `IsActive` | Ob eine Regel bei Weiterleitung, Info-Seite und Validierung berücksichtigt wird; eine deaktivierte Regel bleibt gespeichert und belegt ihren Matcher |
+| Aktiv-Wert (Abgleich) | `AreaRuleSyncEntry.Active` (`active`) | Boolescher Wert pro Eintrag im Stand des Abgleichs; `true` nur für Status «aktiv», übersetzt vom Timer-Trigger in QM Pro; fehlend oder `null` gilt als aktiv (ADR-005). Statuswechsel bestehender Regeln zählt das Ergebnis in `activated` und `deactivated` (Teilmengen von `updated`) |
 | Alte URL | `OldUrl` | Ursprüngliche On-Premises-URL eines Dokuments aus der Migration; ihr Pfad inklusive Query wird zum Matcher |
 | Ampelstufe | `MatchQualityLevel` | Grün (ab 90), Gelb (ab 60) oder Rot — Darstellung der Match-Qualität |
 | API-Key (QM Pro) | `QmProApiKey` | Geheimer Schlüssel aus der Startkonfiguration, den QM Pro im Header `X-Api-Key` sendet |
@@ -30,7 +31,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Laufzeit-Einstellungen | `AppSettings` | Im Admin-Panel änderbare Einstellungen, gespeichert in Table Storage |
 | Match-Qualität | `Quality` | Dem Benutzer angezeigte Güte der Zuordnung in Prozent (100, 75, 50, 0) |
 | Matcher | `Matcher` | Muster der alten URL, gegen das eine Anfrage geprüft wird (Pfad, Domain oder Regex) |
-| Matcher-Konflikt | `MATCHER_CONFLICT` | Abweisung einer teilweisen Regel, deren Matcher hierarchisch mit einer bestehenden teilweisen Regel überlappt; «Wildcard»-Regeln stehen nie in diesem Konflikt |
+| Matcher-Konflikt | `MATCHER_CONFLICT` | Abweisung einer teilweisen Regel, deren Matcher hierarchisch mit einer bestehenden teilweisen Regel überlappt; «Wildcard»-Regeln stehen nie in diesem Konflikt, der Abgleich der Bereichsliste meldet ihn deshalb seit US-13.005 nicht mehr |
 | Normalisierter Schlüssel | `brtqmSourceKey` | Vergleichswert einer Quell-URL ohne Host, dekodiert, ohne Gross-/Kleinschreibung, Query unabhängig von der Reihenfolge, gespeichert als `v1:` + SHA-256 (ADR-003); verhindert doppelte Quell-URLs in der Liste «Redirect Regeln» |
 | Popup-Modus | `PopupMode` | Anzeige der Info-Seite: `inline` (Hinweisbanner) oder `active` (Dialog beim Laden) |
 | Publikations-URL | `PublicationUrl` | URL der publizierten Kopie eines Dokuments in der Publikationsbibliothek; wird zur Ziel-URL der Regel |
@@ -48,7 +49,7 @@ Mapping zwischen deutschem Fachbegriff und dem Begriff im Code. Das Projekt verw
 | Teilweise (Regeltyp) | `RedirectType.Partial` | Regel für einen Pfadabschnitt, die alle darunterliegenden URLs abdeckt; Standardtyp |
 | Tracking-Eintrag | `TrackingEntry` | Datensatz pro Aufruf der Info-Seite oder automatischer Weiterleitung |
 | Transformations-Trace | `UrlTraceStep` | Schrittweise Aufzeichnung, wie die Ziel-URL entstanden ist (Validierungswerkzeug) |
-| Übersprungener Eintrag (Abgleich) | `AreaRuleSyncSkippedEntry` | Eintrag der Liste «Redirect Regeln», den der Abgleich nicht übernimmt, mit Identifier, Code (`VALIDATION_ERROR`, `DUPLICATE_ENTRY`, `MATCHER_DUPLICATE`, `MATCHER_CONFLICT`) und Grund; eine bestehende Regel des Eintrags bleibt unverändert |
+| Übersprungener Eintrag (Abgleich) | `AreaRuleSyncSkippedEntry` | Eintrag der Liste «Redirect Regeln», den der Abgleich nicht übernimmt, mit Identifier, Code (`VALIDATION_ERROR`, `DUPLICATE_ENTRY`, `MATCHER_DUPLICATE`; `MATCHER_CONFLICT` bis US-13.005) und Grund; eine bestehende Regel des Eintrags bleibt unverändert, ausser ein nicht aktiver Eintrag deaktiviert seine aktive Regel |
 | Validierung (Trockenlauf) | `POST /api/rules/validate` | Prüfung einer URL-Liste gegen das Regelwerk, ohne Aufrufe zu erfassen |
 | Verhalten ohne Treffer | `NoMatchBehavior` | `RedirectToDefault`, `SmartSearch` oder `Return404` |
 | Vorgeschlagene URL | `UserProposedUrl` | Vom Benutzer im Feedback angegebene korrekte URL |

@@ -464,16 +464,21 @@ namespace Broot.Redirect.Tests.API.Services
 
         public class AreaListInteractionTests : QmProRuleServiceTests
         {
-            private RedirectRule AddAreaRule(string matcher, string externalDocumentId)
+            private RedirectRule AddAreaRule(
+                string matcher,
+                string externalDocumentId,
+                RedirectType redirectType = RedirectType.Partial,
+                bool isActive = true)
             {
                 var rule = new RedirectRule
                 {
                     Id = Guid.NewGuid(),
                     Matcher = matcher,
                     TargetUrl = "https://tenant.sharepoint.com/sites/QM/Bereich",
-                    RedirectType = RedirectType.Partial,
+                    RedirectType = redirectType,
                     Source = RuleSource.AreaList,
-                    ExternalDocumentId = externalDocumentId
+                    ExternalDocumentId = externalDocumentId,
+                    IsActive = isActive
                 };
 
                 _cache.AddRule(rule);
@@ -501,6 +506,23 @@ namespace Broot.Redirect.Tests.API.Services
 
                 result.Status.Should().Be(QmProPublishStatus.MatcherDuplicate);
                 result.ConflictingRule!.Id.Should().Be(areaRule.Id);
+            }
+
+            [Fact]
+            public async Task Publish_MatcherOfDeactivatedAreaListRule_IsRejectedAsDuplicate()
+            {
+                var areaRule = AddAreaRule(
+                    "/sites/qm/Freigegebene%20Dokumente/Handbuch.docx?web=1",
+                    "5b0c2a4e-0000-4000-8000-000000000001",
+                    RedirectType.Wildcard,
+                    isActive: false);
+
+                var result = await _sut.PublishAsync(PublishRequest());
+
+                result.Status.Should().Be(QmProPublishStatus.MatcherDuplicate);
+                result.ConflictingRule!.Id.Should().Be(areaRule.Id);
+                _cache.GetById(areaRule.Id)!.IsActive.Should().BeFalse();
+                await _repository.DidNotReceive().CreateAsync(Arg.Any<RedirectRule>(), Arg.Any<CancellationToken>());
             }
 
             [Fact]

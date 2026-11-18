@@ -20,7 +20,7 @@ Jeder Eintrag der Liste «Redirect Regeln» führt einen Status (ADR-004, US-13.
 - Eigener Endpunkt für Statuswechsel: zweiter Aufruf pro Lauf, kein atomarer Stand.
 
 ## Konsequenzen
-- Additive, rückwärtskompatible Vertragserweiterung: alte Function App gegen neue API → alle Einträge aktiv; neue Function App gegen alte API → `active` wird ignoriert, alle Einträge aktiv wie bisher.
+- Additive, rückwärtskompatible Vertragserweiterung: alte Function App gegen neue API → alle Einträge aktiv; neue Function App gegen eine API vor US-13.005 → `active` wird ignoriert, neu angelegte Regeln sind aktiv, der Aktiv-Status bestehender Regeln bleibt unverändert (auch bereits deaktivierte Bereichsregeln bleiben deaktiviert) und Ordner-URLs ergeben wieder «Teilweise».
 - Der Lesevertrag des Timer-Triggers aus ADR-003 umfasst `brtqmStatus`, wie von ADR-004 angekündigt.
 - Deaktivierte Bereichsregeln belegen ihren Matcher gegenüber anderen Herkünften (ADR-002).
 - Altbestand ohne Status wird nach dem Deployment des neuen Timer-Triggers deaktiviert; der Status ist vorher zu pflegen.

@@ -1,7 +1,7 @@
 # ADR-003: Liste «Redirect Regeln» als Schnittstelle zwischen QM-Pro-WebPart und Abgleich
 
 ## Status
-Accepted — 2026-10-27
+Accepted — 2026-10-27 (Lesevertrag des Timer-Triggers durch [ADR-004](ADR-004-status-pro-eintrag-liste-redirect-regeln.md) und [ADR-005](ADR-005-aktiv-status-im-abgleich-der-bereichsliste.md) um `brtqmStatus` erweitert, US-13.005)
 
 ## Kontext
 Ein SPFx-WebPart (`Broot.Redirect.SPFx/`, ausgeliefert auf die QM-Pro-Site) erfasst Bereiche mit vielen alten On-Premises-URLs und einer gemeinsamen Ziel-URL (US-13.002). Ein Timer-Trigger in QM Pro liest diese Einträge periodisch und gleicht sie mit den Regeln in broot-redirect ab (US-13.003). Die SharePoint-Liste ist damit der Vertrag zwischen zwei unabhängig ausgelieferten Komponenten.

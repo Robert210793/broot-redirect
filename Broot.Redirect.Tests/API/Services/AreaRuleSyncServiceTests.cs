@@ -2,6 +2,7 @@ using Broot.Redirect.API.Dtos;
 using Broot.Redirect.API.Services;
 using Broot.Redirect.Core.Interfaces;
 using Broot.Redirect.Core.Models;
+using Broot.Redirect.Core.Services;
 using Broot.Redirect.Infrastructure.Cache;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -46,9 +47,9 @@ namespace Broot.Redirect.Tests.API.Services
                 _logger);
         }
 
-        private static AreaRuleSyncEntry Entry(string? id, string? sourceUrl, string? targetUrl = TargetA)
+        private static AreaRuleSyncEntry Entry(string? id, string? sourceUrl, string? targetUrl = TargetA, bool? active = null)
         {
-            return new AreaRuleSyncEntry { Id = id, SourceUrl = sourceUrl, TargetUrl = targetUrl };
+            return new AreaRuleSyncEntry { Id = id, SourceUrl = sourceUrl, TargetUrl = targetUrl, Active = active };
         }
 
         private Task<AreaRuleSyncResponse> SyncAsync(params AreaRuleSyncEntry?[] entries)
@@ -93,7 +94,7 @@ namespace Broot.Redirect.Tests.API.Services
         public class CreateTests : AreaRuleSyncServiceTests
         {
             [Fact]
-            public async Task Sync_FolderUrl_CreatesPartialRuleWithoutAutoRedirect()
+            public async Task Sync_FolderUrl_CreatesWildcardRuleWithoutAutoRedirect()
             {
                 var response = await SyncAsync(Entry(IdA, "/ims/KVP_Innovation/11%20Prozessabweichungen/"));
 
@@ -102,7 +103,7 @@ namespace Broot.Redirect.Tests.API.Services
 
                 var rule = AreaRule(IdA);
                 rule.Matcher.Should().Be("/ims/KVP_Innovation/11%20Prozessabweichungen");
-                rule.RedirectType.Should().Be(RedirectType.Partial);
+                rule.RedirectType.Should().Be(RedirectType.Wildcard);
                 rule.TargetUrl.Should().Be(TargetA);
                 rule.AutoRedirect.Should().BeFalse();
                 rule.IsActive.Should().BeTrue();
@@ -124,11 +125,11 @@ namespace Broot.Redirect.Tests.API.Services
             }
 
             [Fact]
-            public async Task Sync_FolderUrlWithQuery_DecidesTypeByPathBeforeQuery()
+            public async Task Sync_FolderUrlWithQuery_CreatesWildcardRule()
             {
                 await SyncAsync(Entry(IdA, "/ims/A/?Web=1"));
 
-                AreaRule(IdA).RedirectType.Should().Be(RedirectType.Partial);
+                AreaRule(IdA).RedirectType.Should().Be(RedirectType.Wildcard);
             }
 
             [Fact]
@@ -175,7 +176,7 @@ namespace Broot.Redirect.Tests.API.Services
                 updated.CreatedAt.Should().Be(created.CreatedAt);
                 updated.InfoText.Should().Be("Hinweis");
                 updated.Matcher.Should().Be("/ims/A");
-                updated.RedirectType.Should().Be(RedirectType.Partial);
+                updated.RedirectType.Should().Be(RedirectType.Wildcard);
                 await _repository.Received(1).BulkUpsertAsync(
                     Arg.Is<IReadOnlyList<RedirectRule>>(rules => rules.Single().Id == created.Id),
                     Arg.Any<CancellationToken>());
@@ -371,7 +372,7 @@ namespace Broot.Redirect.Tests.API.Services
             [Fact]
             public async Task Sync_SkippedEntries_AreReportedInSubmittedOrder()
             {
-                AddRule("/ims/C", RuleSource.Manual, RedirectType.Partial);
+                AddRule("/ims/C/x", RuleSource.Manual);
 
                 var response = await SyncAsync(
                     Entry(IdA, "/ims/A/"),
@@ -463,7 +464,9 @@ namespace Broot.Redirect.Tests.API.Services
 
                 response.Created.Should().Be(1);
                 response.Skipped.Should().BeEmpty();
-                AreaRules().Should().ContainSingle().Which.Matcher.Should().Be("/ims/A");
+                var rule = AreaRules().Should().ContainSingle().Subject;
+                rule.Matcher.Should().Be("/ims/A");
+                rule.RedirectType.Should().Be(RedirectType.Wildcard);
                 _cache.GetById(document.Id).Should().BeSameAs(document);
             }
 
@@ -476,22 +479,22 @@ namespace Broot.Redirect.Tests.API.Services
 
                 response.Created.Should().Be(1);
                 response.Skipped.Should().BeEmpty();
+                AreaRule(IdA).RedirectType.Should().Be(RedirectType.Wildcard);
             }
 
             [Theory]
             [InlineData("/ims", "/ims/A/")]
             [InlineData("/ims/A/B", "/ims/A/")]
-            public async Task Sync_FolderNestedWithFolderRuleOfOtherOrigin_SkipsWithMatcherConflict(string manualFolder, string entryFolder)
+            public async Task Sync_FolderNestedWithFolderRuleOfOtherOrigin_IsCreatedAsWildcardWithoutConflict(string manualFolder, string entryFolder)
             {
                 var manual = AddRule(manualFolder, RuleSource.Manual, RedirectType.Partial);
 
                 var response = await SyncAsync(Entry(IdA, entryFolder));
 
-                var skipped = response.Skipped.Should().ContainSingle().Subject;
-                skipped.Code.Should().Be(AreaRuleSyncService.MatcherConflictCode);
-                skipped.ConflictingRuleId.Should().Be(manual.Id);
-                skipped.Error.Should().Contain("Ordnerregel");
-                AreaRules().Should().BeEmpty();
+                response.Created.Should().Be(1);
+                response.Skipped.Should().BeEmpty();
+                AreaRule(IdA).RedirectType.Should().Be(RedirectType.Wildcard);
+                _cache.GetById(manual.Id).Should().BeSameAs(manual);
             }
 
             [Fact]
@@ -511,6 +514,7 @@ namespace Broot.Redirect.Tests.API.Services
 
                 response.Created.Should().Be(3);
                 response.Skipped.Should().BeEmpty();
+                AreaRules().Should().OnlyContain(rule => rule.RedirectType == RedirectType.Wildcard);
             }
 
             [Fact]
@@ -525,6 +529,421 @@ namespace Broot.Redirect.Tests.API.Services
                 response.Skipped.Should().ContainSingle().Which.Code.Should().Be(AreaRuleSyncService.MatcherDuplicateCode);
                 response.Deleted.Should().Be(0);
                 AreaRule(IdA).Should().BeSameAs(before);
+            }
+        }
+
+        public class WildcardTests : AreaRuleSyncServiceTests
+        {
+            [Fact]
+            public async Task Sync_ExistingPartialAreaRule_BecomesWildcardKeepingIdAndCreatedAt()
+            {
+                var partial = AddRule("/ims/A", RuleSource.AreaList, RedirectType.Partial, externalDocumentId: IdA);
+                partial.TargetUrl = TargetA;
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/"));
+
+                response.Updated.Should().Be(1);
+                response.Created.Should().Be(0);
+                response.Activated.Should().Be(0);
+                response.Deactivated.Should().Be(0);
+                var updated = AreaRule(IdA);
+                updated.Id.Should().Be(partial.Id);
+                updated.CreatedAt.Should().Be(partial.CreatedAt);
+                updated.RedirectType.Should().Be(RedirectType.Wildcard);
+                updated.Matcher.Should().Be("/ims/A");
+                _cache.GetPartialAndDomainRules().Should().BeEmpty();
+            }
+
+            [Fact]
+            public async Task Sync_FolderUrl_RedirectsOnlyTheFolderItself()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/"));
+                var matching = new RuleMatchingService(_cache);
+
+                matching.ResolveMatch("/ims/A/", new RuleMatchingConfig())!.Rule.ExternalDocumentId.Should().Be(IdA);
+                matching.ResolveMatch("/ims/A/Dokument.docx", new RuleMatchingConfig()).Should().BeNull();
+            }
+        }
+
+        public class ActiveStatusTests : AreaRuleSyncServiceTests
+        {
+            [Fact]
+            public async Task Sync_InactiveEntryWithoutRule_CreatesDeactivatedRule()
+            {
+                var response = await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx", active: false));
+
+                response.Created.Should().Be(1);
+                response.Updated.Should().Be(0);
+                response.Activated.Should().Be(0);
+                response.Deactivated.Should().Be(0);
+                var rule = AreaRule(IdA);
+                rule.IsActive.Should().BeFalse();
+                rule.RedirectType.Should().Be(RedirectType.Wildcard);
+                rule.Source.Should().Be(RuleSource.AreaList);
+                await _repository.Received(1).BulkUpsertAsync(
+                    Arg.Is<IReadOnlyList<RedirectRule>>(rules => rules.Single().IsActive == false),
+                    Arg.Any<CancellationToken>());
+            }
+
+            [Fact]
+            public async Task Sync_ActiveEntryBecomesInactive_DeactivatesRuleKeepingIdCreatedAtAndSettings()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx"));
+                var created = AreaRule(IdA);
+                created.InfoText = "Hinweis";
+                created.AutoRedirect = true;
+                created.DiscardQueryParams = true;
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx", active: false));
+
+                response.Updated.Should().Be(1);
+                response.Deactivated.Should().Be(1);
+                response.Activated.Should().Be(0);
+                var deactivated = AreaRule(IdA);
+                deactivated.IsActive.Should().BeFalse();
+                deactivated.Id.Should().Be(created.Id);
+                deactivated.CreatedAt.Should().Be(created.CreatedAt);
+                deactivated.InfoText.Should().Be("Hinweis");
+                deactivated.AutoRedirect.Should().BeTrue();
+                deactivated.DiscardQueryParams.Should().BeTrue();
+                deactivated.ExternalDocumentId.Should().Be(IdA);
+                deactivated.Source.Should().Be(RuleSource.AreaList);
+            }
+
+            [Fact]
+            public async Task Sync_InactiveEntryBecomesActive_ActivatesRuleKeepingIdCreatedAtAndSettings()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx", active: false));
+                var created = AreaRule(IdA);
+                created.InfoText = "Hinweis";
+                created.AutoRedirect = true;
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx", active: true));
+
+                response.Updated.Should().Be(1);
+                response.Activated.Should().Be(1);
+                response.Deactivated.Should().Be(0);
+                var activated = AreaRule(IdA);
+                activated.IsActive.Should().BeTrue();
+                activated.Id.Should().Be(created.Id);
+                activated.CreatedAt.Should().Be(created.CreatedAt);
+                activated.InfoText.Should().Be("Hinweis");
+                activated.AutoRedirect.Should().BeTrue();
+            }
+
+            [Fact]
+            public async Task Sync_MissingOrNullActive_IsTreatedAsActive()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/", active: false), Entry(IdB, "/ims/B/", active: false));
+
+                var response = await SyncAsync(
+                    Entry(IdA, "/ims/A/", active: null),
+                    new AreaRuleSyncEntry { Id = IdB, SourceUrl = "/ims/B/", TargetUrl = TargetA },
+                    new AreaRuleSyncEntry { Id = IdC, SourceUrl = "/ims/C/", TargetUrl = TargetA });
+
+                response.Activated.Should().Be(2);
+                response.Created.Should().Be(1);
+                AreaRules().Should().HaveCount(3).And.OnlyContain(rule => rule.IsActive);
+            }
+
+            [Fact]
+            public async Task Sync_UnchangedStateWithInactiveEntries_DoesNotWrite()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/", active: false), Entry(IdB, "/ims/B/x.docx"));
+                _repository.ClearReceivedCalls();
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/", active: false), Entry(IdB, "/ims/B/x.docx"));
+
+                response.Unchanged.Should().Be(2);
+                response.Updated.Should().Be(0);
+                response.Activated.Should().Be(0);
+                response.Deactivated.Should().Be(0);
+                AreaRule(IdA).IsActive.Should().BeFalse();
+                await _repository.DidNotReceive().BulkUpsertAsync(Arg.Any<IReadOnlyList<RedirectRule>>(), Arg.Any<CancellationToken>());
+                await _repository.DidNotReceive().BulkDeleteAsync(Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>());
+            }
+
+            [Fact]
+            public async Task Sync_RemovedEntry_DeletesDeactivatedRule()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/", active: false), Entry(IdB, "/ims/B/"));
+                var deactivated = AreaRule(IdA);
+
+                var response = await SyncAsync(Entry(IdB, "/ims/B/"));
+
+                response.Deleted.Should().Be(1);
+                _cache.GetById(deactivated.Id).Should().BeNull();
+                await _repository.Received(1).BulkDeleteAsync(
+                    Arg.Is<IReadOnlyList<Guid>>(ids => ids.Single() == deactivated.Id),
+                    Arg.Any<CancellationToken>());
+            }
+
+            [Fact]
+            public async Task Sync_InvalidInactiveEntry_IsSkippedWithValidationError()
+            {
+                var response = await SyncAsync(Entry(IdA, "kein Link", active: false), Entry(IdB, "/ims/B/", "kein Link", active: false));
+
+                response.Created.Should().Be(0);
+                response.Skipped.Should().HaveCount(2)
+                    .And.OnlyContain(entry => entry.Code == AreaRuleSyncService.ValidationErrorCode);
+                AreaRules().Should().BeEmpty();
+            }
+
+            [Fact]
+            public async Task Sync_InactiveEntryWithEquivalentMatcherOfOtherOrigin_SkipsWithMatcherDuplicate()
+            {
+                var other = AddRule("/ims/A/Dokument.docx", RuleSource.QmPro, externalDocumentId: "site|list|item");
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx", active: false));
+
+                response.Created.Should().Be(0);
+                var skipped = response.Skipped.Should().ContainSingle().Subject;
+                skipped.Code.Should().Be(AreaRuleSyncService.MatcherDuplicateCode);
+                skipped.ConflictingRuleId.Should().Be(other.Id);
+                AreaRules().Should().BeEmpty();
+            }
+
+            [Fact]
+            public async Task Sync_MixedStatusChanges_ReportsActivatedAndDeactivatedAsPartOfUpdated()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/"), Entry(IdB, "/ims/B/", active: false));
+
+                var response = await SyncAsync(
+                    Entry(IdA, "/ims/A/", active: false),
+                    Entry(IdB, "/ims/B/", TargetB, active: true),
+                    Entry(IdC, "/ims/C/", active: false));
+
+                response.Created.Should().Be(1);
+                response.Updated.Should().Be(2);
+                response.Activated.Should().Be(1);
+                response.Deactivated.Should().Be(1);
+                response.Unchanged.Should().Be(0);
+                AreaRule(IdB).TargetUrl.Should().Be(TargetB);
+            }
+
+            [Fact]
+            public async Task Sync_ChangedUrlOfInactiveEntry_UpdatesWithoutActivating()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/", active: false));
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A2/", TargetB, active: false));
+
+                response.Updated.Should().Be(1);
+                response.Activated.Should().Be(0);
+                response.Deactivated.Should().Be(0);
+                var rule = AreaRule(IdA);
+                rule.IsActive.Should().BeFalse();
+                rule.Matcher.Should().Be("/ims/A2");
+                rule.TargetUrl.Should().Be(TargetB);
+            }
+
+            [Fact]
+            public async Task Sync_DeactivatedAreaRule_IsNotMatched()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx"));
+                var matching = new RuleMatchingService(_cache);
+                matching.ResolveMatch("/ims/A/Dokument.docx", new RuleMatchingConfig()).Should().NotBeNull();
+
+                await SyncAsync(Entry(IdA, "/ims/A/Dokument.docx", active: false));
+
+                matching.ResolveMatch("/ims/A/Dokument.docx", new RuleMatchingConfig()).Should().BeNull();
+                _cache.LookupWildcardCandidates("/ims/a/dokument.docx").Should().BeEmpty();
+                AreaRule(IdA).IsActive.Should().BeFalse();
+            }
+        }
+
+        public class ActiveWinnerTests : AreaRuleSyncServiceTests
+        {
+            [Fact]
+            public async Task Sync_ActiveAndInactiveEquivalentEntries_ActiveEntryWins()
+            {
+                var response = await SyncAsync(Entry(IdA, "/ims/A/", active: false), Entry(IdB, "/ims/A", TargetB, active: true));
+
+                response.Created.Should().Be(1);
+                var rule = AreaRules().Should().ContainSingle().Subject;
+                rule.ExternalDocumentId.Should().Be(IdB);
+                rule.IsActive.Should().BeTrue();
+                var skipped = response.Skipped.Should().ContainSingle().Subject;
+                skipped.Id.Should().Be(IdA);
+                skipped.Code.Should().Be(AreaRuleSyncService.DuplicateEntryCode);
+                skipped.Error.Should().Contain(IdB);
+            }
+
+            [Fact]
+            public async Task Sync_ActiveEntryWinsAgainstInactiveEntryWithExistingRule()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/"));
+                var previous = AreaRule(IdA);
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/", active: false), Entry(IdB, "/ims/A/", TargetB, active: true));
+
+                response.Created.Should().Be(1);
+                response.Updated.Should().Be(1);
+                response.Deactivated.Should().Be(1);
+                response.Skipped.Should().ContainSingle().Which.Id.Should().Be(IdA);
+                AreaRule(IdB).IsActive.Should().BeTrue();
+                var loser = AreaRule(IdA);
+                loser.Id.Should().Be(previous.Id);
+                loser.IsActive.Should().BeFalse();
+                AreaRules().Count(rule => rule.IsActive).Should().Be(1);
+            }
+
+            [Fact]
+            public async Task Sync_InactiveEquivalentEntries_EntryWithExistingRuleWins()
+            {
+                await SyncAsync(Entry(IdB, "/ims/A/", TargetB, active: false));
+                var existing = AreaRule(IdB);
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/", active: false), Entry(IdB, "/ims/A/", TargetB, active: false));
+
+                response.Unchanged.Should().Be(1);
+                response.Created.Should().Be(0);
+                AreaRules().Should().ContainSingle().Which.Id.Should().Be(existing.Id);
+                var skipped = response.Skipped.Should().ContainSingle().Subject;
+                skipped.Id.Should().Be(IdA);
+                skipped.ConflictingRuleId.Should().Be(existing.Id);
+            }
+
+            [Fact]
+            public async Task Sync_InactiveEquivalentEntriesWithoutRule_OldestEntryWins()
+            {
+                var response = await SyncAsync(Entry(IdA, "/ims/A/", active: false), Entry(IdB, "/ims/A", TargetB, active: false));
+
+                response.Created.Should().Be(1);
+                var rule = AreaRules().Should().ContainSingle().Subject;
+                rule.ExternalDocumentId.Should().Be(IdA);
+                rule.IsActive.Should().BeFalse();
+                response.Skipped.Should().ContainSingle().Which.Id.Should().Be(IdB);
+            }
+
+            [Fact]
+            public async Task Sync_LoserWithActiveEquivalentRule_IsDeactivated()
+            {
+                var ruleA = AddRule("/ims/A", RuleSource.AreaList, externalDocumentId: IdA);
+                var ruleB = AddRule("/ims/A", RuleSource.AreaList, externalDocumentId: IdB);
+                ruleB.CreatedAt = ruleA.CreatedAt.AddDays(1);
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A"), Entry(IdB, "/ims/A/", TargetB));
+
+                response.Skipped.Should().ContainSingle().Which.Id.Should().Be(IdB);
+                response.Deactivated.Should().Be(1);
+                AreaRule(IdA).IsActive.Should().BeTrue();
+                var loser = AreaRule(IdB);
+                loser.Id.Should().Be(ruleB.Id);
+                loser.IsActive.Should().BeFalse();
+                loser.Matcher.Should().Be("/ims/A");
+                loser.TargetUrl.Should().Be(ruleB.TargetUrl);
+            }
+
+            [Fact]
+            public async Task Sync_ActiveLoserWithNonEquivalentRule_KeepsRuleUnchanged()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/"), Entry(IdB, "/ims/B/"));
+                var ruleB = AreaRule(IdB);
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/"), Entry(IdB, "/ims/A/"));
+
+                response.Skipped.Should().ContainSingle().Which.Id.Should().Be(IdB);
+                response.Updated.Should().Be(0);
+                AreaRule(IdB).Should().BeSameAs(ruleB);
+            }
+        }
+
+        public class SkippedInactiveEntryTests : AreaRuleSyncServiceTests
+        {
+            [Fact]
+            public async Task Sync_InvalidInactiveEntryWithActiveRule_OnlyDeactivatesRule()
+            {
+                var partial = AddRule("/ims/A", RuleSource.AreaList, RedirectType.Partial, externalDocumentId: IdA);
+
+                var response = await SyncAsync(Entry(IdA, "kein Link", "https://tenant.sharepoint.com/neu", active: false));
+
+                response.Skipped.Should().ContainSingle().Which.Code.Should().Be(AreaRuleSyncService.ValidationErrorCode);
+                response.Updated.Should().Be(1);
+                response.Deactivated.Should().Be(1);
+                response.Deleted.Should().Be(0);
+                var rule = AreaRule(IdA);
+                rule.Id.Should().Be(partial.Id);
+                rule.IsActive.Should().BeFalse();
+                rule.RedirectType.Should().Be(RedirectType.Partial);
+                rule.Matcher.Should().Be("/ims/A");
+                rule.TargetUrl.Should().Be(partial.TargetUrl);
+                rule.CreatedAt.Should().Be(partial.CreatedAt);
+            }
+
+            [Fact]
+            public async Task Sync_InvalidActiveEntryWithDeactivatedRule_DoesNotActivateRule()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/", active: false));
+                var before = AreaRule(IdA);
+
+                var response = await SyncAsync(Entry(IdA, "kein Link", active: true));
+
+                response.Skipped.Should().ContainSingle().Which.Code.Should().Be(AreaRuleSyncService.ValidationErrorCode);
+                response.Updated.Should().Be(0);
+                response.Activated.Should().Be(0);
+                AreaRule(IdA).Should().BeSameAs(before);
+                AreaRule(IdA).IsActive.Should().BeFalse();
+            }
+
+            [Fact]
+            public async Task Sync_InvalidInactiveEntryWithDeactivatedRule_DoesNotWrite()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/", active: false));
+                _repository.ClearReceivedCalls();
+
+                var response = await SyncAsync(Entry(IdA, "kein Link", active: false));
+
+                response.Updated.Should().Be(0);
+                response.Deactivated.Should().Be(0);
+                await _repository.DidNotReceive().BulkUpsertAsync(Arg.Any<IReadOnlyList<RedirectRule>>(), Arg.Any<CancellationToken>());
+            }
+
+            [Fact]
+            public async Task Sync_InactiveLoserWithActiveRuleOnOtherMatcher_OnlyDeactivatesRule()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/"), Entry(IdB, "/ims/B/"));
+                var ruleB = AreaRule(IdB);
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/"), Entry(IdB, "/ims/A/", TargetB, active: false));
+
+                response.Skipped.Should().ContainSingle().Which.Code.Should().Be(AreaRuleSyncService.DuplicateEntryCode);
+                response.Deactivated.Should().Be(1);
+                var rule = AreaRule(IdB);
+                rule.Id.Should().Be(ruleB.Id);
+                rule.IsActive.Should().BeFalse();
+                rule.Matcher.Should().Be("/ims/B");
+                rule.TargetUrl.Should().Be(TargetA);
+                AreaRule(IdA).IsActive.Should().BeTrue();
+            }
+
+            [Fact]
+            public async Task Sync_InactiveEntryWithConflictOfOtherOrigin_OnlyDeactivatesItsRule()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/"));
+                var before = AreaRule(IdA);
+                AddRule("/ims/neu.docx", RuleSource.Manual);
+
+                var response = await SyncAsync(Entry(IdA, "/ims/neu.docx", active: false));
+
+                response.Skipped.Should().ContainSingle().Which.Code.Should().Be(AreaRuleSyncService.MatcherDuplicateCode);
+                response.Deactivated.Should().Be(1);
+                var rule = AreaRule(IdA);
+                rule.Id.Should().Be(before.Id);
+                rule.IsActive.Should().BeFalse();
+                rule.Matcher.Should().Be("/ims/A");
+            }
+
+            [Fact]
+            public async Task Sync_SecondEntryWithSameIdentifier_DoesNotDeactivateRule()
+            {
+                await SyncAsync(Entry(IdA, "/ims/A/"));
+
+                var response = await SyncAsync(Entry(IdA, "/ims/A/"), Entry(IdA, "kein Link", active: false));
+
+                response.Unchanged.Should().Be(1);
+                response.Deactivated.Should().Be(0);
+                AreaRule(IdA).IsActive.Should().BeTrue();
             }
         }
 

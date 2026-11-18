@@ -407,6 +407,67 @@ namespace Broot.Redirect.Tests.API.Controllers
                 skipped[1].TryGetProperty("conflictingRuleId", out _).Should().BeFalse();
             }
 
+            [Theory]
+            [InlineData(",\"active\":true", true)]
+            [InlineData(",\"active\":false", false)]
+            [InlineData(",\"active\":null", null)]
+            [InlineData("", null)]
+            public void AreaRuleSyncRequest_DeserializesOptionalActive(string activeProperty, bool? expected)
+            {
+                var json = "{\"entries\":[{\"id\":\"" + EntryId + "\",\"sourceUrl\":\"/ims/A/\",\"targetUrl\":\"https://tenant.sharepoint.com/sites/QM/A\"" + activeProperty + "}]}";
+
+                var request = JsonSerializer.Deserialize<AreaRuleSyncRequest>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+                request!.Entries.Should().ContainSingle().Which!.Active.Should().Be(expected);
+            }
+
+            [Theory]
+            [InlineData(true, true)]
+            [InlineData(false, false)]
+            [InlineData(null, true)]
+            public async Task SyncAreaRules_ActiveValue_DeterminesRuleStatus(bool? active, bool expectedIsActive)
+            {
+                var entry = Entry();
+                entry.Active = active;
+
+                var result = await _sut.SyncAreaRules(SyncRequest(entry), CancellationToken.None) as ObjectResult;
+
+                result!.StatusCode.Should().Be(StatusCodes.Status200OK);
+                var rule = _cache.GetAll().Should().ContainSingle().Subject;
+                rule.IsActive.Should().Be(expectedIsActive);
+                rule.RedirectType.Should().Be(RedirectType.Wildcard);
+            }
+
+            [Fact]
+            public async Task SyncAreaRules_StatusChanges_SerializesActivatedAndDeactivated()
+            {
+                var other = Entry(id: "5b0c2a4e-0000-4000-8000-000000000002", sourceUrl: "/ims/B/");
+                other.Active = false;
+                await _sut.SyncAreaRules(SyncRequest(Entry(), other), CancellationToken.None);
+
+                var deactivate = Entry();
+                deactivate.Active = false;
+                var activate = Entry(id: "5b0c2a4e-0000-4000-8000-000000000002", sourceUrl: "/ims/B/");
+                activate.Active = true;
+
+                var result = await _sut.SyncAreaRules(SyncRequest(deactivate, activate), CancellationToken.None) as ObjectResult;
+
+                var body = ToJson(result!.Value);
+                body.GetProperty("updated").GetInt32().Should().Be(2);
+                body.GetProperty("activated").GetInt32().Should().Be(1);
+                body.GetProperty("deactivated").GetInt32().Should().Be(1);
+            }
+
+            [Fact]
+            public async Task SyncAreaRules_WithoutStatusChanges_SerializesZeroActivatedAndDeactivated()
+            {
+                var result = await _sut.SyncAreaRules(SyncRequest(Entry()), CancellationToken.None) as ObjectResult;
+
+                var body = ToJson(result!.Value);
+                body.GetProperty("activated").GetInt32().Should().Be(0);
+                body.GetProperty("deactivated").GetInt32().Should().Be(0);
+            }
+
             [Fact]
             public async Task SyncAreaRules_EmptyEntries_IsValidAndReturns200()
             {
